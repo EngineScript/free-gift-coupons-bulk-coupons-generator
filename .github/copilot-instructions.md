@@ -40,7 +40,7 @@ All input must be sanitized. All output must be escaped. No exceptions.
 
 ## Internationalization (i18n)
 
-- Text domain: `free-gift-coupons-bulk-coupons-generator`
+- Text domain: `free-gift-bulk-coupon-generator`
 - All user-facing strings must use `__()`, `_e()`, `esc_html__()`, `esc_attr__()`, etc.
 - Update `.pot` language files when adding or modifying translatable strings
 - JS strings must be passed via `wp_add_inline_script()` data, never hardcoded

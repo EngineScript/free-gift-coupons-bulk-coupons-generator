@@ -20,8 +20,8 @@ permissions:
   pull-requests: write
 
 env:
-  PLUGIN_SLUG: free-gift-coupons-bulk-coupons-generator
-  POT_FILE: languages/free-gift-coupons-bulk-coupons-generator.pot
+  PLUGIN_SLUG: free-gift-bulk-coupon-generator
+  POT_FILE: languages/free-gift-bulk-coupon-generator.pot
 
 jobs:
   update-pot:
@@ -64,7 +64,11 @@ jobs:
           if git diff --quiet --ignore-matching-lines='^"POT-Creation-Date:' -- "$POT_FILE"; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "Translation file is up to date"
-            git restore -- "$POT_FILE"
+            if git ls-files --error-unmatch "$POT_FILE" >/dev/null 2>&1; then
+              git restore -- "$POT_FILE"
+            else
+              rm -f "$POT_FILE"
+            fi
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
             echo "Translation file updated"

@@ -234,7 +234,7 @@ jobs:
               <rule ref="WordPress.WP.I18n">
                   <properties>
                       <property name="text_domain" type="array">
-                          <element value="free-gift-coupons-bulk-coupons-generator"/>
+                          <element value="free-gift-bulk-coupon-generator"/>
                       </property>
                   </properties>
               </rule>
