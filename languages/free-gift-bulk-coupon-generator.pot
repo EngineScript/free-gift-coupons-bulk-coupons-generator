@@ -9,29 +9,29 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-05-17T01:08:56+00:00\n"
+"POT-Creation-Date: 2026-05-17T01:09:41+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: free-gift-bulk-coupon-generator\n"
 
 #. Plugin Name of the plugin
-#: free-gift-bulk-coupon-generator.php:3
+#: free-gift-bulk-coupon-generator.php
 #: includes/class-fgcbg-admin-page.php:29
 msgid "Free Gift Coupons Bulk Coupon Generator"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: free-gift-bulk-coupon-generator.php:4
+#: free-gift-bulk-coupon-generator.php
 msgid "https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator"
 msgstr ""
 
 #. Description of the plugin
-#: free-gift-bulk-coupon-generator.php:5
+#: free-gift-bulk-coupon-generator.php
 msgid "Generate bulk free gift coupon codes that work with the Free Gift Coupons for WooCommerce plugin. Creates coupons with the proper data structure for free gift functionality."
 msgstr ""
 
 #. Author of the plugin
-#: free-gift-bulk-coupon-generator.php:7
+#: free-gift-bulk-coupon-generator.php
 msgid "EngineScript"
 msgstr ""
 
