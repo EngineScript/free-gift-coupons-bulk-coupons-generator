@@ -170,7 +170,7 @@ final class FGCBG_Admin_Page {
 				<input type="text" name="coupon_prefix" id="coupon_prefix"
 						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="e.g. GIFT" aria-describedby="coupon-prefix-description">
 				<p class="description" id="coupon-prefix-description">
-					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFTABC123DEF456).', 'free-gift-bulk-coupon-generator' ); ?>
+					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFT).', 'free-gift-bulk-coupon-generator' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -196,7 +196,16 @@ final class FGCBG_Admin_Page {
 						value="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH ); ?>"
 						required aria-describedby="coupon-code-length-description">
 				<p class="description" id="coupon-code-length-description">
-					<?php esc_html_e( 'Number of random characters after the optional prefix. With an 8-character prefix, the total coupon code is at most 32 characters.', 'free-gift-bulk-coupon-generator' ); ?>
+					<?php
+					printf(
+						/* translators: 1: minimum random code length, 2: maximum random code length, 3: maximum prefix length, 4: maximum total coupon code length. */
+						esc_html__( 'Number of random characters after the optional prefix (%1$d-%2$d characters). With a %3$d-character prefix, the total coupon code is at most %4$d characters.', 'free-gift-bulk-coupon-generator' ),
+						esc_html( (string) FGCBG_Coupon_Generator::MIN_CODE_LENGTH ),
+						esc_html( (string) FGCBG_Coupon_Generator::MAX_CODE_LENGTH ),
+						esc_html( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ),
+						esc_html( (string) ( FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH + FGCBG_Coupon_Generator::MAX_CODE_LENGTH ) )
+					);
+					?>
 				</p>
 			</td>
 		</tr>

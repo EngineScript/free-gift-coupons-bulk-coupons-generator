@@ -149,15 +149,17 @@ msgid "Coupon Prefix"
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:173
-msgid "Optional prefix for coupon codes (e.g. GIFTABC123DEF456)."
+msgid "Optional prefix for coupon codes (e.g. GIFT)."
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:190
 msgid "Random Code Length"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:199
-msgid "Number of random characters after the optional prefix. With an 8-character prefix, the total coupon code is at most 32 characters."
+#. translators: 1: minimum random code length, 2: maximum random code length, 3: maximum prefix length, 4: maximum total coupon code length.
+#: includes/class-fgcbg-admin-page.php:202
+#, php-format
+msgid "Number of random characters after the optional prefix (%1$d-%2$d characters). With a %3$d-character prefix, the total coupon code is at most %4$d characters."
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:215
