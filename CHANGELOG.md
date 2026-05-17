@@ -15,14 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CSS Custom Properties**: Defined all colors as `:root` CSS custom properties for consistency and maintainability.
 - **Accessibility**: Added `aria-describedby` attributes to all form fields linking to their description text.
 - **i18n-safe List Formatting**: Product name lists in coupon descriptions now use `wp_sprintf( '%l', ... )` for proper localized formatting (Oxford comma, translated conjunctions).
-- **JavaScript Internationalization**: All user-facing JS strings are now sourced from `wp_localize_script()` — no hardcoded English.
-- **Named Constants**: Extracted magic numbers to class constants: `MAX_COUPONS_PER_BATCH`, `RATE_LIMIT_TTL`, `DELAY_INTERVAL`, `DELAY_MICROSECONDS`, `DEFAULT_CODE_LENGTH`, `DEFAULT_EXPIRY_DAYS`.
+- **JavaScript Internationalization**: All user-facing JS strings are now sourced from `wp_add_inline_script()` data - no hardcoded English.
+- **Named Constants**: Extracted magic numbers to class constants for batch size, generation delays, prefix length, code length, and default expiry.
 
 ### Changed
 
 - **Plugin Rename**: Renamed plugin from "WC Free Gift Coupons Bulk Coupon Generator" to "Free Gift Coupons Bulk Coupon Generator" to remove WC prefix while maintaining clarity as a companion to the Free Gift Coupons for WooCommerce plugin.
   - Renamed main class from `WooCommerceFreeGiftBulkCoupons` to `FGCBG_Plugin`
-  - Updated all plugin constants: `SCG_*` → `FGCBG_*` (Free Gift Coupons Bulk Generator)
+  - Updated all plugin constants: `SCG_*` -> `FGCBG_*` (Free Gift Coupons Bulk Generator)
   - Updated all function names and hooks to use `fgcbg_` prefix instead of `scg_`
   - Updated all coupon metadata keys from `_scg_*` to `_fgcbg_*`
   - Updated helper functions and initialization callbacks
@@ -31,19 +31,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Migration Notes**: External code depending on the old hooks, filters, constants, or function names will need updating. This is considered a major version change due to the breaking API changes.
 
 - **File Architecture**: Split monolithic single-file plugin into modular architecture:
-  - `includes/class-fgcbg-plugin.php` — Main plugin class (singleton, hooks, AJAX handler)
-  - `includes/class-fgcbg-coupon-generator.php` — Coupon generation logic
-  - `includes/class-fgcbg-admin-page.php` — Admin page rendering
-  - `free-gift-bulk-coupon-generator.php` — Slim entry point (~60 lines)
+  - `includes/class-fgcbg-plugin.php` - Main plugin class (singleton, hooks, AJAX handler)
+  - `includes/class-fgcbg-coupon-generator.php` - Coupon generation logic
+  - `includes/class-fgcbg-admin-page.php` - Admin page rendering
+  - `free-gift-bulk-coupon-generator.php` - Slim entry point (~60 lines)
 
-- **ESNext JavaScript**: Modernized admin.js to use `const`/`let`, arrow functions, template literals, optional chaining (`?.`), and nullish coalescing (`??`). WordPress 6.5+ targets modern browsers.
+- **ESNext JavaScript**: Modernized admin.js to use `const`/`let`, arrow functions, template literals, optional chaining (`?.`), and nullish coalescing (`??`). WordPress 6.8+ targets modern browsers.
 - **Admin Notices**: Replaced anonymous `add_action('admin_notices', ...)` closures with a named notice-queue pattern (unhookable by other plugins). AJAX handler now returns JSON responses directly.
 - **CSS Standards**: Rewrote `admin.css` with tab indentation, alphabetical property ordering, proper section comment headers, and `@package`/`@since` in file header per WordPress Coding Standards.
 - **PHPDoc**: Added `@since` tags to all class properties and constants. Complete `@param`, `@return`, `@since` on all methods.
 
 ### Fixed
 
-- **CSRF in `admin_init()`**: Restored nonce verification before processing form data to prevent CSRF. The v1.5.1 removal was incorrect — without it, `$_POST` is accessed before any security check. (Now replaced entirely by AJAX `check_ajax_referer()`.)
+- **CSRF in `admin_init()`**: Restored nonce verification before processing form data to prevent CSRF. The v1.5.1 removal was incorrect - without it, `$_POST` is accessed before any security check. (Now replaced entirely by AJAX `check_ajax_referer()`.)
 - **XSS in Success Notice**: Wrapped `sprintf()` output in `esc_html()` (using `__()` instead of `esc_html__()` for the format string) to properly escape the final rendered output.
 - **Coupon Generation Parse Error**: Restored a missing `catch` block and success return path in `create_single_coupon()` to fix `Cannot use try without catch or finally`.
 - **Error Logging**: `log_coupon_error()` now logs `$exception->getMessage()` instead of the useless `$exception->getCode()`.
@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Double-Escaping in Product Dropdown**: Removed premature `esc_html()` calls in `get_products_for_dropdown()` that caused double-escaping when rendered. Escaping now occurs only at render time in `render_product_selection_field()`.
 - **Double-Escaping in Success Notice**: Removed redundant `esc_html()` wrapping an integer inside an already-escaped `esc_html__()` format string in the coupon generation success message.
-- **Redundant Nonce Verification**: Removed duplicate nonce check in `admin_init()` — the nonce is properly verified once inside `handle_coupon_generation()`.
+- **Redundant Nonce Verification**: Removed duplicate nonce check in `admin_init()` - the nonce is properly verified once inside `handle_coupon_generation()`.
 - **Rate Limiting Transient Leak**: All early-return validation paths in `handle_coupon_generation()` now clear the rate-limiting transient, preventing users from being locked out for 5 minutes after a validation error.
 - **FAQ Inaccuracy**: Corrected readme.txt FAQ to reference `random_int()` instead of the incorrect `wp_generate_password()`.
 - **Version Mismatch**: Synchronized version numbers across README.md, GEMINI.md, readme.txt, and plugin header.
@@ -70,8 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 - **Naming Collision Protection**: Added `defined()` guards around `SCG_PLUGIN_URL`, `SCG_PLUGIN_PATH`, and `SCG_PLUGIN_VERSION` constants to prevent fatal errors. Renamed uninstall helper `scg_delete_transients_with_prefix()` to `wc_fgbcg_delete_transients_with_prefix()` for namespace safety.
-- **Implemented `scg_coupon_code_length` Filter**: The documented filter now actually works, with sane bounds enforcement (8–32 characters).
-- **Removed Dead Code**: Removed unused `wp_localize_script()` AJAX data that had no corresponding AJAX handler.
+- **Implemented `scg_coupon_code_length` Filter**: The documented filter now actually works, with sane bounds enforcement (8-32 characters).
+- **Removed Dead Code**: Removed unused JavaScript AJAX data that had no corresponding AJAX handler.
 - **Removed Misplaced Security Headers**: Removed HTTP header injection from `admin_enqueue_scripts` hook where headers are typically already sent. WordPress already provides these protections via its admin framework.
 - **Cleaned Up Redundant Comments**: Simplified inline comment noise on sanitization lines.
 
@@ -177,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Core Features**: WordPress plugin for generating bulk free gift coupons that work with Free Gift Coupons for WooCommerce
 - **Admin Interface**: User-friendly admin panel in WooCommerce menu
 - **Multi-Product Support**: Select single or multiple products for free gift coupon generation
-- **Custom Prefixes**: Add custom prefixes to coupon codes (e.g., GIFT-ABC123)
+- **Custom Prefixes**: Add custom prefixes to coupon codes (e.g., GIFTABC123)
 - **Bulk Generation**: Generate up to 100 coupons at once with timeout protection
 - **Free Gift Compatibility**: Creates coupons with proper gift_info data structure for Free Gift Coupons for WooCommerce plugin
 - **Security First**: Enterprise-grade security with nonces, capability checks, input sanitization

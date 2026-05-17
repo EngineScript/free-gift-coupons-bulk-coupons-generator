@@ -6,15 +6,14 @@ applyTo: '**'
 
 ## Compatibility
 
-- WordPress 6.6+, PHP 7.4+, WooCommerce 5.0+
+- WordPress 6.8+, PHP 8.2+, WooCommerce 5.0+
 - Follow [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/) for PHP, JS, CSS, HTML, and accessibility
-- Never use deprecated WordPress or PHP functions — this is a modern plugin (2026)
-- Use ES6+ JavaScript (WordPress 6.6+ targets modern browsers)
+- Never use deprecated WordPress or PHP functions; this is a modern plugin (2026)
+- Use ES6+ JavaScript (WordPress 6.8+ targets modern browsers)
 
 ## Environment
 
-- Remote GitHub Codespaces only — never suggest local terminal commands
-- Use WordPress APIs, hooks, and standards exclusively — no non-WP frameworks
+- Use WordPress APIs, hooks, and standards exclusively - no non-WP frameworks
 
 ## Security
 
@@ -33,7 +32,7 @@ All input must be sanitized. All output must be escaped. No exceptions.
 - Use WordPress APIs instead of raw PHP equivalents (e.g., `wc_get_products()` over `get_posts()` for products)
 - Use WooCommerce HPOS-compatible APIs (no direct `wp_posts`/`wp_postmeta` queries for orders or products)
 - Use `add_action()` / `add_filter()` with named methods (not anonymous closures) so hooks can be unhooked
-- No inline styles in PHP or JS — use dedicated CSS files with proper classes
+- No inline styles in PHP or JS; use dedicated CSS files with proper classes
 - Define magic numbers as named constants
 - Use `WP_Error` for error handling; log errors via `wc_get_logger()` without exposing sensitive data
 - PHPDoc all functions: `@param`, `@return`, `@since` tags
@@ -44,12 +43,11 @@ All input must be sanitized. All output must be escaped. No exceptions.
 - Text domain: `free-gift-coupons-bulk-coupons-generator`
 - All user-facing strings must use `__()`, `_e()`, `esc_html__()`, `esc_attr__()`, etc.
 - Update `.pot` language files when adding or modifying translatable strings
-- JS strings must be passed via `wp_localize_script()` or `wp_add_inline_script()`, never hardcoded
+- JS strings must be passed via `wp_add_inline_script()` data, never hardcoded
 
 ## Performance
 
-- Use WordPress caching (`wp_cache_*()`, transients) with targeted invalidation hooks
-- Avoid N+1 queries — use batch-fetching APIs
+- Avoid N+1 queries - use batch-fetching APIs
 - Enqueue assets with `wp_enqueue_script()` / `wp_enqueue_style()` — load only on relevant admin pages
 - Prefer `wc_get_products()` over `get_posts()` + `wc_get_product()` loops
 

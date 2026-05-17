@@ -11,11 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Renders the plugin admin page and manages the product dropdown cache.
+ * Renders the plugin admin page.
  *
  * @since 1.6.0
  */
-class FGCBG_Admin_Page {
+final class FGCBG_Admin_Page {
 
 	/**
 	 * Render the admin page.
@@ -23,18 +23,18 @@ class FGCBG_Admin_Page {
 	 * @since 1.6.0
 	 * @return void
 	 */
-	public function render() {
+	public function render(): void {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Free Gift Coupons Bulk Coupon Generator', 'free-gift-coupons-bulk-coupons-generator' ); ?></h1>
 			<p><?php esc_html_e( 'Generate bulk free gift coupons that work with the Free Gift Coupons for WooCommerce plugin. These coupons are created with the proper data structure required for free gift functionality.', 'free-gift-coupons-bulk-coupons-generator' ); ?></p>
 
-			<div class="scg-admin-container">
-				<div class="scg-main-content">
+			<div class="fgcbg-admin-container">
+				<div class="fgcbg-main-content">
 					<?php $this->render_admin_form(); ?>
 				</div>
 
-				<div class="scg-sidebar">
+				<div class="fgcbg-sidebar">
 					<?php $this->render_admin_sidebar(); ?>
 				</div>
 			</div>
@@ -50,15 +50,15 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_admin_form() {
+	private function render_admin_form(): void {
 		?>
-		<form class="scg-form">
+		<form class="fgcbg-form">
 
 			<table class="form-table">
 				<?php $this->render_product_selection_field(); ?>
 				<?php $this->render_coupon_count_field(); ?>
 				<?php $this->render_coupon_prefix_field(); ?>
-				<?php $this->render_discount_type_field(); ?>
+				<?php $this->render_coupon_code_length_field(); ?>
 			</table>
 
 			<p class="submit">
@@ -67,11 +67,24 @@ class FGCBG_Admin_Page {
 				</button>
 			</p>
 
-			<div id="fgcbg-progress" class="fgcbg-progress" style="display: none;">
+			<div id="fgcbg-progress" class="fgcbg-progress" hidden>
 				<div class="fgcbg-progress-track">
-					<div id="fgcbg-progress-bar" class="fgcbg-progress-bar" style="width: 0%;"></div>
+					<div id="fgcbg-progress-bar" class="fgcbg-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
 				</div>
 				<p id="fgcbg-progress-text" class="fgcbg-progress-text"></p>
+			</div>
+
+			<div id="fgcbg-results" class="fgcbg-results" hidden>
+				<h2><?php esc_html_e( 'Generated Coupon Codes', 'free-gift-coupons-bulk-coupons-generator' ); ?></h2>
+				<textarea id="fgcbg-generated-codes" class="large-text code" rows="10" readonly aria-describedby="fgcbg-generated-codes-description"></textarea>
+				<p id="fgcbg-generated-codes-description" class="description">
+					<?php esc_html_e( 'One coupon code per line.', 'free-gift-coupons-bulk-coupons-generator' ); ?>
+				</p>
+				<p>
+					<button type="button" id="fgcbg-download-codes" class="button">
+						<?php esc_html_e( 'Download .txt', 'free-gift-coupons-bulk-coupons-generator' ); ?>
+					</button>
+				</p>
 			</div>
 		</form>
 		<?php
@@ -85,16 +98,16 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_product_selection_field() {
+	private function render_product_selection_field(): void {
 		?>
 		<tr>
 			<th scope="row">
-				<label for="product_id"><?php esc_html_e( 'Select Products', 'free-gift-coupons-bulk-coupons-generator' ); ?></label>
+				<label for="fgcbg_product_ids"><?php esc_html_e( 'Select Products', 'free-gift-coupons-bulk-coupons-generator' ); ?></label>
 			</th>
 			<td>
-				<select class="wc-product-search" multiple="multiple" style="width: 300px;" id="product_id" name="product_id[]"
+				<select class="wc-product-search fgcbg-product-search" multiple="multiple" id="fgcbg_product_ids" name="product_ids[]"
 						data-placeholder="<?php esc_attr_e( 'Search for a product&hellip;', 'free-gift-coupons-bulk-coupons-generator' ); ?>"
-						data-action="woocommerce_json_search_products"
+						data-action="woocommerce_json_search_products_and_variations"
 						data-allow_clear="true"
 						aria-describedby="product-id-description">
 				</select>
@@ -112,7 +125,7 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_coupon_count_field() {
+	private function render_coupon_count_field(): void {
 		?>
 		<tr>
 			<th scope="row">
@@ -120,13 +133,19 @@ class FGCBG_Admin_Page {
 			</th>
 			<td>
 				<input type="number" name="number_of_coupons" id="number_of_coupons"
-					   class="regular-text" min="1" max="100" value="10" required aria-describedby="coupon-count-description">
+						class="regular-text" min="1" max="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH ); ?>" value="10" required aria-describedby="coupon-count-description">
 				<p class="description" id="coupon-count-description">
-					<?php esc_html_e( 'Enter the number of coupons to generate (maximum 100).', 'free-gift-coupons-bulk-coupons-generator' ); ?>
+					<?php
+					printf(
+						/* translators: %d is the maximum number of coupons that can be generated in one run. */
+						esc_html__( 'Enter the number of coupons to generate (maximum %d).', 'free-gift-coupons-bulk-coupons-generator' ),
+						esc_html( (string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH )
+					);
+					?>
 				</p>
-				<div class="scg-warning-box">
-					<p class="scg-warning-text">
-						<span class="dashicons dashicons-warning scg-warning-icon"></span>
+				<div class="fgcbg-warning-box">
+					<p class="fgcbg-warning-text">
+						<span class="dashicons dashicons-warning fgcbg-warning-icon"></span>
 						<?php esc_html_e( 'Note: Coupon generation can be time-consuming. Generating large numbers of coupons may cause the page to timeout based on your server\'s PHP timeout settings. If you need to generate many coupons, consider doing it in smaller batches.', 'free-gift-coupons-bulk-coupons-generator' ); ?>
 					</p>
 				</div>
@@ -141,7 +160,7 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_coupon_prefix_field() {
+	private function render_coupon_prefix_field(): void {
 		?>
 		<tr>
 			<th scope="row">
@@ -149,9 +168,9 @@ class FGCBG_Admin_Page {
 			</th>
 			<td>
 				<input type="text" name="coupon_prefix" id="coupon_prefix"
-					   class="regular-text" maxlength="10" placeholder="e.g. GIFT" aria-describedby="coupon-prefix-description">
+						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="e.g. GIFT" aria-describedby="coupon-prefix-description">
 				<p class="description" id="coupon-prefix-description">
-					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFT-ABC123DEF456).', 'free-gift-coupons-bulk-coupons-generator' ); ?>
+					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFTABC123DEF456).', 'free-gift-coupons-bulk-coupons-generator' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -159,26 +178,25 @@ class FGCBG_Admin_Page {
 	}
 
 	/**
-	 * Render discount type field.
+	 * Render generated coupon code length field.
 	 *
-	 * @since 1.0.0
+	 * @since 1.6.0
 	 * @return void
 	 */
-	private function render_discount_type_field() {
+	private function render_coupon_code_length_field(): void {
 		?>
 		<tr>
 			<th scope="row">
-				<label for="discount_type"><?php esc_html_e( 'Discount Type', 'free-gift-coupons-bulk-coupons-generator' ); ?></label>
+				<label for="coupon_code_length"><?php esc_html_e( 'Random Code Length', 'free-gift-coupons-bulk-coupons-generator' ); ?></label>
 			</th>
 			<td>
-				<select name="discount_type" id="discount_type" class="regular-text" aria-describedby="discount-type-description">
-					<option value="free_gift"><?php esc_html_e( 'Free Gift', 'free-gift-coupons-bulk-coupons-generator' ); ?></option>
-					<option value="percent"><?php esc_html_e( 'Percentage Discount', 'free-gift-coupons-bulk-coupons-generator' ); ?></option>
-					<option value="fixed_cart"><?php esc_html_e( 'Fixed Cart Discount', 'free-gift-coupons-bulk-coupons-generator' ); ?></option>
-					<option value="fixed_product"><?php esc_html_e( 'Fixed Product Discount', 'free-gift-coupons-bulk-coupons-generator' ); ?></option>
-				</select>
-				<p class="description" id="discount-type-description">
-					<?php esc_html_e( 'Select the type of discount for the coupons.', 'free-gift-coupons-bulk-coupons-generator' ); ?>
+				<input type="number" name="coupon_code_length" id="coupon_code_length"
+						class="regular-text" min="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MIN_CODE_LENGTH ); ?>"
+						max="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_CODE_LENGTH ); ?>"
+						value="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH ); ?>"
+						required aria-describedby="coupon-code-length-description">
+				<p class="description" id="coupon-code-length-description">
+					<?php esc_html_e( 'Number of random characters after the optional prefix. With an 8-character prefix, the total coupon code is at most 32 characters.', 'free-gift-coupons-bulk-coupons-generator' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -191,12 +209,20 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_admin_sidebar() {
+	private function render_admin_sidebar(): void {
 		?>
-		<div class="scg-info-box">
+		<div class="fgcbg-info-box">
 			<h3><?php esc_html_e( 'Information', 'free-gift-coupons-bulk-coupons-generator' ); ?></h3>
 			<ul>
-				<li><?php esc_html_e( 'Maximum 100 coupons can be generated at once', 'free-gift-coupons-bulk-coupons-generator' ); ?></li>
+				<li>
+					<?php
+					printf(
+						/* translators: %d is the maximum number of coupons that can be generated in one run. */
+						esc_html__( 'Maximum %d coupons can be generated at once', 'free-gift-coupons-bulk-coupons-generator' ),
+						esc_html( (string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH )
+					);
+					?>
+				</li>
 				<li><?php esc_html_e( 'Coupons are set to expire after 1 year', 'free-gift-coupons-bulk-coupons-generator' ); ?></li>
 				<li><?php esc_html_e( 'Each coupon can only be used once', 'free-gift-coupons-bulk-coupons-generator' ); ?></li>
 				<li><?php esc_html_e( 'Coupons are set for individual use only', 'free-gift-coupons-bulk-coupons-generator' ); ?></li>
@@ -212,10 +238,10 @@ class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @return void
 	 */
-	private function render_admin_footer() {
+	private function render_admin_footer(): void {
 		?>
-		<div class="scg-footer">
-			<p class="scg-repo-link">
+		<div class="fgcbg-footer">
+			<p class="fgcbg-repo-link">
 				<a href="https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator" target="_blank" rel="noopener noreferrer">
 					<?php esc_html_e( 'View on GitHub', 'free-gift-coupons-bulk-coupons-generator' ); ?>
 				</a>

@@ -9,14 +9,13 @@ on:
 
 permissions:
   contents: write
-  discussions: write
 
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
@@ -42,49 +41,44 @@ jobs:
       - name: Create zip file
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          mkdir -p free-gift-bulk-coupon-generator
-          cp free-gift-bulk-coupon-generator.php free-gift-bulk-coupon-generator/
-          cp README.md free-gift-bulk-coupon-generator/
-          cp CHANGELOG.md free-gift-bulk-coupon-generator/ || echo "No CHANGELOG.md found"
-          cp LICENSE free-gift-bulk-coupon-generator/ || echo "No LICENSE file found"
-          cp uninstall.php free-gift-bulk-coupon-generator/ || echo "No uninstall.php found"
-          [ -d assets ] && cp -r assets free-gift-bulk-coupon-generator/ || echo "No assets directory found"
-          [ -d languages ] && cp -r languages free-gift-bulk-coupon-generator/ || echo "No languages directory found"
-          zip -r free-gift-bulk-coupon-generator-${{ steps.get_version.outputs.version }}.zip free-gift-bulk-coupon-generator
+          PLUGIN_SLUG="free-gift-bulk-coupon-generator"
+          rm -rf "$PLUGIN_SLUG"
+          mkdir -p "$PLUGIN_SLUG"
+          cp free-gift-bulk-coupon-generator.php "$PLUGIN_SLUG/"
+          cp -r includes "$PLUGIN_SLUG/"
+          cp -r assets "$PLUGIN_SLUG/"
+          cp readme.txt "$PLUGIN_SLUG/"
+          cp README.md "$PLUGIN_SLUG/"
+          cp CHANGELOG.md "$PLUGIN_SLUG/"
+          cp LICENSE "$PLUGIN_SLUG/" || echo "No LICENSE file found"
+          if [ -d languages ]; then
+            cp -r languages "$PLUGIN_SLUG/"
+          fi
+          zip -r "${PLUGIN_SLUG}-${{ steps.get_version.outputs.version }}.zip" "$PLUGIN_SLUG"
 
       - name: Get changelog entry
         if: steps.check_release.outputs.exists == 'false'
         id: get_changelog
         run: |
-          if [ -f CHANGELOG.md ]; then
-            CHANGELOG_ENTRY=$(awk -v ver="## ${{ steps.get_version.outputs.version }}" 'BEGIN{flag=0} $0~ver{flag=1; print; next} /^## [0-9]+\.[0-9]+\.[0-9]+/{flag=0} flag{print}' CHANGELOG.md | tail -n +2)
-            echo "changelog<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "changelog=Initial release of WooCommerce Free Gift Bulk Coupons Generator" >> $GITHUB_OUTPUT
-          fi
+          CHANGELOG_ENTRY=$(awk -v ver="${{ steps.get_version.outputs.version }}" 'BEGIN{flag=0; target="^## \\[?" ver "\\]?([[:space:]-]|$)"} $0 ~ target {flag=1; print; next} /^## \[?[0-9]+\.[0-9]+\.[0-9]+\]?([[:space:]-]|$)/ {flag=0} flag {print}' CHANGELOG.md | tail -n +2)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           body: |
             ${{ steps.get_changelog.outputs.changelog }}
-            
+
             ## Installation
             1. Download the zip file
             2. Upload to your WordPress site through the Plugins > Add New > Upload menu
             3. Activate the plugin
-            4. Navigate to WooCommerce > Coupon Generator to start using the plugin
-            
-            ## Requirements
-            - WordPress 6.6 or higher
-            - WooCommerce 5.0 or higher
-            - PHP 7.4 or higher
-            
+
             [Full Documentation](https://github.com/${{ github.repository }})
           files: free-gift-bulk-coupon-generator-${{ steps.get_version.outputs.version }}.zip
           draft: false
@@ -99,28 +93,29 @@ jobs:
         run: |
           README_FILE="README.md"
           TMP_FILE=$(mktemp)
-          
-          # Update the version badge with the new version and logo
-          sed -E 's/\[\!Version\]\(https:\/\/img\.shields\.io\/badge\/Version-[0-9]+\.[0-9]+\.[0-9]+-orange\.svg\?logo=github\)\]\(https:\/\/github\.com\/EngineScript\/WooCommerce-Free-Gift-Bulk-Coupons-Generator\/releases\/latest\/download\/free-gift-bulk-coupon-generator-[0-9]+\.[0-9]+\.[0-9]+\.zip\)/\[\!Version\]\(https:\/\/img\.shields\.io\/badge\/Version-'"$VERSION"'-orange\.svg\?logo=github\)\]\(https:\/\/github\.com\/EngineScript\/WooCommerce-Free-Gift-Bulk-Coupons-Generator\/releases\/latest\/download\/free-gift-bulk-coupon-generator-'"$VERSION"'\.zip\)/g' "$README_FILE" > "$TMP_FILE"
-          
+
+          # Update the version badge with the new version and release asset.
+          NEW_BADGE="[![Version](https://img.shields.io/badge/Version-${VERSION}-orange.svg?logo=github)](https://github.com/${{ github.repository }}/releases/latest/download/free-gift-bulk-coupon-generator-${VERSION}.zip)"
+          sed -E "s#\\[!\\[Version\\]\\(https://img\\.shields\\.io/badge/Version-[0-9]+\\.[0-9]+\\.[0-9]+-orange\\.svg\\?logo=github\\)\\]\\([^)]*free-gift-bulk-coupon-generator-[0-9]+\\.[0-9]+\\.[0-9]+\\.zip\\)#$NEW_BADGE#g" "$README_FILE" > "$TMP_FILE"
+
           # Replace file if changes were made
           if ! cmp -s "$README_FILE" "$TMP_FILE"; then
             cp "$TMP_FILE" "$README_FILE"
             echo "Updated README.md with version $VERSION"
-            
+
             # Configure git
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
-            
+
             # Commit and push the changes
             git add "$README_FILE"
             git commit -m "docs: update README.md version to $VERSION [skip ci]"
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
-            
+
             echo "::notice::README.md updated with latest version $VERSION"
           else
             echo "::notice::README.md already has the correct version"
           fi
-          
+
           # Clean up temporary file
           rm "$TMP_FILE"

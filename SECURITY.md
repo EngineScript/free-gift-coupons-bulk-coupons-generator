@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We release security updates for the latest major version of EngineScript. Please ensure you are running the latest version to receive security patches.
+We release security updates for the latest major version of this plugin. Please ensure you are running the latest version to receive security patches.
 
 | Version    | Supported          |
 |------------|--------------------|
@@ -11,7 +11,7 @@ We release security updates for the latest major version of EngineScript. Please
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in EngineScript, please follow these steps:
+If you discover a security vulnerability in this plugin, please follow these steps:
 
 1. **Do not open a public issue.**
 2. Email us at [peter@visistruct.com](mailto:peter@visistruct.com) with details of the vulnerability.
@@ -25,7 +25,7 @@ We will acknowledge your report within 5 business days and work with you to reso
 
 ## Security Best Practices
 
-- Always keep your EngineScript installation and dependencies up to date.
+- Always keep this plugin, WordPress, WooCommerce, and dependencies up to date.
 - Use strong, unique passwords for all accounts.
 - Restrict SSH and admin access to trusted IPs.
 - Regularly back up your data.
@@ -35,4 +35,4 @@ We will acknowledge your report within 5 business days and work with you to reso
 
 We follow a responsible disclosure process. Once a vulnerability is confirmed and a fix is available, we will publish a security advisory and credit the reporter (unless anonymity is requested).
 
-Thank you for helping keep EngineScript and its users safe!
+Thank you for helping keep this plugin and its users safe.

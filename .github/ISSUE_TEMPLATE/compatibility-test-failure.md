@@ -19,7 +19,7 @@ The automated compatibility test has failed for the following environment:
 
 ### Next Steps
 
-This issue has been automatically created because the WooCommerce Free Gift Bulk Coupons Generator plugin failed compatibility testing with this specific WordPress and PHP version combination. This could indicate:
+This issue has been automatically created because the Free Gift Coupons Bulk Coupon Generator plugin failed compatibility testing with this specific WordPress and PHP version combination. This could indicate:
 
 #### Potential Issues
 
@@ -43,7 +43,7 @@ This issue has been automatically created because the WooCommerce Free Gift Bulk
 docker run --rm -v $(pwd):/app wordpress:{{ env.WP_VERSION }}-php{{ env.PHP_VERSION }}-apache
 
 # Run plugin check locally
-wp plugin check WooCommerce-Free-Gift-Bulk-Coupons-Generator --format=json --require=./wp-content/plugins/plugin-check/cli.php
+wp plugin check free-gift-bulk-coupon-generator --format=json --require=./wp-content/plugins/plugin-check/cli.php
 ```
 
 Once fixed, please close this issue and reference it in the changelog.

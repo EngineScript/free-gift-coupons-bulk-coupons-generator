@@ -8,7 +8,7 @@ assignees: []
 
 ## WordPress Plugin Check Failure
 
-The WordPress Plugin Check action has identified issues with the WooCommerce Free Gift Bulk Coupons Generator plugin.
+The WordPress Plugin Check action has identified issues with the Free Gift Coupons Bulk Coupon Generator plugin.
 
 ### Details
 

@@ -1,39 +1,40 @@
 === Free Gift Coupons Bulk Coupon Generator ===
 Contributors: enginescript
 Tags: woocommerce, coupons, bulk, free-gifts, gift-coupons
-Requires at least: 6.6
+Requires at least: 6.8
 Tested up to: 6.9
 Stable tag: 1.5.1
-Requires PHP: 7.4
+Requires PHP: 8.2
 License: GPL v3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Bulk generate free gift coupons that work with Free Gift Coupons for WooCommerce plugin with proper data structure.
+Bulk-generate free gift coupons that work with the Free Gift Coupons for WooCommerce plugin and use the proper free gift data structure.
 
 == Description ==
 
-Free Gift Coupons Bulk Coupon Generator is a specialized WordPress plugin designed to work specifically with the **Free Gift Coupons for WooCommerce** plugin. It generates bulk free gift coupons with the correct data structure that other coupon generators cannot provide.
+Free Gift Coupons Bulk Coupon Generator is a specialized WordPress plugin designed to work specifically with the **Free Gift Coupons for WooCommerce** plugin. It generates bulk free gift coupons with the correct data structure required by that plugin.
 
 **IMPORTANT**: This plugin requires the Free Gift Coupons for WooCommerce plugin to function properly. The Free Gift Coupons plugin can be purchased at https://woocommerce.com/products/free-gift-coupons/
 
-The plugin creates coupons with the proper `gift_info` array structure required by the Free Gift Coupons plugin, ensuring compatibility where other bulk coupon generators fail.
+The plugin creates coupons with the proper `$gift_info` array structure required by the Free Gift Coupons plugin, ensuring compatibility where other bulk coupon generators fail.
 
 Key features:
-* **Free Gift Compatibility**: Specifically designed for Free Gift Coupons for WooCommerce plugin
+* **Free Gift Compatibility**: Specifically designed for the Free Gift Coupons for WooCommerce plugin
 * **Bulk Generation**: Create up to 100 free gift coupons at once with AJAX batch processing
-* **AJAX Product Search**: WooCommerce Select2-powered search — scales to any catalog size
-* **Progress Bar**: Real-time progress feedback during generation, no timeout risk
+* **AJAX Product Search**: WooCommerce Select2-powered search - scales to any catalog size
+* **Progress Bar**: Real-time progress feedback during generation to reduce timeout risk
 * **Multi-Product Support**: Select multiple products as free gifts in a single coupon
-* **Proper Data Structure**: Creates gift_info arrays with correct product ID mapping
-* **Custom Prefixes**: Add custom prefixes to coupon codes for easy organization
+* **Proper Data Structure**: Creates `$gift_info` arrays with correct product and variation ID mapping
+* **Custom Prefixes**: Add alphanumeric prefixes to coupon codes for easy organization
+* **Generated Code Export**: View generated codes one per line and download them as a `.txt` file
 * **Security First**: CSRF protection, input sanitization, output escaping, and capability checks
 * **User-Friendly Interface**: Clean, responsive admin interface with real-time validation
-* **Performance Optimized**: Transient caching, batch processing, and server-friendly delays
+* **Performance Optimized**: Batch processing and server-friendly delays
 * **Internationalization Ready**: Full i18n support with translation files
-* **Clean Uninstall**: Removes all plugin data when uninstalled
+* **Clean Uninstall**: Leaves generated coupons intact so active promotions are not broken
 
 Perfect for:
-* Promotional campaigns with product-specific discounts
+* Promotional campaigns with product-specific free gifts
 * Bulk coupon creation for marketing events
 * Educational platforms offering course-specific discounts
 * E-commerce stores needing organized coupon management
@@ -46,17 +47,17 @@ This plugin is built with security as the top priority, implementing multiple la
 2. Upload the plugin files to the `/wp-content/plugins/free-gift-bulk-coupon-generator` directory, or install the plugin through the WordPress plugins screen directly.
 3. Activate the plugin through the 'Plugins' screen in WordPress.
 4. Ensure WooCommerce is installed and activated.
-5. Navigate to WooCommerce → Free Gift Bulk Coupons in your WordPress admin.
-6. Select products, set the number of coupons, add a custom prefix, and click "Generate Free Gift Coupons".
+5. Navigate to WooCommerce -> Free Gift Bulk Coupons in your WordPress admin.
+6. Select products, set the number of coupons, optionally add a custom prefix, and click "Generate Free Gift Coupons".
 
 == Frequently Asked Questions ==
 
 = What are the system requirements? =
 
-* WordPress 6.6 or higher
+* WordPress 6.8 or higher
 * WooCommerce plugin installed and activated
 * Free Gift Coupons for WooCommerce plugin (required - purchase at https://woocommerce.com/products/free-gift-coupons/)
-* PHP 7.4 or higher
+* PHP 8.2 or higher
 * Administrator or Shop Manager capabilities
 
 = How many coupons can I generate at once? =
@@ -65,15 +66,15 @@ The plugin allows up to 100 coupons per batch to prevent server timeouts and mai
 
 = Can I customize the coupon codes? =
 
-Yes! You can add a custom prefix to all generated coupon codes. For example, using prefix "SUMMER" will generate codes like "SUMMER_ABC123", "SUMMER_DEF456", etc.
+Yes! You can add a custom prefix to all generated coupon codes. Prefixes are alphanumeric, limited to 8 characters, and are added directly before the random code without a separator.
 
 = Are the generated coupons secure? =
 
-Absolutely. Each coupon code is generated using PHP's cryptographically secure `random_int()` function, ensuring codes are unpredictable and unique.
+Yes. Coupon codes are generated through WordPress's password-generation utility with alphanumeric output, and each generated code is checked for uniqueness before it is saved.
 
-= Can I restrict coupons to specific products? =
+= Which products are included as free gifts? =
 
-Yes, you can select one or more products when generating coupons. The generated coupons will only be valid for the selected products.
+You can select one or more products or variations when generating coupons. Those selected items are stored in the free gift metadata used by the Free Gift Coupons for WooCommerce plugin.
 
 = What discount type is used for generated coupons? =
 
@@ -85,7 +86,7 @@ Yes, the plugin includes a .pot file and is fully prepared for translation into 
 
 = How do I uninstall the plugin? =
 
-Simply deactivate and delete the plugin through the WordPress admin. The plugin includes a clean uninstall process that removes all its data from your database.
+Deactivate and delete the plugin through the WordPress admin. Generated coupons are intentionally left in place because they may still be active on the site.
 
 = Can developers extend the plugin? =
 
@@ -114,18 +115,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 **Added:**
 
-* AJAX batch coupon generation with real-time progress bar — eliminates timeout risks.
-* WooCommerce Select2 AJAX product search — scales to unlimited catalog sizes.
+* AJAX batch coupon generation with real-time progress bar - eliminates timeout risks.
+* WooCommerce Select2 AJAX product search - scales to unlimited catalog sizes.
 * CSS custom properties for all colors.
 * `aria-describedby` attributes on all form fields for accessibility.
 * i18n-safe list formatting with `wp_sprintf()`.
-* All JavaScript strings internationalized via `wp_localize_script()`.
-* Named class constants for all magic numbers.
+* All JavaScript strings provided via `wp_add_inline_script()` configuration data.
+* Named class constants for all important generation limits.
 
 **Changed:**
 
 * Renamed plugin from "WC Free Gift Coupons Bulk Coupon Generator" to "Free Gift Coupons Bulk Coupon Generator". Updated all prefixes from `scg_`/`SCG_` to `fgcbg_`/`FGCBG_`. **Breaking change** for external code using old hooks/filters/constants.
-* Split single-file architecture into `includes/class-fgcbg-plugin.php`, `includes/class-fgcbg-coupon-generator.php`, `includes/class-fgcbg-admin-page.php`.
+* Split single-file architecture into dedicated classes under `includes/`.
 * Modernized JavaScript to ESNext (`const`/`let`, arrow functions, template literals, optional chaining, nullish coalescing).
 * Replaced anonymous hook closures with named methods (unhookable by other plugins).
 * Rewrote CSS with tab indentation, alphabetical property ordering per WordPress Coding Standards.
@@ -133,8 +134,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 **Fixed:**
 
-* CSRF vulnerability in `admin_init()` — now replaced by AJAX `check_ajax_referer()`.
-* XSS in success notice — properly escaped `sprintf()` output.
+* CSRF vulnerability in `admin_init()` - now replaced by AJAX `check_ajax_referer()`.
+* XSS in success notice - properly escaped `sprintf()` output.
 * Parse error from missing `catch` block in `create_single_coupon()`.
 * Error logging now uses `$exception->getMessage()` instead of useless `$exception->getCode()`.
 * Removed all inline styles from PHP and JavaScript.
@@ -190,7 +191,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 = 1.1.0 =
 * **Text Domain Standardization**: Fixed WordPress textdomain to match plugin slug for proper internationalization
 * **Internationalization Compliance**: Updated all translation functions and POT file to use consistent textdomain
-* **Code Quality**: Enhanced code documentation and inline comments for better maintainability  
+* **Code Quality**: Enhanced code documentation and inline comments for better maintainability
 * **WordPress Standards**: Improved compliance with WordPress coding standards and best practices
 * **Coupon Generation**: Restored full character set for coupon codes (all lowercase letters and digits)
 * **File Structure**: Renamed POT file to match WordPress naming conventions
@@ -203,10 +204,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * **Initial Release**: Complete WordPress plugin based on original WooCommerce coupon snippet
 * **Security Features**: CSRF protection, input sanitization, output escaping, rate limiting
 * **Bulk Generation**: Create up to 100 coupons at once with server-friendly processing
-* **Product Selection**: Multi-select dropdown for product-specific coupon restrictions  
+* **Product Selection**: Multi-select dropdown for product-specific coupon restrictions
 * **Custom Prefixes**: Add custom prefixes to organize coupon codes
 * **Admin Interface**: Clean, responsive UI with real-time validation and feedback
-* **Performance**: Transient caching, batch processing, and optimized database queries
+* **Performance**: Batch processing and optimized database queries
 * **Internationalization**: Full i18n support with .pot translation file
 * **Developer Friendly**: Extensive hooks and filters for customization
 * **Clean Uninstall**: Complete data removal when plugin is deleted

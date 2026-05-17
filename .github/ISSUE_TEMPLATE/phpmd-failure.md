@@ -8,7 +8,7 @@ assignees: []
 
 ## PHPMD Code Quality Analysis Failure
 
-The automated PHP Mess Detector (PHPMD) analysis has detected code quality issues in the WooCommerce Free Gift Bulk Coupons Generator plugin.
+The automated PHP Mess Detector (PHPMD) analysis has detected code quality issues in the Free Gift Coupons Bulk Coupon Generator plugin.
 
 ### Details
 
@@ -19,7 +19,7 @@ The automated PHP Mess Detector (PHPMD) analysis has detected code quality issue
 
 ### Next Steps
 
-This issue has been automatically created because the WooCommerce Free Gift Bulk Coupons Generator plugin failed PHPMD code quality analysis. PHPMD detects:
+This issue has been automatically created because the Free Gift Coupons Bulk Coupon Generator plugin failed PHPMD code quality analysis. PHPMD detects:
 
 #### Analyzed Areas
 

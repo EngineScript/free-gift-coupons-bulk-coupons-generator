@@ -8,8 +8,8 @@ This is a WordPress plugin that generates bulk free gift coupon codes for WooCom
 
 - **Name:** Free Gift Coupons Bulk Coupon Generator
 - **Version:** 1.5.1
-- **WordPress Compatibility:** 6.6+
-- **PHP Compatibility:** 7.4+
+- **WordPress Compatibility:** 6.8+
+- **PHP Compatibility:** 8.2+
 - **WooCommerce Compatibility:** 5.0+
 - **License:** GPL-3.0-or-later
 - **Text Domain:** free-gift-coupons-bulk-coupons-generator
@@ -22,24 +22,30 @@ This is a WordPress plugin that generates bulk free gift coupon codes for WooCom
 The plugin uses a singleton orchestrator that delegates to dedicated classes:
 
 ```php
-FGCBG_Plugin          — Singleton, hooks, AJAX handler, asset enqueue
-FGCBG_Coupon_Generator — Coupon creation, code generation, batch processing
-FGCBG_Admin_Page       — Admin page rendering (form, sidebar, footer)
+FGCBG_Plugin           - Plugin orchestration and admin menu hooks
+FGCBG_Dependencies     - WooCommerce and free gift coupon type checks
+FGCBG_Admin_Assets     - Admin asset loading and script data
+FGCBG_Ajax_Handler     - Coupon generation AJAX request handling
+FGCBG_Coupon_Generator - Coupon creation, code generation, batch processing
+FGCBG_Admin_Page       - Admin page rendering (form, sidebar, footer)
 ```
 
 ### File Structure
 
 ```text
-free-gift-bulk-coupon-generator.php    — Plugin entry point, constants, require_once
+free-gift-bulk-coupon-generator.php    - Plugin entry point, constants, require_once
 includes/
-    class-fgcbg-plugin.php             — Main plugin class (singleton, hooks, AJAX)
-    class-fgcbg-coupon-generator.php   — Coupon generation logic
-    class-fgcbg-admin-page.php         — Admin page rendering
+    class-fgcbg-admin-assets.php       - Admin asset loading and script data
+    class-fgcbg-admin-page.php         - Admin page rendering
+    class-fgcbg-ajax-handler.php       - AJAX request handling
+    class-fgcbg-coupon-generator.php   - Coupon generation logic
+    class-fgcbg-dependencies.php       - Dependency checks
+    class-fgcbg-plugin.php             - Main plugin orchestration
 assets/
-    css/admin.css                      — Admin interface styles (CSS custom properties, tab indentation)
-    js/admin.js                        — Admin interface JavaScript (ESNext, AJAX batch generation)
+    css/admin.css                      - Admin interface styles (CSS custom properties, tab indentation)
+    js/admin.js                        - Admin interface JavaScript (ESNext, AJAX batch generation)
 languages/
-    Free-Gift-Coupons-Bulk-Coupons-Generator.pot — Translation template
+    free-gift-coupons-bulk-coupons-generator.pot - Translation template
 ```
 
 ### Plugin Initialization
@@ -69,15 +75,15 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 - Use `current_user_can( 'manage_woocommerce' )` for capability checks
 - AJAX: `check_ajax_referer()` for nonce verification, `wp_send_json_error()`/`wp_send_json_success()` for responses
 - Validate product IDs and coupon parameters
-- Use rate limiting to prevent coupon generation abuse
+- Bound coupon generation counts to prevent resource abuse
 
 ### WordPress & WooCommerce Integration
 
 - **Hooks:** Named methods via `add_action()` / `add_filter()` (no anonymous closures)
 - **WooCommerce API:** `WC_Coupon` class for coupon creation, `wc_get_product()` for validation
-- **Product Search:** WooCommerce Select2 AJAX search (`wc-product-search` class, `wc-enhanced-selects` dependency)
+- **Product Search:** WooCommerce Select2 AJAX search (`wc-product-search` class, `wc-enhanced-select` dependency)
 - **Database:** WordPress/WooCommerce APIs only, no direct SQL
-- **Internationalization:** All strings use `__()`, `esc_html__()`, `esc_html_e()`; JS strings via `wp_localize_script()`
+- **Internationalization:** All strings use `__()`, `esc_html__()`, `esc_html_e()`; JS strings via `wp_add_inline_script()` data
 - **Admin Interface:** Integrated into WooCommerce admin menu
 
 ## Plugin-Specific Context
@@ -86,15 +92,16 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 #### AJAX Batch Coupon Generation
 
-- **Product Selection:** WooCommerce Select2 AJAX search — scales to unlimited products
+- **Product Selection:** WooCommerce Select2 AJAX search - scales to unlimited products
 - **Batch Processing:** JS sends AJAX requests in batches of 10; progress bar updates between batches
-- **AJAX Handler:** `wp_ajax_fgcbg_generate_batch` — validates input, delegates to `FGCBG_Coupon_Generator::generate_coupons()`
-- **Progress Feedback:** Real-time progress bar with coupon count; no timeout risk
+- **AJAX Handler:** `wp_ajax_fgcbg_generate_batch` - validates input and delegates to `FGCBG_Coupon_Generator::generate_coupon_batch()`
+- **Progress Feedback:** Real-time progress bar with coupon count to reduce timeout risk
+- **Generated Code Output:** Shows generated coupon codes one per line and allows `.txt` download
 - **Free Gift Integration:** Creates coupons compatible with Free Gift Coupons plugin
 
 #### Coupon Security Features
 
-- **Unique Code Generation:** Cryptographically secure `random_int()` for coupon codes
+- **Unique Code Generation:** WordPress alphanumeric password generation with WooCommerce duplicate checks
 - **Input Validation:** Comprehensive sanitization of all coupon parameters
 - **Capability Checks:** `manage_woocommerce` permission required for all operations
 - **Nonce Verification:** AJAX nonce via `check_ajax_referer()`
@@ -103,7 +110,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 - **AJAX Batching:** Generates coupons in small batches (10 at a time) to avoid timeouts
 - **Server-Relief Delays:** Micro-delays every 50 coupons to prevent resource exhaustion
-- **WooCommerce AJAX Search:** No pre-loaded product lists — search-as-you-type via WooCommerce built-in
+- **WooCommerce AJAX Search:** No pre-loaded product lists - search-as-you-type via WooCommerce built-in
 - **Database Efficiency:** WooCommerce API usage for all coupon creation
 
 #### Admin Interface
@@ -118,22 +125,22 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 - **WC_Coupon API:** Proper use of WooCommerce coupon creation methods
 - **Product Validation:** Verification of product existence via `wc_get_product()`
-- **Meta Data Structure:** Correct `_wc_free_gift_coupon_data` format for Free Gift Coupons compatibility
+- **Metadata Structure:** Correct `_wc_free_gift_coupon_data` format for Free Gift Coupons compatibility
 - **Coupon Properties:** Expiration, usage limits, individual use, discount type settings
 
 ### Hooks and Filters
 
 #### Actions
 
-- `fgcbg_before_coupon_generation` — Fired before coupon generation starts
-- `fgcbg_after_coupon_generation` — Fired after coupon generation completes
-- `fgcbg_coupon_generated` — Fired after each individual coupon is created
+- `fgcbg_before_coupon_generation` - Fired before coupon generation starts
+- `fgcbg_after_coupon_generation` - Fired after coupon generation completes
+- `fgcbg_coupon_generated` - Fired after each individual coupon is created
 
 #### Filters
 
-- `fgcbg_coupon_code_length` — Filter the length of generated coupon codes (default: 12, bounds: 8–32)
-- `fgcbg_coupon_expiry_days` — Filter the number of days until coupon expiry (default: 365)
-- `fgcbg_max_coupons_per_batch` — Filter the maximum number of coupons per batch (default: 100)
+- `fgcbg_coupon_code_length` - Filter the random portion length of generated coupon codes (default: 8, bounds: 8-24)
+- `fgcbg_coupon_expiry_days` - Filter the number of days until coupon expiry (default: 365)
+- `fgcbg_max_coupons_per_batch` - Filter the maximum number of coupons per batch (default: 100)
 
 ## Development Standards
 
@@ -149,7 +156,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 - ESNext (const/let, arrow functions, template literals, optional chaining, nullish coalescing)
 - jQuery for DOM manipulation (WooCommerce admin dependency)
-- All user-facing strings from `wp_localize_script()` — never hardcoded
+- All user-facing strings from `wp_add_inline_script()` data - never hardcoded
 - IIFE scope with `'use strict'`
 
 ### PHP Standards
@@ -168,6 +175,6 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 ### Testing & Quality Assurance
 
-- **PHPStan Level 5:** Static analysis with WooCommerce stubs
+- **PHPStan Level 6:** Static analysis with WooCommerce stubs
 - **PHPCS WordPress Standards:** Full WordPress and WooCommerce coding standards
 - **PHPMD:** Code quality and complexity management

@@ -1,6 +1,7 @@
 # This workflow automatically posts a guidance comment on new pull requests.
-# It encourages contributors to follow best practices and provides helpful information
-# for maintainers to review and test changes more efficiently.
+# It welcomes contributors and provides a brief message to acknowledge their
+# contribution to Free Gift Coupons Bulk Coupon Generator.
+# The workflow is triggered whenever a new pull request is opened.
 
 name: New Pull Request Guidance
 
@@ -16,22 +17,22 @@ jobs:
       pull-requests: write
     steps:
       - name: Post guidance comment on new PR
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            Thanks for contributing to WooCommerce Free Gift Bulk Coupons Generator! 🎉
-            
+            Thanks for contributing to Free Gift Coupons Bulk Coupon Generator!
+
             **Before we review:**
-            - [ ] Have you tested your changes with WordPress 6.6+ and WooCommerce 5.0+?
-            - [ ] Are your changes compatible with PHP 7.4+?
+            - [ ] Have you tested your changes with WordPress 6.8+?
+            - [ ] Are your changes compatible with PHP 8.2+?
             - [ ] Have you followed WordPress coding standards?
             - [ ] Did you update the CHANGELOG.md if needed?
-            
+
             **Security Reminder:**
-            This plugin handles sensitive coupon generation, so please ensure:
+            This plugin creates WooCommerce coupons and stores free gift metadata, so please ensure:
             - All user inputs are properly sanitized
             - All outputs are properly escaped
             - No security vulnerabilities are introduced
-            
-            We'll review your PR soon! 🚀
+
+            We'll review your PR soon.

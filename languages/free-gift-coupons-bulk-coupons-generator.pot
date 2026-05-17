@@ -80,7 +80,7 @@ msgstr ""
 msgid "Coupon Prefix"
 msgstr ""
 
-msgid "Optional prefix for coupon codes (e.g. GIFT-ABC123DEF456)."
+msgid "Optional prefix for coupon codes (e.g. GIFTABC123DEF456)."
 msgstr ""
 
 msgid "Discount Type"

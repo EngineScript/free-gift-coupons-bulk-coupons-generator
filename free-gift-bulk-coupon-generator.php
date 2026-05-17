@@ -5,9 +5,9 @@
  * Description: Generate bulk free gift coupon codes that work with the Free Gift Coupons for WooCommerce plugin. Creates coupons with the proper data structure for free gift functionality.
  * Version: 1.5.1
  * Author: EngineScript
- * Requires at least: 6.6
+ * Requires at least: 6.8
  * Tested up to: 6.9
- * Requires PHP: 7.4
+ * Requires PHP: 8.2
  * License: GPL-3.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: free-gift-coupons-bulk-coupons-generator
@@ -32,7 +32,10 @@ if ( ! defined( 'FGCBG_PLUGIN_VERSION' ) ) {
 }
 
 // Load class files.
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-dependencies.php';
 require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-coupon-generator.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-ajax-handler.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-admin-assets.php';
 require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-admin-page.php';
 require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-plugin.php';
 
