@@ -18,7 +18,7 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_URL' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_PATH' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_VERSION' ) );
-		$this->assertSame( '1.5.1', FGCBG_PLUGIN_VERSION );
+		$this->assertSame( '1.6.0', FGCBG_PLUGIN_VERSION );
 		$this->assertTrue( fgcbg_is_loaded() );
 	}
 

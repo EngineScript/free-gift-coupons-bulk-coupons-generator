@@ -14,7 +14,7 @@ if ( ! defined( 'FGCBG_PLUGIN_PATH' ) ) {
 }
 
 if ( ! defined( 'FGCBG_PLUGIN_VERSION' ) ) {
-	define( 'FGCBG_PLUGIN_VERSION', '1.5.1' );
+	define( 'FGCBG_PLUGIN_VERSION', '1.6.0' );
 }
 
 if ( ! defined( 'DAY_IN_SECONDS' ) ) {
