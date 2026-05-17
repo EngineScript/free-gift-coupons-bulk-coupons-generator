@@ -14,7 +14,7 @@ We release security updates for the latest major version of this plugin. Please 
 If you discover a security vulnerability in this plugin, please follow these steps:
 
 1. **Do not open a public issue.**
-2. Email us at [peter@visistruct.com](mailto:peter@visistruct.com) with details of the vulnerability.
+2. Contact the maintainers through the repository's private security reporting channel with details of the vulnerability.
 3. Include:
    - A clear description of the issue
    - Steps to reproduce (if applicable)
@@ -25,7 +25,7 @@ We will acknowledge your report within 5 business days and work with you to reso
 
 ## Security Best Practices
 
-- Always keep this plugin, WordPress, WooCommerce, and dependencies up to date.
+- Keep this plugin, WordPress, WooCommerce, and dependencies up to date after testing compatibility, or document and escalate any temporary deferral.
 - Use strong, unique passwords for all accounts.
 - Restrict SSH and admin access to trusted IPs.
 - Regularly back up your data.

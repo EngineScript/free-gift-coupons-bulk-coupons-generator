@@ -90,7 +90,7 @@ free-gift-bulk-coupon-generator/
 |   `-- js/
 |       `-- admin.js                        # Admin interface JavaScript
 |-- languages/
-|   `-- free-gift-coupons-bulk-coupons-generator.pot
+|   `-- free-gift-bulk-coupon-generator.pot
 `-- README.md
 ```
 

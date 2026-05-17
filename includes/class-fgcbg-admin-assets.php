@@ -98,24 +98,24 @@ final class FGCBG_Admin_Assets {
 			'max_code_length'        => FGCBG_Coupon_Generator::MAX_CODE_LENGTH,
 			'nonce'                  => wp_create_nonce( 'fgcbg_ajax_nonce' ),
 			/* translators: %d is the number of coupons to be generated. */
-			'confirm_large_batch'    => __( 'You are about to generate %d coupons. This may take a while and could potentially timeout depending on your server settings. Do you want to continue?', 'free-gift-coupons-bulk-coupons-generator' ),
+			'confirm_large_batch'    => __( 'You are about to generate %d coupons. This may take a while and could potentially timeout depending on your server settings. Do you want to continue?', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d is the maximum number of coupons that can be generated in one run. */
-			'max_coupons_warning'    => __( 'Maximum %d coupons allowed', 'free-gift-coupons-bulk-coupons-generator' ),
-			'many_coupons_warning'   => __( 'Generating many coupons may take some time and could timeout', 'free-gift-coupons-bulk-coupons-generator' ),
-			'select_product'         => __( 'Please select at least one product.', 'free-gift-coupons-bulk-coupons-generator' ),
-			'invalid_coupon_count'   => __( 'Please enter a valid number of coupons (minimum 1).', 'free-gift-coupons-bulk-coupons-generator' ),
+			'max_coupons_warning'    => __( 'Maximum %d coupons allowed', 'free-gift-bulk-coupon-generator' ),
+			'many_coupons_warning'   => __( 'Generating many coupons may take some time and could timeout', 'free-gift-bulk-coupon-generator' ),
+			'select_product'         => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ),
+			'invalid_coupon_count'   => __( 'Please enter a valid number of coupons (minimum 1).', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d is the maximum number of coupons that can be generated in one run. */
-			'max_coupon_count'       => __( 'Maximum number of coupons is %d.', 'free-gift-coupons-bulk-coupons-generator' ),
+			'max_coupon_count'       => __( 'Maximum number of coupons is %d.', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d is the maximum coupon prefix length. */
-			'prefix_too_long'        => __( 'Coupon prefix must be %d characters or less.', 'free-gift-coupons-bulk-coupons-generator' ),
+			'prefix_too_long'        => __( 'Coupon prefix must be %d characters or less.', 'free-gift-bulk-coupon-generator' ),
 			/* translators: 1: minimum random code length, 2: maximum random code length. */
-			'code_length_invalid'    => __( 'Please enter a random code length between %1$d and %2$d characters.', 'free-gift-coupons-bulk-coupons-generator' ),
-			'generation_in_progress' => __( 'Coupon generation is in progress. Are you sure you want to leave this page?', 'free-gift-coupons-bulk-coupons-generator' ),
+			'code_length_invalid'    => __( 'Please enter a random code length between %1$d and %2$d characters.', 'free-gift-bulk-coupon-generator' ),
+			'generation_in_progress' => __( 'Coupon generation is in progress. Are you sure you want to leave this page?', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %1$d is the current coupon count, %2$d is the total number of coupons to generate. */
-			'generating_progress'    => __( 'Generating coupons: %1$d of %2$d', 'free-gift-coupons-bulk-coupons-generator' ),
+			'generating_progress'    => __( 'Generating coupons: %1$d of %2$d', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d is the number of successfully generated coupons. */
-			'generation_complete'    => __( 'Successfully generated %d coupons.', 'free-gift-coupons-bulk-coupons-generator' ),
-			'generation_failed'      => __( 'Failed to generate coupons. Please try again.', 'free-gift-coupons-bulk-coupons-generator' ),
+			'generation_complete'    => __( 'Successfully generated %d coupons.', 'free-gift-bulk-coupon-generator' ),
+			'generation_failed'      => __( 'Failed to generate coupons. Please try again.', 'free-gift-bulk-coupon-generator' ),
 		);
 	}
 }

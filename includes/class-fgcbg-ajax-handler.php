@@ -63,13 +63,13 @@ final class FGCBG_Ajax_Handler {
 		check_ajax_referer( 'fgcbg_ajax_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-coupons-bulk-coupons-generator' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-bulk-coupon-generator' ) ), 403 );
 		}
 
 		if ( ! FGCBG_Dependencies::has_free_gift_coupon_type() ) {
 			wp_send_json_error(
 				array(
-					'message' => __( 'Free Gift Coupons for WooCommerce must be active before generating free gift coupons.', 'free-gift-coupons-bulk-coupons-generator' ),
+					'message' => __( 'Free Gift Coupons for WooCommerce must be active before generating free gift coupons.', 'free-gift-bulk-coupon-generator' ),
 				),
 				400
 			);
@@ -81,11 +81,11 @@ final class FGCBG_Ajax_Handler {
 		$code_length   = $this->get_code_length();
 
 		if ( empty( $product_ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'Please select at least one product.', 'free-gift-coupons-bulk-coupons-generator' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ) ), 400 );
 		}
 
 		if ( ! $this->current_user_can_edit_products( $product_ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons for one or more selected products.', 'free-gift-coupons-bulk-coupons-generator' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons for one or more selected products.', 'free-gift-bulk-coupon-generator' ) ), 403 );
 		}
 
 		$result = $this->generator->generate_coupon_batch( $product_ids, $batch_size, $coupon_prefix, $code_length );
@@ -128,7 +128,7 @@ final class FGCBG_Ajax_Handler {
 			return $fallback;
 		}
 
-		return sanitize_text_field( (string) $value );
+		return sanitize_text_field( $value );
 	}
 
 	/**

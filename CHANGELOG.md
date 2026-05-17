@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Text Domain Slug**: Updated the plugin header, translation calls, PHPCS configuration, and POT file to use `free-gift-bulk-coupon-generator`, matching the main plugin file slug expected by WordPress Plugin Check.
 - **CSRF in `admin_init()`**: Restored nonce verification before processing form data to prevent CSRF. The v1.5.1 removal was incorrect - without it, `$_POST` is accessed before any security check. (Now replaced entirely by AJAX `check_ajax_referer()`.)
 - **XSS in Success Notice**: Wrapped `sprintf()` output in `esc_html()` (using `__()` instead of `esc_html__()` for the format string) to properly escape the final rendered output.
 - **Coupon Generation Parse Error**: Restored a missing `catch` block and success return path in `create_single_coupon()` to fix `Cannot use try without catch or finally`.

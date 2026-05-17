@@ -44,8 +44,8 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers responsible for enforcement at
-peter@visistruct.com.
+reported to the project maintainers responsible for enforcement through the
+repository's maintainer contact channel.
 
 Project maintainers will review and investigate all complaints, and will
 respond in a way that they deem appropriate to the circumstances.

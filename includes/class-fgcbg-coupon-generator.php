@@ -102,6 +102,7 @@ final class FGCBG_Coupon_Generator {
 	 * @param string         $prefix            Coupon prefix.
 	 * @param int|null       $code_length       Generated random code length, excluding the optional prefix.
 	 * @return int Number of coupons generated.
+	 * @psalm-api
 	 */
 	public function generate_coupons( array|int $product_ids, int $number_of_coupons, string $prefix = '', ?int $code_length = null ): int {
 		$result = $this->generate_coupon_batch( $product_ids, $number_of_coupons, $prefix, $code_length );
@@ -327,7 +328,7 @@ final class FGCBG_Coupon_Generator {
 		$coupon->set_description(
 			sprintf(
 				/* translators: 1: Product names, 2: Current batch number, 3: Total number of coupons */
-				__( 'Auto-generated coupon for %1$s (Batch %2$d/%3$d)', 'free-gift-coupons-bulk-coupons-generator' ),
+				__( 'Auto-generated coupon for %1$s (Batch %2$d/%3$d)', 'free-gift-bulk-coupon-generator' ),
 				$products_text,
 				$current_number,
 				$params['count']
@@ -384,11 +385,11 @@ final class FGCBG_Coupon_Generator {
 			wc_get_logger()->error(
 				sprintf(
 					/* translators: 1: Exception class name, 2: Error message */
-					__( 'FGCBG Error generating coupon [%1$s]: %2$s', 'free-gift-coupons-bulk-coupons-generator' ),
+					__( 'FGCBG Error generating coupon [%1$s]: %2$s', 'free-gift-bulk-coupon-generator' ),
 					get_class( $exception ),
 					$exception->getMessage()
 				),
-				array( 'source' => 'free-gift-coupons-bulk-coupons-generator' )
+				array( 'source' => 'free-gift-bulk-coupon-generator' )
 			);
 		}
 	}

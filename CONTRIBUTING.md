@@ -69,7 +69,7 @@ This project adheres to **WordPress Coding Standards**:
 3. **Internationalization**: All user-facing strings must be translatable
 
    - Use `__()`, `_e()`, `esc_html__()`, `esc_html_e()` functions
-   - Text domain: `free-gift-coupons-bulk-coupons-generator`
+   - Text domain: `free-gift-bulk-coupon-generator`
 
 4. **Accessibility**: Follow WCAG guidelines
 
@@ -120,7 +120,7 @@ free-gift-bulk-coupon-generator/
 |-- phpstan.neon                        # PHPStan configuration
 |-- phpmd.xml                           # PHPMD configuration
 |-- languages/                          # Translation files
-|   `-- free-gift-coupons-bulk-coupons-generator.pot
+|   `-- free-gift-bulk-coupon-generator.pot
 `-- .github/                            # GitHub workflows
     `-- workflows/
 ```
@@ -273,7 +273,7 @@ When releasing new versions, update these files:
 - `README.md`
 - `readme.txt`
 - `CHANGELOG.md`
-- `languages/free-gift-coupons-bulk-coupons-generator.pot`
+- `languages/free-gift-bulk-coupon-generator.pot`
 
 ### Semantic Versioning
 

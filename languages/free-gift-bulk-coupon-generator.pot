@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: WP-CLI 2.4.0\n"
-"X-Domain: free-gift-coupons-bulk-coupons-generator\n"
+"X-Domain: free-gift-bulk-coupon-generator\n"
 
 msgid "Free Gift Coupons Bulk Coupon Generator requires WooCommerce to be installed and active. You can download %s here."
 msgstr ""

@@ -116,7 +116,7 @@ final class FGCBG_Plugin {
 	public function woocommerce_missing_notice(): void {
 		$message = sprintf(
 			/* translators: %s: WooCommerce download link */
-			esc_html__( 'Free Gift Coupons Bulk Coupon Generator requires WooCommerce to be installed and active. You can download %s here.', 'free-gift-coupons-bulk-coupons-generator' ),
+			esc_html__( 'Free Gift Coupons Bulk Coupon Generator requires WooCommerce to be installed and active. You can download %s here.', 'free-gift-bulk-coupon-generator' ),
 			'<a href="' . esc_url( 'https://woocommerce.com/' ) . '" target="_blank" rel="noopener noreferrer">WooCommerce</a>'
 		);
 
@@ -131,7 +131,7 @@ final class FGCBG_Plugin {
 	 */
 	public function free_gift_coupons_missing_notice(): void {
 		echo '<div class="notice notice-error"><p>';
-		esc_html_e( 'Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available.', 'free-gift-coupons-bulk-coupons-generator' );
+		esc_html_e( 'Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available.', 'free-gift-bulk-coupon-generator' );
 		echo '</p></div>';
 	}
 
@@ -144,8 +144,8 @@ final class FGCBG_Plugin {
 	public function add_admin_menu(): void {
 		add_submenu_page(
 			'woocommerce',
-			__( 'Free Gift Bulk Coupons', 'free-gift-coupons-bulk-coupons-generator' ),
-			__( 'Coupon Generator', 'free-gift-coupons-bulk-coupons-generator' ),
+			__( 'Free Gift Bulk Coupons', 'free-gift-bulk-coupon-generator' ),
+			__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
 			'manage_woocommerce',
 			'free-gift-bulk-coupon-generator',
 			array( $this->admin_page, 'render' )

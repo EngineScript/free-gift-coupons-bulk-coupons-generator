@@ -7,9 +7,7 @@
  */
 /* eslint-enable jsdoc/check-tag-names */
 
-( function ( $ ) {
-	'use strict';
-
+( ( $ ) => {
 	/** Runtime configuration injected with wp_add_inline_script(). */
 	const i18n = window.fgcbg_i18n ?? {};
 	const configuredBatchSize = parseInt( i18n.batch_size ?? 10, 10 );
@@ -46,7 +44,7 @@
 	function buildWarningSpan( modifier, text ) {
 		return createElement( 'span', {
 			id: 'coupon-count-warning',
-			class: 'fgcbg-coupon-count-warning is-' + modifier,
+			class: `fgcbg-coupon-count-warning is-${ modifier }`,
 		} ).text( text );
 	}
 
@@ -183,7 +181,7 @@
 				const batchSize = Math.min( BATCH_SIZE, remaining );
 
 				sendBatchRequest( batchSize )
-					.done( function ( response ) {
+					.done( ( response ) => {
 						if ( response?.success ) {
 							generated += response.data?.generated ?? 0;
 							if ( Array.isArray( response.data?.codes ) ) {
@@ -199,7 +197,7 @@
 						remaining -= batchSize;
 
 						const pct = Math.round( ( generated / total ) * 100 );
-						$bar.css( 'width', pct + '%' ).attr( 'aria-valuenow', pct );
+						$bar.css( 'width', `${ pct }%` ).attr( 'aria-valuenow', pct );
 						$text.text(
 							String( i18n.generating_progress ?? '' )
 								.replace( '%1$d', String( generated ) )
@@ -208,7 +206,7 @@
 
 						processNextBatch();
 					} )
-					.fail( function () {
+					.fail( () => {
 						FGCBG_Admin.showErrorMessage( i18n.generation_failed ?? '' );
 						onComplete();
 					} );
@@ -251,7 +249,7 @@
 
 			$( '#coupon-count-warning' ).remove();
 
-			if ( isNaN( num ) || num < 1 ) {
+			if ( Number.isNaN( num ) || num < 1 ) {
 				$input.val( '1' );
 				return;
 			}
@@ -326,7 +324,7 @@
 			const raw = $( '#number_of_coupons' ).val();
 			const count = parseInt( raw, 10 );
 
-			if ( ! raw || isNaN( count ) || count < 1 ) {
+			if ( ! raw || Number.isNaN( count ) || count < 1 ) {
 				errors.push( i18n.invalid_coupon_count ?? 'Please enter a valid number of coupons (minimum 1).' );
 				return false;
 			}
@@ -366,7 +364,7 @@
 			const raw = String( $input.val() ).replace( /\D/g, '' );
 			let num = parseInt( raw, 10 );
 
-			if ( isNaN( num ) || num < min ) {
+			if ( Number.isNaN( num ) || num < min ) {
 				$input.val( String( min ) );
 				return;
 			}
@@ -390,7 +388,7 @@
 			const raw = $( '#coupon_code_length' ).val();
 			const count = parseInt( raw, 10 );
 
-			if ( ! raw || isNaN( count ) || count < min || count > max ) {
+			if ( ! raw || Number.isNaN( count ) || count < min || count > max ) {
 				errors.push(
 					String( i18n.code_length_invalid ?? 'Please enter a random code length between %1$d and %2$d characters.' )
 						.replace( '%1$d', String( min ) )
@@ -408,7 +406,7 @@
 				return;
 			}
 
-			const blob = new Blob( [ codes + '\n' ], { type: 'text/plain;charset=utf-8' } );
+			const blob = new Blob( [ `${ codes }\n` ], { type: 'text/plain;charset=utf-8' } );
 			const url = window.URL.createObjectURL( blob );
 			const link = document.createElement( 'a' );
 
@@ -475,4 +473,4 @@
 	// Reset loading state on fresh page load (back-button / refresh edge case).
 	$( '.fgcbg-form' ).removeClass( 'loading' );
 	$( '.button-primary' ).prop( 'disabled', false );
-}( jQuery ) );
+} )( jQuery );
