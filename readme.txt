@@ -111,6 +111,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 == Changelog ==
 
+= Unreleased =
+
+**Changed:**
+
+* Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a modern WordPress 6.8+ browser baseline.
+* Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script.
+* Hardened runtime JavaScript configuration with a frozen `fgcbgAdminConfig` object and JSON hex escaping.
+* Simplified client-side validation so the first invalid field is tracked through a single validation list.
+
+**Fixed:**
+
+* Removed a useless conditional in admin form validation reported by static analysis.
+
 = 1.6.0 =
 
 **Added:**

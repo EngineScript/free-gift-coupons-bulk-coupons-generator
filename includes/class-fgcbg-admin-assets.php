@@ -58,9 +58,12 @@ final class FGCBG_Admin_Assets {
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
 			FGCBG_PLUGIN_URL . 'assets/js/admin.js',
-			array( 'jquery', 'wc-enhanced-select' ),
+			array( 'wc-enhanced-select' ),
 			FGCBG_PLUGIN_VERSION,
-			true
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
 		);
 
 		wp_enqueue_style(
@@ -70,14 +73,17 @@ final class FGCBG_Admin_Assets {
 			FGCBG_PLUGIN_VERSION
 		);
 
-		$script_data = wp_json_encode( $this->get_script_data() );
+		$script_data = wp_json_encode(
+			$this->get_script_data(),
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+		);
 		if ( false === $script_data ) {
 			$script_data = '{}';
 		}
 
 		wp_add_inline_script(
 			self::SCRIPT_HANDLE,
-			'window.fgcbg_i18n = ' . $script_data . ';',
+			'globalThis.fgcbgAdminConfig = Object.freeze(' . $script_data . ');',
 			'before'
 		);
 	}

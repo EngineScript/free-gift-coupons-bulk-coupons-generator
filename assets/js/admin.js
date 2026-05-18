@@ -1,273 +1,332 @@
-/* eslint-disable jsdoc/check-tag-names */
 /**
  * Free Gift Coupons Bulk Generator - Admin JavaScript.
  *
- * Modern ESNext code. WordPress 6.8+ targets browsers with full ES6+ support.
- * All user-facing strings are sourced from `fgcbg_i18n`.
+ * Modern browser code for the WordPress 6.8+ admin. Request-specific data is
+ * injected before this file as `fgcbgAdminConfig`.
  */
-/* eslint-enable jsdoc/check-tag-names */
 
-( ( $ ) => {
-	/** Runtime configuration injected with wp_add_inline_script(). */
-	const i18n = window.fgcbg_i18n ?? {};
-	const configuredBatchSize = parseInt( i18n.batch_size ?? 10, 10 );
-	const BATCH_SIZE = Number.isNaN( configuredBatchSize ) || configuredBatchSize < 1 ? 10 : configuredBatchSize;
-	const configuredMaxCoupons = parseInt( i18n.max_coupon_count_value ?? 100, 10 );
-	const MAX_COUPON_COUNT = Number.isNaN( configuredMaxCoupons ) || configuredMaxCoupons < 1 ? 100 : configuredMaxCoupons;
-	const configuredMaxPrefix = parseInt( i18n.max_prefix_length ?? 8, 10 );
-	const MAX_PREFIX_LENGTH = Number.isNaN( configuredMaxPrefix ) || configuredMaxPrefix < 1 ? 8 : configuredMaxPrefix;
+( () => {
+	'use strict';
+
+	const config = Object.freeze( globalThis.fgcbgAdminConfig ?? {} );
+
+	const selectors = Object.freeze( {
+		codeLength: '#coupon_code_length',
+		couponCount: '#number_of_coupons',
+		downloadButton: '#fgcbg-download-codes',
+		form: '.fgcbg-form',
+		generatedCodes: '#fgcbg-generated-codes',
+		prefix: '#coupon_prefix',
+		productIds: '#fgcbg_product_ids',
+		progress: '#fgcbg-progress',
+		progressBar: '#fgcbg-progress-bar',
+		progressText: '#fgcbg-progress-text',
+		results: '#fgcbg-results',
+		submitButton: '.button-primary',
+		warning: '#coupon-count-warning',
+	} );
+
+	const toPositiveInteger = ( value, fallback ) => {
+		const parsed = Number.parseInt( value ?? fallback, 10 );
+
+		return Number.isNaN( parsed ) || parsed < 1 ? fallback : parsed;
+	};
+
+	const message = ( key, fallback = '' ) => String( config[ key ] ?? fallback );
+
+	const formatMessage = ( key, fallback, replacements ) => replacements.reduce(
+		( template, [ placeholder, value ] ) => template.replace( placeholder, String( value ) ),
+		message( key, fallback )
+	);
+
+	const BATCH_SIZE = toPositiveInteger( config.batch_size, 10 );
+	const MAX_COUPON_COUNT = toPositiveInteger( config.max_coupon_count_value, 100 );
+	const MAX_PREFIX_LENGTH = toPositiveInteger( config.max_prefix_length, 8 );
 
 	/**
-	 * Create a jQuery element safely from a static HTML tag string.
+	 * Create an element safely from a static tag name.
 	 *
-	 * @param {string} tag - Tag name (e.g. 'div', 'span').
+	 * @param {string} tag - Tag name.
 	 * @param {Object} attrs - Attribute key/value pairs.
-	 * @returns {jQuery} The new element.
+	 * @returns {HTMLElement} The new element.
 	 */
-	function createElement( tag, attrs ) {
-		// Create element using document.createElement (safe, no string parsing)
-		const domElement = document.createElement( tag );
-		const el = jQuery( domElement );
-		if ( attrs ) {
-			el.attr( attrs );
+	function createElement( tag, attrs = {} ) {
+		const element = document.createElement( tag );
+
+		for ( const [ key, value ] of Object.entries( attrs ) ) {
+			element.setAttribute( key, value );
 		}
-		return el;
+
+		return element;
 	}
 
 	/**
 	 * Build a coupon-count warning span using safe DOM construction.
 	 *
-	 * @param {string} modifier - CSS BEM modifier ('error' or 'caution').
-	 * @param {string} text - Warning message text (escaped via .text()).
-	 * @returns {jQuery} The warning span element.
+	 * @param {string} modifier - CSS BEM modifier.
+	 * @param {string} text - Warning message text.
+	 * @returns {HTMLElement} The warning span element.
 	 */
 	function buildWarningSpan( modifier, text ) {
-		return createElement( 'span', {
-			id: 'coupon-count-warning',
+		const warning = createElement( 'span', {
 			class: `fgcbg-coupon-count-warning is-${ modifier }`,
-		} ).text( text );
-	}
-
-	/**
-	 * Insert a notice element before the form and scroll it into view.
-	 *
-	 * @param {jQuery} $el - The notice element to insert.
-	 */
-	function insertNoticeBeforeForm( $el ) {
-		$el.insertBefore( $( '.fgcbg-form' ) );
-
-		const offset = $el.offset();
-		if ( offset?.top ) {
-			$( 'html, body' ).animate( { scrollTop: Math.max( 0, offset.top - 50 ) }, 300 );
-		}
-	}
-
-	/**
-	 * Send a single batch AJAX request and return the jQuery promise.
-	 *
-	 * @param {number} batchSize - Number of coupons for this batch.
-	 * @returns {Promise} jQuery AJAX promise.
-	 */
-	function sendBatchRequest( batchSize ) {
-		return $.ajax( {
-			url: i18n.ajax_url,
-			type: 'POST',
-			data: {
-				action: 'fgcbg_generate_batch',
-				nonce: i18n.nonce,
-				product_ids: $( '#fgcbg_product_ids' ).val(),
-				batch_size: batchSize,
-				coupon_prefix: $( '#coupon_prefix' ).val(),
-				coupon_code_length: $( '#coupon_code_length' ).val(),
-			},
+			id: 'coupon-count-warning',
 		} );
+
+		warning.textContent = text;
+
+		return warning;
 	}
 
-	/**
-	 * Main admin controller for the coupon generator form.
-	 */
-	const FGCBG_Admin = {
+	class AdminController {
+		constructor() {
+			const form = document.querySelector( selectors.form );
 
-		/**
-		 * Clean a string to uppercase alphanumeric only.
-		 *
-		 * @param {string} value - Raw input value.
-		 * @param {number} maxLength - Maximum output length.
-		 * @returns {string} Cleaned value.
-		 */
-		cleanAlphanumeric( value, maxLength = MAX_PREFIX_LENGTH ) {
-			return String( value )
-				.replace( /[^a-zA-Z0-9]/g, '' )
-				.toUpperCase()
-				.slice( 0, maxLength );
-		},
+			this.elements = Object.freeze( {
+				codeLength: document.querySelector( selectors.codeLength ),
+				couponCount: document.querySelector( selectors.couponCount ),
+				downloadButton: document.querySelector( selectors.downloadButton ),
+				form,
+				generatedCodes: document.querySelector( selectors.generatedCodes ),
+				prefix: document.querySelector( selectors.prefix ),
+				products: document.querySelector( selectors.productIds ),
+				progress: document.querySelector( selectors.progress ),
+				progressBar: document.querySelector( selectors.progressBar ),
+				progressText: document.querySelector( selectors.progressText ),
+				results: document.querySelector( selectors.results ),
+				submitButton: form?.querySelector( selectors.submitButton ) ?? null,
+			} );
+		}
 
 		/** Bootstrap all event bindings. */
 		init() {
-			this.bindEvents();
-			this.initFormValidation();
-		},
-
-		/** Attach DOM event handlers. */
-		bindEvents() {
-			$( '.fgcbg-form' ).on( 'submit', this.handleFormSubmission );
-			$( '#coupon_prefix' ).on( 'input', this.formatPrefix );
-			$( '#number_of_coupons' ).on( 'input', this.validateNumberInput );
-			$( '#coupon_code_length' ).on( 'input', this.validateCodeLengthInput );
-			$( '#fgcbg-download-codes' ).on( 'click', this.downloadGeneratedCodes );
-		},
-
-		/**
-		 * Handle form submission - validate, confirm large batches, run AJAX generation.
-		 *
-		 * @param {Event} e - Submit event.
-		 */
-		handleFormSubmission( e ) {
-			e.preventDefault();
-
-			if ( ! FGCBG_Admin.validateForm() ) {
+			if ( ! this.elements.form ) {
 				return;
 			}
 
-			const total = parseInt( $( '#number_of_coupons' ).val(), 10 );
+			this.bindEvents();
+			this.initFormValidation();
+			this.resetLoadingState();
+		}
+
+		/** Attach DOM event handlers. */
+		bindEvents() {
+			this.elements.form.addEventListener( 'submit', ( event ) => this.handleFormSubmission( event ) );
+			this.elements.prefix?.addEventListener( 'input', () => this.formatPrefix() );
+			this.elements.couponCount?.addEventListener( 'input', () => this.validateNumberInput() );
+			this.elements.codeLength?.addEventListener( 'input', () => this.validateCodeLengthInput() );
+			this.elements.downloadButton?.addEventListener( 'click', () => this.downloadGeneratedCodes() );
+			globalThis.addEventListener( 'beforeunload', ( event ) => this.warnBeforeUnload( event ) );
+		}
+
+		/**
+		 * Handle form submission: validate, confirm large batches, run AJAX generation.
+		 *
+		 * @param {SubmitEvent} event - Submit event.
+		 * @returns {void}
+		 */
+		handleFormSubmission( event ) {
+			event.preventDefault();
+
+			if ( ! this.validateForm() ) {
+				return;
+			}
+
+			const total = Number.parseInt( this.elements.couponCount.value, 10 );
 
 			if ( total > 25 ) {
-				const message = String( i18n.confirm_large_batch ?? '' ).replace( '%d', String( total ) );
+				const confirmation = formatMessage( 'confirm_large_batch', '', [
+					[ '%d', total ],
+				] );
 
-				if ( ! confirm( message ) ) { // eslint-disable-line no-alert
+				// eslint-disable-next-line no-alert
+				if ( ! globalThis.confirm( confirmation ) ) {
 					return;
 				}
 			}
 
-			FGCBG_Admin.runBatchGeneration( total );
-		},
+			void this.runBatchGeneration( total );
+		}
 
 		/**
 		 * Run AJAX batch coupon generation with progress feedback.
-		 * Uses recursive callbacks instead of await-in-loop.
 		 *
 		 * @param {number} total - Total coupons to generate.
+		 * @returns {Promise<void>}
 		 */
-		runBatchGeneration( total ) {
-			const $form = $( '.fgcbg-form' );
-			const $submitBtn = $form.find( '.button-primary' );
-			const $progress = $( '#fgcbg-progress' );
-			const $bar = $( '#fgcbg-progress-bar' );
-			const $text = $( '#fgcbg-progress-text' );
-			const $results = $( '#fgcbg-results' );
-			const $codes = $( '#fgcbg-generated-codes' );
-
-			$form.addClass( 'loading' );
-			$submitBtn.prop( 'disabled', true );
-			$progress.prop( 'hidden', false );
-			$results.prop( 'hidden', true );
-			$codes.val( '' );
-			$bar.css( 'width', '0%' ).attr( 'aria-valuenow', '0' );
-			$text.text( '' );
-
+		async runBatchGeneration( total ) {
+			const { form, generatedCodes, progress, progressBar, progressText, results, submitButton } = this.elements;
+			const collectedCodes = [];
 			let generated = 0;
 			let remaining = total;
-			const generatedCodes = [];
 
-			/**
-			 * Process the next batch recursively.
-			 */
-			function processNextBatch() {
-				if ( remaining <= 0 ) {
-					onComplete();
-					return;
-				}
-
-				const batchSize = Math.min( BATCH_SIZE, remaining );
-
-				sendBatchRequest( batchSize )
-					.done( ( response ) => {
-						if ( response?.success ) {
-							generated += response.data?.generated ?? 0;
-							if ( Array.isArray( response.data?.codes ) ) {
-								generatedCodes.push( ...response.data.codes );
-							}
-						} else {
-							const msg = response?.data?.message ?? ( i18n.generation_failed ?? '' );
-							FGCBG_Admin.showErrorMessage( msg );
-							onComplete();
-							return;
-						}
-
-						remaining -= batchSize;
-
-						const pct = Math.round( ( generated / total ) * 100 );
-						$bar.css( 'width', `${ pct }%` ).attr( 'aria-valuenow', pct );
-						$text.text(
-							String( i18n.generating_progress ?? '' )
-								.replace( '%1$d', String( generated ) )
-								.replace( '%2$d', String( total ) )
-						);
-
-						processNextBatch();
-					} )
-					.fail( () => {
-						FGCBG_Admin.showErrorMessage( i18n.generation_failed ?? '' );
-						onComplete();
-					} );
+			form.classList.add( 'loading' );
+			if ( submitButton ) {
+				submitButton.disabled = true;
 			}
+			if ( progress ) {
+				progress.hidden = false;
+			}
+			if ( results ) {
+				results.hidden = true;
+			}
+			if ( generatedCodes ) {
+				generatedCodes.value = '';
+			}
+			this.updateProgress( 0 );
 
-			/**
-			 * Finalize the generation run - restore UI state and show result.
-			 */
-			function onComplete() {
-				$form.removeClass( 'loading' );
-				$submitBtn.prop( 'disabled', false );
+			try {
+				while ( remaining > 0 ) {
+					const batchSize = Math.min( BATCH_SIZE, remaining );
+					const response = await this.sendBatchRequest( batchSize );
+
+					if ( ! response?.success ) {
+						this.showErrorMessage( response?.data?.message ?? message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
+						return;
+					}
+
+					const generatedInBatch = Number.parseInt( response.data?.generated ?? 0, 10 );
+					generated += Number.isNaN( generatedInBatch ) ? 0 : generatedInBatch;
+
+					if ( Array.isArray( response.data?.codes ) ) {
+						collectedCodes.push( ...response.data.codes.map( String ) );
+					}
+
+					remaining -= batchSize;
+					this.updateProgress( Math.min( 100, Math.round( ( generated / total ) * 100 ) ) );
+
+					if ( progressText ) {
+						progressText.textContent = formatMessage( 'generating_progress', '', [
+							[ '%1$d', generated ],
+							[ '%2$d', total ],
+						] );
+					}
+				}
+			} catch ( error ) {
+				this.showErrorMessage( message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
+			} finally {
+				form.classList.remove( 'loading' );
+				if ( submitButton ) {
+					submitButton.disabled = false;
+				}
 
 				if ( generated > 0 ) {
-					$bar.css( 'width', '100%' ).attr( 'aria-valuenow', '100' );
-					$codes.val( generatedCodes.join( '\n' ) );
-					$results.prop( 'hidden', false );
-					const msg = String( i18n.generation_complete ?? '' ).replace( '%d', String( generated ) );
-					FGCBG_Admin.showSuccessMessage( msg );
+					this.updateProgress( 100 );
+					if ( generatedCodes ) {
+						generatedCodes.value = collectedCodes.join( '\n' );
+					}
+					if ( results ) {
+						results.hidden = false;
+					}
+					this.showSuccessMessage( formatMessage( 'generation_complete', '', [
+						[ '%d', generated ],
+					] ) );
 				}
 
-				if ( generated === 0 ) {
-					$progress.prop( 'hidden', true );
+				if ( generated === 0 && progress ) {
+					progress.hidden = true;
 				}
 			}
+		}
 
-			processNextBatch();
-		},
+		/**
+		 * Send a single batch AJAX request.
+		 *
+		 * @param {number} batchSize - Number of coupons for this batch.
+		 * @returns {Promise<Object>} Parsed JSON response.
+		 */
+		async sendBatchRequest( batchSize ) {
+			const ajaxUrl = message( 'ajax_url' );
+
+			if ( ! ajaxUrl ) {
+				throw new Error( 'Missing AJAX URL.' );
+			}
+
+			const body = new URLSearchParams( {
+				action: 'fgcbg_generate_batch',
+				batch_size: String( batchSize ),
+				coupon_code_length: this.elements.codeLength?.value ?? '',
+				coupon_prefix: this.elements.prefix?.value ?? '',
+				nonce: message( 'nonce' ),
+			} );
+
+			for ( const productId of this.getSelectedProductIds() ) {
+				body.append( 'product_ids[]', productId );
+			}
+
+			const response = await fetch( ajaxUrl, {
+				body,
+				credentials: 'same-origin',
+				headers: {
+					Accept: 'application/json',
+				},
+				method: 'POST',
+			} );
+			const payload = await response.json().catch( () => null );
+
+			if ( ! payload ) {
+				throw new Error( `Unexpected AJAX response: ${ response.status }` );
+			}
+
+			return payload;
+		}
 
 		/** Sanitize the coupon prefix input on keystroke. */
 		formatPrefix() {
-			const $input = $( this );
-			$input.val( FGCBG_Admin.cleanAlphanumeric( $input.val(), MAX_PREFIX_LENGTH ) );
-		},
+			const { prefix } = this.elements;
+
+			if ( ! prefix ) {
+				return;
+			}
+
+			prefix.value = String( prefix.value )
+				.replace( /[^a-zA-Z0-9]/g, '' )
+				.toUpperCase()
+				.slice( 0, MAX_PREFIX_LENGTH );
+		}
 
 		/** Validate and clamp the coupon-count input field. */
 		validateNumberInput() {
-			const $input = $( this );
-			const raw = String( $input.val() ).replace( /\D/g, '' );
-			let num = parseInt( raw, 10 );
+			const { couponCount } = this.elements;
 
-			$( '#coupon-count-warning' ).remove();
+			if ( ! couponCount ) {
+				return;
+			}
+
+			const raw = String( couponCount.value ).replace( /\D/g, '' );
+			let num = Number.parseInt( raw, 10 );
+
+			document.querySelector( selectors.warning )?.remove();
 
 			if ( Number.isNaN( num ) || num < 1 ) {
-				$input.val( '1' );
+				couponCount.value = '1';
 				return;
 			}
 
 			if ( num > MAX_COUPON_COUNT ) {
 				num = MAX_COUPON_COUNT;
-				$input.val( num );
-				buildWarningSpan(
-					'error',
-					String( i18n.max_coupons_warning ?? '' ).replace( '%d', String( MAX_COUPON_COUNT ) )
-				).insertAfter( $input );
-			} else if ( num > 50 ) {
-				$input.val( num );
-				buildWarningSpan( 'caution', i18n.many_coupons_warning ?? '' ).insertAfter( $input );
-			} else {
-				$input.val( num );
+				couponCount.value = String( num );
+				couponCount.insertAdjacentElement(
+					'afterend',
+					buildWarningSpan(
+						'error',
+						formatMessage( 'max_coupons_warning', '', [
+							[ '%d', MAX_COUPON_COUNT ],
+						] )
+					)
+				);
+				return;
 			}
-		},
+
+			couponCount.value = String( num );
+
+			if ( num > 50 ) {
+				couponCount.insertAdjacentElement(
+					'afterend',
+					buildWarningSpan( 'caution', message( 'many_coupons_warning' ) )
+				);
+			}
+		}
 
 		/**
 		 * Run all field validations.
@@ -277,27 +336,27 @@
 		validateForm() {
 			const errors = [];
 			let firstInvalid = null;
+			const validations = [
+				[ () => this.validateProductSelection( errors ), this.elements.products ],
+				[ () => this.validateCouponCount( errors ), this.elements.couponCount ],
+				[ () => this.validateCouponPrefix( errors ), this.elements.prefix ],
+				[ () => this.validateCodeLength( errors ), this.elements.codeLength ],
+			];
 
-			if ( ! this.validateProductSelection( errors ) && ! firstInvalid ) {
-				firstInvalid = $( '#fgcbg_product_ids' );
-			}
-			if ( ! this.validateCouponCount( errors ) && ! firstInvalid ) {
-				firstInvalid = $( '#number_of_coupons' );
-			}
-			if ( ! this.validateCouponPrefix( errors ) && ! firstInvalid ) {
-				firstInvalid = $( '#coupon_prefix' );
-			}
-			if ( ! this.validateCodeLength( errors ) && ! firstInvalid ) {
-				firstInvalid = $( '#coupon_code_length' );
+			for ( const [ validate, field ] of validations ) {
+				if ( ! validate() && firstInvalid === null ) {
+					firstInvalid = field;
+				}
 			}
 
 			if ( errors.length > 0 ) {
 				this.showErrorMessage( errors.join( '\n' ) );
-				firstInvalid?.addClass( 'error' ).trigger( 'focus' );
+				firstInvalid?.classList.add( 'error' );
+				firstInvalid?.focus();
 			}
 
 			return errors.length === 0;
-		},
+		}
 
 		/**
 		 * Validate product selection.
@@ -306,13 +365,13 @@
 		 * @returns {boolean} True when valid.
 		 */
 		validateProductSelection( errors ) {
-			const ids = $( '#fgcbg_product_ids' ).val();
-			if ( ! ids || ( Array.isArray( ids ) && ids.length === 0 ) ) {
-				errors.push( i18n.select_product ?? 'Please select at least one product.' );
+			if ( this.getSelectedProductIds().length === 0 ) {
+				errors.push( message( 'select_product', 'Please select at least one product.' ) );
 				return false;
 			}
+
 			return true;
-		},
+		}
 
 		/**
 		 * Validate coupon count field.
@@ -321,22 +380,23 @@
 		 * @returns {boolean} True when valid.
 		 */
 		validateCouponCount( errors ) {
-			const raw = $( '#number_of_coupons' ).val();
-			const count = parseInt( raw, 10 );
+			const raw = this.elements.couponCount?.value.trim() ?? '';
+			const count = Number.parseInt( raw, 10 );
 
 			if ( ! raw || Number.isNaN( count ) || count < 1 ) {
-				errors.push( i18n.invalid_coupon_count ?? 'Please enter a valid number of coupons (minimum 1).' );
+				errors.push( message( 'invalid_coupon_count', 'Please enter a valid number of coupons (minimum 1).' ) );
 				return false;
 			}
+
 			if ( count > MAX_COUPON_COUNT ) {
-				errors.push(
-					String( i18n.max_coupon_count ?? 'Maximum number of coupons is %d.' )
-						.replace( '%d', String( MAX_COUPON_COUNT ) )
-				);
+				errors.push( formatMessage( 'max_coupon_count', 'Maximum number of coupons is %d.', [
+					[ '%d', MAX_COUPON_COUNT ],
+				] ) );
 				return false;
 			}
+
 			return true;
-		},
+		}
 
 		/**
 		 * Validate coupon prefix field.
@@ -345,27 +405,33 @@
 		 * @returns {boolean} True when valid.
 		 */
 		validateCouponPrefix( errors ) {
-			const prefix = $( '#coupon_prefix' ).val();
-			if ( prefix && prefix.length > MAX_PREFIX_LENGTH ) {
-				errors.push(
-					String( i18n.prefix_too_long ?? 'Coupon prefix must be %d characters or less.' )
-						.replace( '%d', String( MAX_PREFIX_LENGTH ) )
-				);
+			const prefix = this.elements.prefix?.value ?? '';
+
+			if ( prefix.length > MAX_PREFIX_LENGTH ) {
+				errors.push( formatMessage( 'prefix_too_long', 'Coupon prefix must be %d characters or less.', [
+					[ '%d', MAX_PREFIX_LENGTH ],
+				] ) );
 				return false;
 			}
+
 			return true;
-		},
+		}
 
 		/** Validate and clamp the random coupon-code length field. */
 		validateCodeLengthInput() {
-			const $input = $( this );
-			const min = parseInt( i18n.min_code_length ?? 8, 10 );
-			const max = parseInt( i18n.max_code_length ?? 32, 10 );
-			const raw = String( $input.val() ).replace( /\D/g, '' );
-			let num = parseInt( raw, 10 );
+			const { codeLength } = this.elements;
+
+			if ( ! codeLength ) {
+				return;
+			}
+
+			const min = toPositiveInteger( config.min_code_length, 8 );
+			const max = toPositiveInteger( config.max_code_length, 32 );
+			const raw = String( codeLength.value ).replace( /\D/g, '' );
+			let num = Number.parseInt( raw, 10 );
 
 			if ( Number.isNaN( num ) || num < min ) {
-				$input.val( String( min ) );
+				codeLength.value = String( min );
 				return;
 			}
 
@@ -373,8 +439,8 @@
 				num = max;
 			}
 
-			$input.val( String( num ) );
-		},
+			codeLength.value = String( num );
+		}
 
 		/**
 		 * Validate random coupon-code length field.
@@ -383,94 +449,175 @@
 		 * @returns {boolean} True when valid.
 		 */
 		validateCodeLength( errors ) {
-			const min = parseInt( i18n.min_code_length ?? 8, 10 );
-			const max = parseInt( i18n.max_code_length ?? 32, 10 );
-			const raw = $( '#coupon_code_length' ).val();
-			const count = parseInt( raw, 10 );
+			const min = toPositiveInteger( config.min_code_length, 8 );
+			const max = toPositiveInteger( config.max_code_length, 32 );
+			const raw = this.elements.codeLength?.value.trim() ?? '';
+			const count = Number.parseInt( raw, 10 );
 
 			if ( ! raw || Number.isNaN( count ) || count < min || count > max ) {
-				errors.push(
-					String( i18n.code_length_invalid ?? 'Please enter a random code length between %1$d and %2$d characters.' )
-						.replace( '%1$d', String( min ) )
-						.replace( '%2$d', String( max ) )
-				);
+				errors.push( formatMessage( 'code_length_invalid', 'Please enter a random code length between %1$d and %2$d characters.', [
+					[ '%1$d', min ],
+					[ '%2$d', max ],
+				] ) );
 				return false;
 			}
+
 			return true;
-		},
+		}
 
 		/** Download the generated coupon code list as a plain text file. */
 		downloadGeneratedCodes() {
-			const codes = String( $( '#fgcbg-generated-codes' ).val() ?? '' ).trim();
-			if ( '' === codes ) {
+			const codes = this.elements.generatedCodes?.value.trim() ?? '';
+
+			if ( codes === '' ) {
 				return;
 			}
 
 			const blob = new Blob( [ `${ codes }\n` ], { type: 'text/plain;charset=utf-8' } );
-			const url = window.URL.createObjectURL( blob );
-			const link = document.createElement( 'a' );
+			const url = URL.createObjectURL( blob );
+			const link = createElement( 'a', {
+				download: 'free-gift-coupon-codes.txt',
+				href: url,
+			} );
 
-			link.href = url;
-			link.download = 'free-gift-coupon-codes.txt';
-			document.body.appendChild( link );
+			document.body.append( link );
 			link.click();
 			link.remove();
 
-			window.URL.revokeObjectURL( url );
-		},
+			URL.revokeObjectURL( url );
+		}
 
 		/** Wire up real-time error-class removal on focus/input. */
 		initFormValidation() {
-			$( '#fgcbg_product_ids, #number_of_coupons, #coupon_prefix, #coupon_code_length' ).on(
-				'focus input change',
-				function () {
-					$( this ).removeClass( 'error' );
+			const fields = [
+				this.elements.products,
+				this.elements.couponCount,
+				this.elements.prefix,
+				this.elements.codeLength,
+			].filter( Boolean );
+
+			for ( const field of fields ) {
+				for ( const eventName of [ 'focus', 'input', 'change' ] ) {
+					field.addEventListener( eventName, () => field.classList.remove( 'error' ) );
 				}
-			);
-		},
+			}
+		}
 
 		/**
 		 * Display an error notice above the form.
 		 *
-		 * @param {string} message - Error text.
+		 * @param {string} text - Error text.
+		 * @returns {void}
 		 */
-		showErrorMessage( message ) {
-			$( '.fgcbg-error-message' ).remove();
+		showErrorMessage( text ) {
+			document.querySelectorAll( '.fgcbg-error-message' ).forEach( ( notice ) => notice.remove() );
 
-			message = String( message ).slice( 0, 500 );
+			const notice = createElement( 'div', { class: 'notice notice-error fgcbg-error-message' } );
+			const paragraph = createElement( 'p' );
+			paragraph.textContent = String( text ).slice( 0, 500 );
+			notice.append( paragraph );
 
-			const $el = createElement( 'div', { class: 'notice notice-error fgcbg-error-message' } );
-			$el.append( createElement( 'p' ).text( message ) );
-			insertNoticeBeforeForm( $el );
+			this.insertNoticeBeforeForm( notice );
 
-			setTimeout( () => $el.fadeOut( 400, () => $el.remove() ), 5000 );
-		},
+			globalThis.setTimeout( () => {
+				notice.classList.add( 'is-dismissing' );
+				notice.addEventListener( 'transitionend', () => notice.remove(), { once: true } );
+				globalThis.setTimeout( () => notice.remove(), 500 );
+			}, 5000 );
+		}
 
 		/**
 		 * Display a success notice above the form.
 		 *
-		 * @param {string} message - Success text.
+		 * @param {string} text - Success text.
+		 * @returns {void}
 		 */
-		showSuccessMessage( message ) {
-			message = String( message ).slice( 0, 500 );
+		showSuccessMessage( text ) {
+			const notice = createElement( 'div', { class: 'notice notice-success is-dismissible fgcbg-success-message' } );
+			const paragraph = createElement( 'p' );
+			paragraph.textContent = String( text ).slice( 0, 500 );
+			notice.append( paragraph );
 
-			const $el = createElement( 'div', { class: 'notice notice-success is-dismissible' } );
-			$el.append( createElement( 'p' ).text( message ) );
-			insertNoticeBeforeForm( $el );
-		},
+			this.insertNoticeBeforeForm( notice );
+		}
+
+		/**
+		 * Insert a notice element before the form and scroll it into view.
+		 *
+		 * @param {HTMLElement} notice - The notice element to insert.
+		 * @returns {void}
+		 */
+		insertNoticeBeforeForm( notice ) {
+			this.elements.form.before( notice );
+
+			const prefersReducedMotion = globalThis.matchMedia?.( '(prefers-reduced-motion: reduce)' ).matches ?? false;
+			notice.scrollIntoView( {
+				behavior: prefersReducedMotion ? 'auto' : 'smooth',
+				block: 'start',
+			} );
+		}
+
+		/**
+		 * Update the visual progress bar.
+		 *
+		 * @param {number} percent - Progress percentage.
+		 * @returns {void}
+		 */
+		updateProgress( percent ) {
+			if ( ! this.elements.progressBar ) {
+				return;
+			}
+
+			this.elements.progressBar.style.width = `${ percent }%`;
+			this.elements.progressBar.setAttribute( 'aria-valuenow', String( percent ) );
+		}
+
+		/**
+		 * Get selected product IDs from the WooCommerce enhanced select.
+		 *
+		 * @returns {string[]} Selected product IDs.
+		 */
+		getSelectedProductIds() {
+			return Array.from(
+				this.elements.products?.selectedOptions ?? [],
+				( option ) => option.value
+			).filter( Boolean );
+		}
+
+		/**
+		 * Warn before navigating away during generation.
+		 *
+		 * @param {BeforeUnloadEvent} event - Before unload event.
+		 * @returns {string|undefined} Warning message for legacy browsers.
+		 */
+		warnBeforeUnload( event ) {
+			if ( ! this.elements.form.classList.contains( 'loading' ) ) {
+				return undefined;
+			}
+
+			const warning = message( 'generation_in_progress' );
+			event.preventDefault();
+			event.returnValue = warning;
+
+			return warning;
+		}
+
+		/** Reset loading state on fresh page load (back-button / refresh edge case). */
+		resetLoadingState() {
+			this.elements.form.classList.remove( 'loading' );
+			if ( this.elements.submitButton ) {
+				this.elements.submitButton.disabled = false;
+			}
+		}
+	}
+
+	const boot = () => {
+		new AdminController().init();
 	};
 
-	// Boot.
-	FGCBG_Admin.init();
-
-	// Warn on navigating away during generation.
-	$( window ).on( 'beforeunload', () => {
-		if ( $( '.fgcbg-form' ).hasClass( 'loading' ) ) {
-			return i18n.generation_in_progress ?? '';
-		}
-	} );
-
-	// Reset loading state on fresh page load (back-button / refresh edge case).
-	$( '.fgcbg-form' ).removeClass( 'loading' );
-	$( '.button-primary' ).prop( 'disabled', false );
-} )( jQuery );
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', boot, { once: true } );
+	} else {
+		boot();
+	}
+} )();

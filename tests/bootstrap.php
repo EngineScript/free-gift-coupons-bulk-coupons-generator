@@ -447,11 +447,20 @@ if ( ! function_exists( 'wp_enqueue_script' ) ) {
 	/**
 	 * Record an enqueued script.
 	 *
-	 * @param string $handle Script handle.
+	 * @param string           $handle    Script handle.
+	 * @param string           $src       Script source URL.
+	 * @param array<int,string> $deps      Script dependencies.
+	 * @param string|bool|null $ver       Script version.
+	 * @param bool|array       $args      Footer flag or loading args.
 	 * @return void
 	 */
-	function wp_enqueue_script( $handle ) {
-		$GLOBALS['fgcbg_test_enqueued']['scripts'][] = $handle;
+	function wp_enqueue_script( $handle, $src = '', $deps = array(), $ver = false, $args = array() ) {
+		$GLOBALS['fgcbg_test_enqueued']['scripts'][ $handle ] = array(
+			'args'         => $args,
+			'dependencies' => $deps,
+			'src'          => $src,
+			'version'      => $ver,
+		);
 	}
 }
 
@@ -459,11 +468,20 @@ if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	/**
 	 * Record an enqueued style.
 	 *
-	 * @param string $handle Style handle.
+	 * @param string           $handle Style handle.
+	 * @param string           $src    Style source URL.
+	 * @param array<int,string> $deps   Style dependencies.
+	 * @param string|bool|null $ver    Style version.
+	 * @param string           $media  Style media.
 	 * @return void
 	 */
-	function wp_enqueue_style( $handle ) {
-		$GLOBALS['fgcbg_test_enqueued']['styles'][] = $handle;
+	function wp_enqueue_style( $handle, $src = '', $deps = array(), $ver = false, $media = 'all' ) {
+		$GLOBALS['fgcbg_test_enqueued']['styles'][ $handle ] = array(
+			'dependencies' => $deps,
+			'media'        => $media,
+			'src'          => $src,
+			'version'      => $ver,
+		);
 	}
 }
 
@@ -488,11 +506,12 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 	/**
 	 * Encode data as JSON.
 	 *
-	 * @param mixed $data Data to encode.
+	 * @param mixed $data  Data to encode.
+	 * @param int   $flags JSON encoding flags.
 	 * @return string|false
 	 */
-	function wp_json_encode( $data ) {
-		return json_encode( $data );
+	function wp_json_encode( $data, $flags = 0 ) {
+		return json_encode( $data, $flags );
 	}
 }
 

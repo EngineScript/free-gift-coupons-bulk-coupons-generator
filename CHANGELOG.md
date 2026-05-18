@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Modern JavaScript Admin UI**: Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a cleaner WordPress 6.8+ browser baseline.
+- **Asset Loading**: Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script for better loading performance.
+- **JavaScript Configuration**: Renamed the runtime config object to `fgcbgAdminConfig`, froze it with `Object.freeze()`, and JSON hex-escaped the inline config payload for stronger script-safety.
+- **Validation Flow**: Simplified client-side validation so the first invalid field is tracked through a single validation list instead of repeated conditional chains.
+
+### Fixed
+
+- **Static Analysis Finding**: Removed a useless conditional in admin form validation where the first invalid field check always evaluated the same way.
+
 ## [1.6.0] - 2026-05-17
 
 ### Added

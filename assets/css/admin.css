@@ -193,7 +193,8 @@
 	border-color: var(--fgcbg-color-btn-active);
 }
 
-.fgcbg-form .button-primary.disabled {
+.fgcbg-form .button-primary.disabled,
+.fgcbg-form .button-primary:disabled {
 	cursor: not-allowed;
 	opacity: 0.5;
 	pointer-events: none;
@@ -249,6 +250,12 @@
 .fgcbg-error-message {
 	animation: fgcbg-fade-in 0.3s ease-in;
 	margin: 15px 0;
+	scroll-margin-top: 50px;
+	transition: opacity 0.4s ease;
+}
+
+.fgcbg-error-message.is-dismissing {
+	opacity: 0;
 }
 
 
@@ -314,6 +321,10 @@
 
 .notice-success {
 	animation: fgcbg-fade-in 0.3s ease-in;
+}
+
+.fgcbg-success-message {
+	scroll-margin-top: 50px;
 }
 
 @keyframes fgcbg-fade-in {
