@@ -5,7 +5,7 @@
  * injected before this file as `fgcbgAdminConfig`.
  */
 
-( function () {
+( () => {
 	const config = Object.freeze( globalThis.fgcbgAdminConfig ?? {} );
 
 	const selectors = Object.freeze( {
@@ -621,4 +621,4 @@
 	} else {
 		boot();
 	}
-}() );
+} )();

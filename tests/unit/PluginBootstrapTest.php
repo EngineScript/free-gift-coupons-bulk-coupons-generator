@@ -12,6 +12,24 @@ use PHPUnit\Framework\TestCase;
  */
 final class PluginBootstrapTest extends TestCase {
 	/**
+	 * Reset recorded asset state before each test.
+	 */
+	protected function setUp(): void {
+		parent::setUp();
+
+		$this->reset_asset_globals();
+	}
+
+	/**
+	 * Reset recorded asset state after each test.
+	 */
+	protected function tearDown(): void {
+		$this->reset_asset_globals();
+
+		parent::tearDown();
+	}
+
+	/**
 	 * The main plugin file defines the expected constants and helper.
 	 */
 	public function test_main_plugin_defines_constants_and_helper(): void {
@@ -48,9 +66,6 @@ final class PluginBootstrapTest extends TestCase {
 	public function test_admin_assets_are_enqueued_for_generator_page(): void {
 		fgcbg_init();
 
-		$GLOBALS['fgcbg_test_enqueued']       = array();
-		$GLOBALS['fgcbg_test_inline_scripts'] = array();
-
 		$plugin = FGCBG_Plugin::get_instance();
 		$assets = $this->get_plugin_property( $plugin, 'admin_assets' );
 
@@ -59,6 +74,7 @@ final class PluginBootstrapTest extends TestCase {
 		$assets->enqueue( 'woocommerce_page_free-gift-bulk-coupon-generator' );
 
 		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['scripts'] );
+		$this->assertSame( FGCBG_PLUGIN_URL . 'assets/js/admin.js', $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['src'] );
 		$this->assertSame( array( 'wc-enhanced-select' ), $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['dependencies'] );
 		$this->assertSame(
 			array(
@@ -79,14 +95,28 @@ final class PluginBootstrapTest extends TestCase {
 	 *
 	 * @param FGCBG_Plugin $plugin   Plugin instance.
 	 * @param string       $property Property name.
-	 * @return object
+	 * @return FGCBG_Admin_Assets|FGCBG_Ajax_Handler
 	 */
-	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): object {
+	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): FGCBG_Admin_Assets|FGCBG_Ajax_Handler {
 		$reflection_property = new ReflectionProperty( $plugin, $property );
 		$property_value      = $reflection_property->getValue( $plugin );
+		$expected_class      = match ( $property ) {
+			'admin_assets' => FGCBG_Admin_Assets::class,
+			'ajax_handler' => FGCBG_Ajax_Handler::class,
+			default        => '',
+		};
 
-		$this->assertIsObject( $property_value );
+		$this->assertNotSame( '', $expected_class, 'Unexpected plugin collaborator property.' );
+		$this->assertInstanceOf( $expected_class, $property_value );
 
 		return $property_value;
+	}
+
+	/**
+	 * Clear WordPress asset globals used by the bootstrap stubs.
+	 */
+	private function reset_asset_globals(): void {
+		$GLOBALS['fgcbg_test_enqueued']       = array();
+		$GLOBALS['fgcbg_test_inline_scripts'] = array();
 	}
 }
