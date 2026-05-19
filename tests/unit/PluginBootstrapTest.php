@@ -83,10 +83,10 @@ final class PluginBootstrapTest extends TestCase {
 	 */
 	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): object {
 		$reflection_property = new ReflectionProperty( $plugin, $property );
-		$value               = $reflection_property->getValue( $plugin );
+		$property_value      = $reflection_property->getValue( $plugin );
 
-		$this->assertIsObject( $value );
+		$this->assertIsObject( $property_value );
 
-		return $value;
+		return $property_value;
 	}
 }

@@ -5,9 +5,7 @@
  * injected before this file as `fgcbgAdminConfig`.
  */
 
-( () => {
-	'use strict';
-
+( function () {
 	const config = Object.freeze( globalThis.fgcbgAdminConfig ?? {} );
 
 	const selectors = Object.freeze( {
@@ -26,18 +24,25 @@
 		warning: '#coupon-count-warning',
 	} );
 
-	const toPositiveInteger = ( value, fallback ) => {
+	function toPositiveInteger( value, fallback ) {
 		const parsed = Number.parseInt( value ?? fallback, 10 );
 
 		return Number.isNaN( parsed ) || parsed < 1 ? fallback : parsed;
-	};
+	}
 
-	const message = ( key, fallback = '' ) => String( config[ key ] ?? fallback );
+	function message( key, fallback = '' ) {
+		return String( config[ key ] ?? fallback );
+	}
 
-	const formatMessage = ( key, fallback, replacements ) => replacements.reduce(
-		( template, [ placeholder, value ] ) => template.replace( placeholder, String( value ) ),
-		message( key, fallback )
-	);
+	function formatMessage( key, fallback, replacements ) {
+		let template = message( key, fallback );
+
+		for ( const [ placeholder, value ] of replacements ) {
+			template = template.replace( placeholder, String( value ) );
+		}
+
+		return template;
+	}
 
 	const BATCH_SIZE = toPositiveInteger( config.batch_size, 10 );
 	const MAX_COUPON_COUNT = toPositiveInteger( config.max_coupon_count_value, 100 );
@@ -155,7 +160,7 @@
 		 * @returns {Promise<void>}
 		 */
 		async runBatchGeneration( total ) {
-			const { form, generatedCodes, progress, progressBar, progressText, results, submitButton } = this.elements;
+			const { form, generatedCodes, progress, progressText, results, submitButton } = this.elements;
 			const collectedCodes = [];
 			let generated = 0;
 			let remaining = total;
@@ -202,7 +207,7 @@
 						] );
 					}
 				}
-			} catch ( error ) {
+			} catch {
 				this.showErrorMessage( message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
 			} finally {
 				form.classList.remove( 'loading' );
@@ -236,12 +241,6 @@
 		 * @returns {Promise<Object>} Parsed JSON response.
 		 */
 		async sendBatchRequest( batchSize ) {
-			const ajaxUrl = message( 'ajax_url' );
-
-			if ( ! ajaxUrl ) {
-				throw new Error( 'Missing AJAX URL.' );
-			}
-
 			const body = new URLSearchParams( {
 				action: 'fgcbg_generate_batch',
 				batch_size: String( batchSize ),
@@ -254,7 +253,7 @@
 				body.append( 'product_ids[]', productId );
 			}
 
-			const response = await fetch( ajaxUrl, {
+			const response = await fetch( 'admin-ajax.php', {
 				body,
 				credentials: 'same-origin',
 				headers: {
@@ -510,7 +509,9 @@
 		 * @returns {void}
 		 */
 		showErrorMessage( text ) {
-			document.querySelectorAll( '.fgcbg-error-message' ).forEach( ( notice ) => notice.remove() );
+			document.querySelectorAll( '.fgcbg-error-message' ).forEach( ( notice ) => {
+				notice.remove();
+			} );
 
 			const notice = createElement( 'div', { class: 'notice notice-error fgcbg-error-message' } );
 			const paragraph = createElement( 'p' );
@@ -611,13 +612,13 @@
 		}
 	}
 
-	const boot = () => {
+	function boot() {
 		new AdminController().init();
-	};
+	}
 
 	if ( document.readyState === 'loading' ) {
 		document.addEventListener( 'DOMContentLoaded', boot, { once: true } );
 	} else {
 		boot();
 	}
-} )();
+}() );
