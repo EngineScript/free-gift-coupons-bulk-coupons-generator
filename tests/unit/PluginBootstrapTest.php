@@ -36,7 +36,7 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_URL' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_PATH' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_VERSION' ) );
-		$this->assertSame( '1.6.0', FGCBG_PLUGIN_VERSION );
+		$this->assertSame( $this->get_plugin_header_version(), FGCBG_PLUGIN_VERSION );
 		$this->assertTrue( fgcbg_is_loaded() );
 	}
 
@@ -98,18 +98,39 @@ final class PluginBootstrapTest extends TestCase {
 	 * @return FGCBG_Admin_Assets|FGCBG_Ajax_Handler
 	 */
 	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): FGCBG_Admin_Assets|FGCBG_Ajax_Handler {
-		$reflection_property = new ReflectionProperty( $plugin, $property );
-		$property_value      = $reflection_property->getValue( $plugin );
-		$expected_class      = match ( $property ) {
+		$expected_class = match ( $property ) {
 			'admin_assets' => FGCBG_Admin_Assets::class,
 			'ajax_handler' => FGCBG_Ajax_Handler::class,
 			default        => '',
 		};
 
 		$this->assertNotSame( '', $expected_class, 'Unexpected plugin collaborator property.' );
+
+		$reflection_class = new ReflectionClass( $plugin );
+		$this->assertTrue(
+			$reflection_class->hasProperty( $property ),
+			sprintf( 'Expected plugin property "%s" to exist.', $property )
+		);
+
+		$reflection_property = $reflection_class->getProperty( $property );
+		$property_value      = $reflection_property->getValue( $plugin );
+
 		$this->assertInstanceOf( $expected_class, $property_value );
 
 		return $property_value;
+	}
+
+	/**
+	 * Read the plugin version from the WordPress plugin header.
+	 */
+	private function get_plugin_header_version(): string {
+		$plugin_file = FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php';
+		$contents    = file_get_contents( $plugin_file );
+
+		$this->assertIsString( $contents );
+		$this->assertSame( 1, preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches ) );
+
+		return $matches[1];
 	}
 
 	/**

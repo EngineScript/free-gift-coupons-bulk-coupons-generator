@@ -83,6 +83,23 @@
 		return warning;
 	}
 
+	/**
+	 * Build a WordPress admin notice with safe text content.
+	 *
+	 * @param {string} className - Notice CSS classes.
+	 * @param {string} text - Notice message text.
+	 * @returns {HTMLElement} The notice element.
+	 */
+	function buildNotice( className, text ) {
+		const notice = createElement( 'div', { class: className } );
+		const paragraph = createElement( 'p' );
+
+		paragraph.textContent = String( text ).slice( 0, 500 );
+		notice.append( paragraph );
+
+		return notice;
+	}
+
 	class AdminController {
 		constructor() {
 			const form = document.querySelector( selectors.form );
@@ -513,11 +530,7 @@
 				notice.remove();
 			} );
 
-			const notice = createElement( 'div', { class: 'notice notice-error fgcbg-error-message' } );
-			const paragraph = createElement( 'p' );
-			paragraph.textContent = String( text ).slice( 0, 500 );
-			notice.append( paragraph );
-
+			const notice = buildNotice( 'notice notice-error fgcbg-error-message', text );
 			this.insertNoticeBeforeForm( notice );
 
 			globalThis.setTimeout( () => {
@@ -534,11 +547,7 @@
 		 * @returns {void}
 		 */
 		showSuccessMessage( text ) {
-			const notice = createElement( 'div', { class: 'notice notice-success is-dismissible fgcbg-success-message' } );
-			const paragraph = createElement( 'p' );
-			paragraph.textContent = String( text ).slice( 0, 500 );
-			notice.append( paragraph );
-
+			const notice = buildNotice( 'notice notice-success is-dismissible fgcbg-success-message', text );
 			this.insertNoticeBeforeForm( notice );
 		}
 
