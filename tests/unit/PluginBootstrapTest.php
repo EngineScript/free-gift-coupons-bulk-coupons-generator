@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Tests for the main plugin entry point.
+ *
+ * This suite targets PHP 8.2+, matching the plugin minimum.
  */
 final class PluginBootstrapTest extends TestCase {
 	/**
@@ -93,18 +95,20 @@ final class PluginBootstrapTest extends TestCase {
 	/**
 	 * Read a private collaborator from the plugin singleton.
 	 *
+	 * Uses union return syntax supported by the plugin's PHP 8.2+ baseline.
+	 *
 	 * @param FGCBG_Plugin $plugin   Plugin instance.
 	 * @param string       $property Property name.
 	 * @return FGCBG_Admin_Assets|FGCBG_Ajax_Handler
 	 */
 	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): FGCBG_Admin_Assets|FGCBG_Ajax_Handler {
-		$expected_class = match ( $property ) {
+		$expected_classes = array(
 			'admin_assets' => FGCBG_Admin_Assets::class,
 			'ajax_handler' => FGCBG_Ajax_Handler::class,
-			default        => '',
-		};
+		);
 
-		$this->assertNotSame( '', $expected_class, 'Unexpected plugin collaborator property.' );
+		$this->assertArrayHasKey( $property, $expected_classes, 'Unexpected plugin collaborator property.' );
+		$expected_class = $expected_classes[ $property ];
 
 		$reflection_class = new ReflectionClass( $plugin );
 		$this->assertTrue(
