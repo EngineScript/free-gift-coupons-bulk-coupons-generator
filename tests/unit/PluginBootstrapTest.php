@@ -142,7 +142,8 @@ final class PluginBootstrapTest extends TestCase {
 
 		$contents = file_get_contents( $plugin_file );
 
-		$this->assertIsString( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
+		$this->assertNotFalse( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
+		$this->assertIsString( $contents );
 		$this->assertSame( 1, preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches ) );
 
 		return $matches[1];
