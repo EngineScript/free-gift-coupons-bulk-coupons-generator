@@ -140,7 +140,7 @@ final class PluginBootstrapTest extends TestCase {
 	 * @param class-string<TObject> $expected_class Expected object class.
 	 * @return TObject
 	 */
-	private function get_plugin_property( FGCBG_Plugin $plugin, string $property, string $expected_class ): object {
+	private function get_plugin_property( FGCBG_Plugin $plugin, string $property, string $expected_class ) {
 		$reflection_class = new ReflectionClass( $plugin );
 		$this->assertTrue(
 			$reflection_class->hasProperty( $property ),
