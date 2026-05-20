@@ -136,9 +136,13 @@ final class PluginBootstrapTest extends TestCase {
 	 */
 	private function get_plugin_header_version(): string {
 		$plugin_file = FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php';
-		$contents    = file_get_contents( $plugin_file );
 
-		$this->assertIsString( $contents );
+		$this->assertFileExists( $plugin_file, sprintf( 'Expected plugin file "%s" to exist.', $plugin_file ) );
+		$this->assertTrue( is_readable( $plugin_file ), sprintf( 'Expected plugin file "%s" to be readable.', $plugin_file ) );
+
+		$contents = file_get_contents( $plugin_file );
+
+		$this->assertIsString( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
 		$this->assertSame( 1, preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches ) );
 
 		return $matches[1];
