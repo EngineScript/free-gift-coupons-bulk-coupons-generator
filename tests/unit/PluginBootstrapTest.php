@@ -144,7 +144,11 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertNotFalse( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
 		$this->assertIsString( $contents );
-		$this->assertSame( 1, preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches ) );
+
+		$match_count = preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches );
+
+		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a Version header.', $plugin_file ) );
+		$this->assertArrayHasKey( 1, $matches, sprintf( 'Expected Version header in "%s" to capture the version number.', $plugin_file ) );
 
 		return $matches[1];
 	}
