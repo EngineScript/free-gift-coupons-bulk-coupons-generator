@@ -61,10 +61,12 @@ final class PluginBootstrapTest extends TestCase {
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
+		$assets = $this->get_plugin_property( $plugin, 'admin_assets' );
+		$ajax   = $this->get_plugin_property( $plugin, 'ajax_handler' );
 
 		$this->assertSame( 10, has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
-		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( $this->get_plugin_property( $plugin, 'admin_assets' ), 'enqueue' ) ) );
-		$this->assertSame( 10, has_action( 'wp_ajax_fgcbg_generate_batch', array( $this->get_plugin_property( $plugin, 'ajax_handler' ), 'generate_batch' ) ) );
+		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( $assets, 'enqueue' ) ) );
+		$this->assertSame( 10, has_action( 'wp_ajax_fgcbg_generate_batch', array( $ajax, 'generate_batch' ) ) );
 	}
 
 	/**
