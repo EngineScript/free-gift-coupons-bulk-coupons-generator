@@ -17,9 +17,18 @@ if ( ! defined( 'DAY_IN_SECONDS' ) ) {
 	define( 'DAY_IN_SECONDS', 86400 );
 }
 
-if ( ! class_exists( 'WooCommerce' ) ) {
+/**
+ * Define a minimal WooCommerce presence marker for plugin initialization tests.
+ *
+ * @return void
+ */
+function fgcbg_test_define_woocommerce_marker() {
+	if ( class_exists( 'WooCommerce', false ) ) {
+		return;
+	}
+
 	/**
-	 * Minimal WooCommerce presence marker for plugin initialization tests.
+	 * Minimal WooCommerce presence marker.
 	 */
 	class WooCommerce {}
 }

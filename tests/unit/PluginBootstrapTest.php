@@ -5,6 +5,8 @@
  * @package FreeGiftCouponsBulkGenerator
  */
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -68,6 +70,7 @@ final class PluginBootstrapTest extends TestCase {
 	 * Initializing with WooCommerce present registers the admin hooks.
 	 */
 	public function test_admin_hooks_are_registered_when_initialized(): void {
+		fgcbg_test_define_woocommerce_marker();
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
@@ -83,6 +86,7 @@ final class PluginBootstrapTest extends TestCase {
 	 * Admin assets use standalone files with a minimal modern script dependency list.
 	 */
 	public function test_admin_assets_are_enqueued_for_generator_page(): void {
+		fgcbg_test_define_woocommerce_marker();
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
@@ -112,60 +116,19 @@ final class PluginBootstrapTest extends TestCase {
 	/**
 	 * Initializing without WooCommerce registers only the dependency notice.
 	 */
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_missing_woocommerce_registers_notice_without_admin_hooks(): void {
-		$result = $this->run_fixture_script( 'woocommerce-missing-init.php' );
+		fgcbg_init();
 
-		$this->assertFalse( $result['woocommerce_loaded'] );
-		$this->assertSame( 10, $result['plugins_loaded_priority'] );
-		$this->assertSame( 10, $result['missing_notice_priority'] );
-		$this->assertFalse( $result['admin_menu_priority'] );
-		$this->assertFalse( $result['admin_enqueue_priority'] );
-		$this->assertFalse( $result['ajax_priority'] );
-	}
+		$plugin = FGCBG_Plugin::get_instance();
 
-	/**
-	 * Run a fixture script in a clean PHP process and decode its JSON payload.
-	 *
-	 * @param string $script_name Fixture script filename.
-	 * @return array<string, mixed>
-	 */
-	private function run_fixture_script( string $script_name ): array {
-		$script = dirname( __DIR__ ) . DIRECTORY_SEPARATOR . 'fixtures' . DIRECTORY_SEPARATOR . $script_name;
-
-		$this->assertFileExists( $script, sprintf( 'Expected fixture script "%s" to exist.', $script ) );
-
-		$pipes   = array();
-		$process = proc_open(
-			array( PHP_BINARY, $script ),
-			array(
-				1 => array( 'pipe', 'w' ),
-				2 => array( 'pipe', 'w' ),
-			),
-			$pipes,
-			dirname( __DIR__, 2 )
-		);
-
-		$this->assertIsResource( $process, sprintf( 'Failed to start fixture script "%s".', $script ) );
-
-		$output   = stream_get_contents( $pipes[1] );
-		$error    = stream_get_contents( $pipes[2] );
-		fclose( $pipes[1] );
-		fclose( $pipes[2] );
-		$exitcode = proc_close( $process );
-
-		$this->assertIsString( $output );
-		$this->assertIsString( $error );
-		$this->assertSame(
-			0,
-			$exitcode,
-			sprintf( "Fixture script \"%s\" failed.\nSTDOUT:\n%s\nSTDERR:\n%s", $script, $output, $error )
-		);
-
-		$result = json_decode( $output, true );
-
-		$this->assertIsArray( $result, sprintf( "Expected fixture script \"%s\" to return a JSON object.\nSTDOUT:\n%s\nSTDERR:\n%s", $script, $output, $error ) );
-
-		return $result;
+		$this->assertFalse( class_exists( 'WooCommerce' ) );
+		$this->assertSame( 10, has_action( 'plugins_loaded', 'fgcbg_init' ) );
+		$this->assertSame( 10, has_action( 'admin_notices', array( $plugin, 'woocommerce_missing_notice' ) ) );
+		$this->assertFalse( has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
+		$this->assertFalse( has_action( 'admin_enqueue_scripts' ) );
+		$this->assertFalse( has_action( 'wp_ajax_fgcbg_generate_batch' ) );
 	}
 
 	/**
