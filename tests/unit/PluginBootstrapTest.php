@@ -61,8 +61,8 @@ final class PluginBootstrapTest extends TestCase {
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
-		$assets = $this->get_plugin_property( $plugin, 'admin_assets' );
-		$ajax   = $this->get_plugin_property( $plugin, 'ajax_handler' );
+		$assets = $this->get_plugin_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
+		$ajax   = $this->get_plugin_property( $plugin, 'ajax_handler', FGCBG_Ajax_Handler::class );
 
 		$this->assertSame( 10, has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
 		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( $assets, 'enqueue' ) ) );
@@ -76,7 +76,7 @@ final class PluginBootstrapTest extends TestCase {
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
-		$assets = $this->get_plugin_property( $plugin, 'admin_assets' );
+		$assets = $this->get_plugin_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
 
 		$this->assertInstanceOf( FGCBG_Admin_Assets::class, $assets );
 
@@ -100,23 +100,15 @@ final class PluginBootstrapTest extends TestCase {
 	}
 
 	/**
-	 * Read a private collaborator from the plugin singleton.
+	 * Read a private object property from the plugin singleton.
 	 *
-	 * Uses union return syntax supported by the plugin's PHP 8.2+ baseline.
-	 *
-	 * @param FGCBG_Plugin $plugin   Plugin instance.
-	 * @param string       $property Property name.
-	 * @return FGCBG_Admin_Assets|FGCBG_Ajax_Handler
+	 * @template TObject of object
+	 * @param FGCBG_Plugin          $plugin         Plugin instance.
+	 * @param string                $property       Property name.
+	 * @param class-string<TObject> $expected_class Expected object class.
+	 * @return TObject
 	 */
-	private function get_plugin_property( FGCBG_Plugin $plugin, string $property ): FGCBG_Admin_Assets|FGCBG_Ajax_Handler {
-		$expected_classes = array(
-			'admin_assets' => FGCBG_Admin_Assets::class,
-			'ajax_handler' => FGCBG_Ajax_Handler::class,
-		);
-
-		$this->assertArrayHasKey( $property, $expected_classes, 'Unexpected plugin collaborator property.' );
-		$expected_class = $expected_classes[ $property ];
-
+	private function get_plugin_property( FGCBG_Plugin $plugin, string $property, string $expected_class ): object {
 		$reflection_class = new ReflectionClass( $plugin );
 		$this->assertTrue(
 			$reflection_class->hasProperty( $property ),
@@ -126,7 +118,11 @@ final class PluginBootstrapTest extends TestCase {
 		$reflection_property = $reflection_class->getProperty( $property );
 		$property_value      = $reflection_property->getValue( $plugin );
 
-		$this->assertInstanceOf( $expected_class, $property_value );
+		$this->assertInstanceOf(
+			$expected_class,
+			$property_value,
+			sprintf( 'Expected plugin property "%s" to be an instance of %s.', $property, $expected_class )
+		);
 
 		return $property_value;
 	}
@@ -145,9 +141,9 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertNotFalse( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
 		$this->assertIsString( $contents );
 
-		$match_count = preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $contents, $matches );
+		$match_count = preg_match( '/^\s*\*\s*Version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$/m', $contents, $matches );
 
-		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a Version header.', $plugin_file ) );
+		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a semantic Version header like 1.2.3.', $plugin_file ) );
 		$this->assertArrayHasKey( 1, $matches, sprintf( 'Expected Version header in "%s" to capture the version number.', $plugin_file ) );
 
 		return $matches[1];
