@@ -21,6 +21,11 @@ final class PluginBootstrapTest extends TestCase {
 	private const GENERATOR_PAGE_HOOK = 'woocommerce_page_free-gift-bulk-coupon-generator';
 
 	/**
+	 * Strict semantic version value expected in the plugin header.
+	 */
+	private const SEMANTIC_VERSION_PATTERN = '[0-9]+\.[0-9]+\.[0-9]+';
+
+	/**
 	 * Reset recorded asset state before each test.
 	 */
 	protected function setUp(): void {
@@ -96,8 +101,12 @@ final class PluginBootstrapTest extends TestCase {
 
 		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
+		$admin_script_path = FGCBG_PLUGIN_PATH . 'assets/js/admin.js';
+		$admin_script_url  = FGCBG_PLUGIN_URL . 'assets/js/admin.js';
+
 		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['scripts'] );
-		$this->assertSame( FGCBG_PLUGIN_URL . 'assets/js/admin.js', $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['src'] );
+		$this->assertSame( $admin_script_url, $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['src'] );
+		$this->assertFileExists( $admin_script_path, sprintf( 'Expected enqueued admin script "%s" to exist.', $admin_script_path ) );
 		$this->assertSame( array( 'wc-enhanced-select' ), $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['dependencies'] );
 		$this->assertSame(
 			array(
@@ -173,7 +182,7 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertNotFalse( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
 		$this->assertIsString( $contents );
 
-		$match_count = preg_match( '/^\s*\*\s*Version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$/m', $contents, $matches );
+		$match_count = preg_match( sprintf( '/^\s*\*\s*Version:\s*(%s)\s*$/m', self::SEMANTIC_VERSION_PATTERN ), $contents, $matches );
 
 		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a semantic Version header like 1.2.3.', $plugin_file ) );
 		$this->assertArrayHasKey( 1, $matches, sprintf( 'Expected Version header in "%s" to capture the version number.', $plugin_file ) );
