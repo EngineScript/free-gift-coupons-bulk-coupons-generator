@@ -14,6 +14,11 @@ use PHPUnit\Framework\TestCase;
  */
 final class PluginBootstrapTest extends TestCase {
 	/**
+	 * Hook suffix WordPress returns for the WooCommerce coupon generator submenu page.
+	 */
+	private const GENERATOR_PAGE_HOOK = 'woocommerce_page_free-gift-bulk-coupon-generator';
+
+	/**
 	 * Reset recorded asset state before each test.
 	 */
 	protected function setUp(): void {
@@ -73,7 +78,7 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertInstanceOf( FGCBG_Admin_Assets::class, $assets );
 
-		$assets->enqueue( 'woocommerce_page_free-gift-bulk-coupon-generator' );
+		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
 		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['scripts'] );
 		$this->assertSame( FGCBG_PLUGIN_URL . 'assets/js/admin.js', $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['src'] );
@@ -141,7 +146,13 @@ final class PluginBootstrapTest extends TestCase {
 	 * Clear WordPress asset globals used by the bootstrap stubs.
 	 */
 	private function reset_asset_globals(): void {
-		$GLOBALS['fgcbg_test_enqueued']       = array();
+		unset( $GLOBALS['fgcbg_test_enqueued'], $GLOBALS['fgcbg_test_inline_scripts'] );
+
+		$GLOBALS['fgcbg_test_enqueued'] = array(
+			'scripts' => array(),
+			'styles'  => array(),
+		);
+
 		$GLOBALS['fgcbg_test_inline_scripts'] = array();
 	}
 }
