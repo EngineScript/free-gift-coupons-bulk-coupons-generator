@@ -19,12 +19,13 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@f27b608878404679385c85cfa523b85ccb86e213 # v6
+    - uses: actions/labeler@v6
+      if: github.event_name == 'pull_request'
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         configuration-path: .github/labeler.yml
         sync-labels: false
-    - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # v10
+    - uses: actions/stale@v10
       with:
         days-before-stale: 30
         days-before-close: 7
