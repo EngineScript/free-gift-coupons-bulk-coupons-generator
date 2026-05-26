@@ -177,77 +177,200 @@
 		 * @returns {Promise<void>}
 		 */
 		async runBatchGeneration( total ) {
-			const { form, generatedCodes, progress, progressText, results, submitButton } = this.elements;
-			const collectedCodes = [];
-			let generated = 0;
-			let remaining = total;
+			const state = {
+				collectedCodes: [],
+				generated: 0,
+				remaining: total,
+				total,
+			};
 
-			form.classList.add( 'loading' );
-			if ( submitButton ) {
-				submitButton.disabled = true;
-			}
-			if ( progress ) {
-				progress.hidden = false;
-			}
-			if ( results ) {
-				results.hidden = true;
-			}
-			if ( generatedCodes ) {
-				generatedCodes.value = '';
-			}
-			this.updateProgress( 0 );
+			this.prepareBatchGeneration();
 
 			try {
-				while ( remaining > 0 ) {
-					const batchSize = Math.min( BATCH_SIZE, remaining );
-					const response = await this.sendBatchRequest( batchSize );
-
-					if ( ! response?.success ) {
-						this.showErrorMessage( response?.data?.message ?? message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
-						return;
-					}
-
-					const generatedInBatch = Number.parseInt( response.data?.generated ?? 0, 10 );
-					generated += Number.isNaN( generatedInBatch ) ? 0 : generatedInBatch;
-
-					if ( Array.isArray( response.data?.codes ) ) {
-						collectedCodes.push( ...response.data.codes.map( String ) );
-					}
-
-					remaining -= batchSize;
-					this.updateProgress( Math.min( 100, Math.round( ( generated / total ) * 100 ) ) );
-
-					if ( progressText ) {
-						progressText.textContent = formatMessage( 'generating_progress', '', [
-							[ '%1$d', generated ],
-							[ '%2$d', total ],
-						] );
-					}
-				}
+				await this.generateCouponBatches( state );
 			} catch {
 				this.showErrorMessage( message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
 			} finally {
-				form.classList.remove( 'loading' );
-				if ( submitButton ) {
-					submitButton.disabled = false;
-				}
+				this.finishBatchGeneration( state );
+			}
+		}
 
-				if ( generated > 0 ) {
-					this.updateProgress( 100 );
-					if ( generatedCodes ) {
-						generatedCodes.value = collectedCodes.join( '\n' );
-					}
-					if ( results ) {
-						results.hidden = false;
-					}
-					this.showSuccessMessage( formatMessage( 'generation_complete', '', [
-						[ '%d', generated ],
-					] ) );
-				}
+		/** Prepare the form controls before batch generation begins. */
+		prepareBatchGeneration() {
+			this.elements.form.classList.add( 'loading' );
+			this.setSubmitButtonDisabled( true );
+			this.setProgressVisible( true );
+			this.setResultsVisible( false );
+			this.clearGeneratedCodes();
+			this.updateProgress( 0 );
+		}
 
-				if ( generated === 0 && progress ) {
-					progress.hidden = true;
+		/**
+		 * Generate all coupon batches.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @returns {Promise<void>}
+		 */
+		async generateCouponBatches( state ) {
+			while ( state.remaining > 0 ) {
+				if ( ! await this.generateCouponBatch( state ) ) {
+					return;
 				}
+			}
+		}
+
+		/**
+		 * Generate a single coupon batch and update progress state.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @returns {Promise<boolean>} True when generation can continue.
+		 */
+		async generateCouponBatch( state ) {
+			const batchSize = Math.min( BATCH_SIZE, state.remaining );
+			const response = await this.sendBatchRequest( batchSize );
+
+			if ( ! response?.success ) {
+				this.showBatchFailure( response );
+				return false;
+			}
+
+			this.addBatchResult( state, response, batchSize );
+			this.updateBatchProgress( state );
+
+			return true;
+		}
+
+		/**
+		 * Add a successful AJAX response to the current batch state.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @param {Object} response - AJAX response payload.
+		 * @param {number} batchSize - Requested batch size.
+		 * @returns {void}
+		 */
+		addBatchResult( state, response, batchSize ) {
+			const generatedInBatch = Number.parseInt( response.data?.generated ?? 0, 10 );
+			state.generated += Number.isNaN( generatedInBatch ) ? 0 : generatedInBatch;
+			state.remaining -= batchSize;
+
+			if ( Array.isArray( response.data?.codes ) ) {
+				state.collectedCodes.push( ...response.data.codes.map( String ) );
+			}
+		}
+
+		/**
+		 * Refresh progress UI after a successful batch.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @returns {void}
+		 */
+		updateBatchProgress( state ) {
+			this.updateProgress( Math.min( 100, Math.round( ( state.generated / state.total ) * 100 ) ) );
+
+			if ( this.elements.progressText ) {
+				this.elements.progressText.textContent = formatMessage( 'generating_progress', '', [
+					[ '%1$d', state.generated ],
+					[ '%2$d', state.total ],
+				] );
+			}
+		}
+
+		/**
+		 * Display the AJAX failure response.
+		 *
+		 * @param {Object|null|undefined} response - AJAX response payload.
+		 * @returns {void}
+		 */
+		showBatchFailure( response ) {
+			this.showErrorMessage(
+				response?.data?.message ?? message( 'generation_failed', 'Failed to generate coupons. Please try again.' )
+			);
+		}
+
+		/**
+		 * Restore controls and reveal generated coupon results.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @returns {void}
+		 */
+		finishBatchGeneration( state ) {
+			this.elements.form.classList.remove( 'loading' );
+			this.setSubmitButtonDisabled( false );
+
+			if ( state.generated > 0 ) {
+				this.showBatchResults( state );
+			}
+
+			if ( state.generated === 0 ) {
+				this.setProgressVisible( false );
+			}
+		}
+
+		/**
+		 * Display completed batch generation results.
+		 *
+		 * @param {Object} state - Mutable batch state.
+		 * @returns {void}
+		 */
+		showBatchResults( state ) {
+			this.updateProgress( 100 );
+			this.setGeneratedCodes( state.collectedCodes );
+			this.setResultsVisible( true );
+			this.showSuccessMessage( formatMessage( 'generation_complete', '', [
+				[ '%d', state.generated ],
+			] ) );
+		}
+
+		/**
+		 * Toggle the submit button disabled state when the button exists.
+		 *
+		 * @param {boolean} disabled - Whether the submit button is disabled.
+		 * @returns {void}
+		 */
+		setSubmitButtonDisabled( disabled ) {
+			if ( this.elements.submitButton ) {
+				this.elements.submitButton.disabled = disabled;
+			}
+		}
+
+		/**
+		 * Toggle progress visibility when the progress element exists.
+		 *
+		 * @param {boolean} visible - Whether progress should be visible.
+		 * @returns {void}
+		 */
+		setProgressVisible( visible ) {
+			if ( this.elements.progress ) {
+				this.elements.progress.hidden = ! visible;
+			}
+		}
+
+		/**
+		 * Toggle results visibility when the results element exists.
+		 *
+		 * @param {boolean} visible - Whether results should be visible.
+		 * @returns {void}
+		 */
+		setResultsVisible( visible ) {
+			if ( this.elements.results ) {
+				this.elements.results.hidden = ! visible;
+			}
+		}
+
+		/** Clear any previously generated coupon codes. */
+		clearGeneratedCodes() {
+			this.setGeneratedCodes( [] );
+		}
+
+		/**
+		 * Replace the generated coupon code textarea contents.
+		 *
+		 * @param {string[]} codes - Coupon codes.
+		 * @returns {void}
+		 */
+		setGeneratedCodes( codes ) {
+			if ( this.elements.generatedCodes ) {
+				this.elements.generatedCodes.value = codes.join( '\n' );
 			}
 		}
 
