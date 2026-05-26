@@ -15,6 +15,9 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  PLUGIN_SLUG: free-gift-bulk-coupon-generator
+
 jobs:
   triage:
     runs-on: ubuntu-latest
