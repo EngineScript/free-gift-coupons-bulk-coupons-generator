@@ -2,7 +2,7 @@
 Contributors: enginescript
 Tags: woocommerce, coupons, bulk, free-gifts, gift-coupons
 Requires at least: 6.8
-Tested up to: 6.9
+Tested up to: 7.0
 Stable tag: 1.6.0
 Requires PHP: 8.2
 License: GPL v3 or later
