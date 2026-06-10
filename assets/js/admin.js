@@ -34,6 +34,20 @@
 		return String( config[ key ] ?? fallback );
 	}
 
+	function getAjaxUrl() {
+		const configuredAjaxUrl = message( 'ajax_url' );
+
+		if ( configuredAjaxUrl !== '' ) {
+			return configuredAjaxUrl;
+		}
+
+		if ( typeof globalThis.ajaxurl === 'string' && globalThis.ajaxurl !== '' ) {
+			return globalThis.ajaxurl;
+		}
+
+		throw new Error( 'Missing WordPress AJAX URL.' );
+	}
+
 	function formatMessage( key, fallback, replacements ) {
 		let template = message( key, fallback );
 
@@ -234,7 +248,13 @@
 				return false;
 			}
 
-			this.addBatchResult( state, response, batchSize );
+			const generatedInBatch = this.addBatchResult( state, response );
+
+			if ( generatedInBatch < 1 ) {
+				this.showBatchFailure( response );
+				return false;
+			}
+
 			this.updateBatchProgress( state );
 
 			return true;
@@ -245,17 +265,20 @@
 		 *
 		 * @param {Object} state - Mutable batch state.
 		 * @param {Object} response - AJAX response payload.
-		 * @param {number} batchSize - Requested batch size.
-		 * @returns {void}
+		 * @returns {number} Number of coupons generated in the batch.
 		 */
-		addBatchResult( state, response, batchSize ) {
-			const generatedInBatch = Number.parseInt( response.data?.generated ?? 0, 10 );
-			state.generated += Number.isNaN( generatedInBatch ) ? 0 : generatedInBatch;
-			state.remaining -= batchSize;
+		addBatchResult( state, response ) {
+			const parsedGenerated = Number.parseInt( response.data?.generated ?? 0, 10 );
+			const generatedInBatch = Number.isNaN( parsedGenerated ) ? 0 : parsedGenerated;
+
+			state.generated += generatedInBatch;
+			state.remaining = Math.max( 0, state.remaining - generatedInBatch );
 
 			if ( Array.isArray( response.data?.codes ) ) {
 				state.collectedCodes.push( ...response.data.codes.map( String ) );
 			}
+
+			return generatedInBatch;
 		}
 
 		/**
@@ -299,9 +322,7 @@
 
 			if ( state.generated > 0 ) {
 				this.showBatchResults( state );
-			}
-
-			if ( state.generated === 0 ) {
+			} else {
 				this.setProgressVisible( false );
 			}
 		}
@@ -313,12 +334,18 @@
 		 * @returns {void}
 		 */
 		showBatchResults( state ) {
-			this.updateProgress( 100 );
+			if ( state.remaining === 0 ) {
+				this.updateProgress( 100 );
+			}
+
 			this.setGeneratedCodes( state.collectedCodes );
 			this.setResultsVisible( true );
-			this.showSuccessMessage( formatMessage( 'generation_complete', '', [
-				[ '%d', state.generated ],
-			] ) );
+
+			if ( state.remaining === 0 ) {
+				this.showSuccessMessage( formatMessage( 'generation_complete', '', [
+					[ '%d', state.generated ],
+				] ) );
+			}
 		}
 
 		/**
@@ -393,7 +420,7 @@
 				body.append( 'product_ids[]', productId );
 			}
 
-			const response = await fetch( 'admin-ajax.php', {
+			const response = await fetch( getAjaxUrl(), {
 				body,
 				credentials: 'same-origin',
 				headers: {
@@ -623,7 +650,7 @@
 			link.click();
 			link.remove();
 
-			URL.revokeObjectURL( url );
+			globalThis.setTimeout( () => URL.revokeObjectURL( url ), 1000 );
 		}
 
 		/** Wire up real-time error-class removal on focus/input. */

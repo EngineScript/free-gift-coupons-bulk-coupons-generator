@@ -96,6 +96,7 @@ final class FGCBG_Admin_Assets {
 	 */
 	private function get_script_data(): array {
 		return array(
+			'ajax_url'               => admin_url( 'admin-ajax.php' ),
 			'batch_size'             => FGCBG_Ajax_Handler::DEFAULT_BATCH_SIZE,
 			'max_coupon_count_value' => FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH,
 			'max_prefix_length'      => FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH,
