@@ -46,7 +46,7 @@ final class FGCBG_Admin_Assets {
 	/**
 	 * Enqueue admin scripts and styles.
 	 *
-	 * @since 1.0.0
+	 * @since 1.6.0
 	 * @param string $hook The current admin page hook.
 	 * @return void
 	 */
