@@ -21,9 +21,9 @@ final class PluginBootstrapTest extends TestCase {
 	private const GENERATOR_PAGE_HOOK = 'woocommerce_page_free-gift-bulk-coupon-generator';
 
 	/**
-	 * Strict semantic version value expected in the plugin header.
+	 * Strict anchored semantic version value expected in the plugin header.
 	 */
-	private const SEMANTIC_VERSION_PATTERN = '[0-9]+\.[0-9]+\.[0-9]+';
+	private const SEMANTIC_VERSION_PATTERN = '/\A[0-9]+\.[0-9]+\.[0-9]+\z/';
 
 	/**
 	 * Reset recorded asset state before each test.
@@ -158,6 +158,9 @@ final class PluginBootstrapTest extends TestCase {
 	/**
 	 * Read a private object property from the plugin singleton.
 	 *
+	 * The test fails through PHPUnit assertions when the property does not
+	 * exist or when its value is not an instance of the expected class.
+	 *
 	 * @template TObject of object
 	 * @param FGCBG_Plugin          $plugin         Plugin instance.
 	 * @param string                $property       Property name.
@@ -197,10 +200,15 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertNotFalse( $contents, sprintf( 'Failed to read plugin file "%s".', $plugin_file ) );
 		$this->assertIsString( $contents );
 
-		$match_count = preg_match( sprintf( '/^\s*\*\s*Version:\s*(%s)\s*$/m', self::SEMANTIC_VERSION_PATTERN ), $contents, $matches );
+		$match_count = preg_match( '/^\s*\*\s*Version:\s*([^\s]+)\s*$/m', $contents, $matches );
 
-		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a semantic Version header like 1.2.3.', $plugin_file ) );
+		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a Version header.', $plugin_file ) );
 		$this->assertArrayHasKey( 1, $matches, sprintf( 'Expected Version header in "%s" to capture the version number.', $plugin_file ) );
+		$this->assertMatchesRegularExpression(
+			self::SEMANTIC_VERSION_PATTERN,
+			$matches[1],
+			sprintf( 'Expected Version header in "%s" to contain a semantic version like 1.2.3.', $plugin_file )
+		);
 
 		return $matches[1];
 	}
