@@ -21,9 +21,9 @@ final class PluginBootstrapTest extends TestCase {
 	private const GENERATOR_PAGE_HOOK = 'woocommerce_page_free-gift-bulk-coupon-generator';
 
 	/**
-	 * Strict anchored semantic version value expected in the plugin header.
+	 * Strict anchored SemVer 2.0.0 value expected in the plugin header.
 	 */
-	private const SEMANTIC_VERSION_PATTERN = '/\A[0-9]+\.[0-9]+\.[0-9]+\z/';
+	private const SEMANTIC_VERSION_PATTERN = '/\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\z/';
 
 	/**
 	 * Reset recorded asset state before each test.
@@ -117,10 +117,12 @@ final class PluginBootstrapTest extends TestCase {
 		);
 		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['styles'] );
 
+		$localized_script = $this->get_recorded_localized_script( 'fgcbg-admin' );
+
 		$this->assertArrayNotHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_inline_scripts'] );
-		$this->assertSame( 'fgcbgAdminConfig', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['object_name'] );
-		$this->assertArrayHasKey( 'ajax_url', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
-		$this->assertArrayNotHasKey( 'fgcbg_i18n', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
+		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
+		$this->assertArrayHasKey( 'ajax_url', $localized_script['data'] );
+		$this->assertArrayNotHasKey( 'fgcbg_i18n', $localized_script['data'] );
 	}
 
 	/**
@@ -133,8 +135,11 @@ final class PluginBootstrapTest extends TestCase {
 
 		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
+		$localized_script = $this->get_recorded_localized_script( 'fgcbg-admin' );
+
 		$this->assertSame( 10, has_action( 'admin_notices', array( $assets, 'script_data_failure_notice' ) ) );
-		$this->assertSame( array(), $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
+		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
+		$this->assertSame( array(), $localized_script['data'] );
 	}
 
 	/**
@@ -211,6 +216,37 @@ final class PluginBootstrapTest extends TestCase {
 		);
 
 		return $matches[1];
+	}
+
+	/**
+	 * Get localized script data recorded by the WordPress test stub.
+	 *
+	 * The test fails through PHPUnit assertions when the script handle or
+	 * requested localization entry has not been recorded.
+	 *
+	 * @param string $handle Script handle.
+	 * @param int    $index  Zero-based localization entry index.
+	 * @return array{data: array<string,mixed>, object_name: string}
+	 */
+	private function get_recorded_localized_script( string $handle, int $index = 0 ): array {
+		$this->assertArrayHasKey(
+			$handle,
+			$GLOBALS['fgcbg_test_localized_scripts'],
+			sprintf( 'Expected localized script data for handle "%s" to be recorded.', $handle )
+		);
+		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ] );
+		$this->assertArrayHasKey(
+			$index,
+			$GLOBALS['fgcbg_test_localized_scripts'][ $handle ],
+			sprintf( 'Expected localized script data entry %d for handle "%s" to be recorded.', $index, $handle )
+		);
+		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
+		$this->assertArrayHasKey( 'data', $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
+		$this->assertArrayHasKey( 'object_name', $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
+		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ]['data'] );
+		$this->assertIsString( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ]['object_name'] );
+
+		return $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ];
 	}
 
 	/**
