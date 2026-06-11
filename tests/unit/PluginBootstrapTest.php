@@ -117,9 +117,24 @@ final class PluginBootstrapTest extends TestCase {
 		);
 		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['styles'] );
 
-		$this->assertSame( 'before', $GLOBALS['fgcbg_test_inline_scripts']['fgcbg-admin'][0]['position'] );
-		$this->assertStringStartsWith( 'globalThis.fgcbgAdminConfig = Object.freeze(', $GLOBALS['fgcbg_test_inline_scripts']['fgcbg-admin'][0]['data'] );
-		$this->assertStringNotContainsString( 'fgcbg_i18n', $GLOBALS['fgcbg_test_inline_scripts']['fgcbg-admin'][0]['data'] );
+		$this->assertArrayNotHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_inline_scripts'] );
+		$this->assertSame( 'fgcbgAdminConfig', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['object_name'] );
+		$this->assertArrayHasKey( 'ajax_url', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
+		$this->assertArrayNotHasKey( 'fgcbg_i18n', $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
+	}
+
+	/**
+	 * Script data encoding failures are surfaced to admins.
+	 */
+	public function test_admin_assets_queue_notice_when_script_data_cannot_be_encoded(): void {
+		$assets = new FGCBG_Admin_Assets();
+
+		$GLOBALS['fgcbg_test_wp_json_encode_result'] = false;
+
+		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
+
+		$this->assertSame( 10, has_action( 'admin_notices', array( $assets, 'script_data_failure_notice' ) ) );
+		$this->assertSame( array(), $GLOBALS['fgcbg_test_localized_scripts']['fgcbg-admin'][0]['data'] );
 	}
 
 	/**
@@ -194,7 +209,13 @@ final class PluginBootstrapTest extends TestCase {
 	 * Clear WordPress asset globals used by the bootstrap stubs.
 	 */
 	private function reset_asset_globals(): void {
-		unset( $GLOBALS['fgcbg_test_enqueued'], $GLOBALS['fgcbg_test_inline_scripts'] );
+		unset(
+			$GLOBALS['fgcbg_test_enqueued'],
+			$GLOBALS['fgcbg_test_inline_scripts'],
+			$GLOBALS['fgcbg_test_localized_scripts'],
+			$GLOBALS['fgcbg_test_wp_json_encode_result'],
+			$GLOBALS['fgcbg_test_wp_localize_script_result']
+		);
 
 		$GLOBALS['fgcbg_test_enqueued'] = array(
 			'scripts' => array(),
@@ -202,5 +223,6 @@ final class PluginBootstrapTest extends TestCase {
 		);
 
 		$GLOBALS['fgcbg_test_inline_scripts'] = array();
+		$GLOBALS['fgcbg_test_localized_scripts'] = array();
 	}
 }

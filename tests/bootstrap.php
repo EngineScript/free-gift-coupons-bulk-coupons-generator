@@ -38,6 +38,7 @@ $GLOBALS['fgcbg_test_products']         = array();
 $GLOBALS['fgcbg_test_coupons']          = array();
 $GLOBALS['fgcbg_test_enqueued']         = array();
 $GLOBALS['fgcbg_test_inline_scripts']   = array();
+$GLOBALS['fgcbg_test_localized_scripts'] = array();
 $GLOBALS['fgcbg_test_passwords']        = array();
 $GLOBALS['fgcbg_test_submenu_pages']    = array();
 $GLOBALS['fgcbg_test_current_user_can'] = true;
@@ -511,6 +512,29 @@ if ( ! function_exists( 'wp_add_inline_script' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_localize_script' ) ) {
+	/**
+	 * Record localized script data.
+	 *
+	 * @param string               $handle      Script handle.
+	 * @param string               $object_name JavaScript object name.
+	 * @param array<string,mixed>  $l10n        Localization data.
+	 * @return bool
+	 */
+	function wp_localize_script( $handle, $object_name, $l10n ) {
+		if ( isset( $GLOBALS['fgcbg_test_wp_localize_script_result'] ) ) {
+			return (bool) $GLOBALS['fgcbg_test_wp_localize_script_result'];
+		}
+
+		$GLOBALS['fgcbg_test_localized_scripts'][ $handle ][] = array(
+			'data'        => $l10n,
+			'object_name' => $object_name,
+		);
+
+		return true;
+	}
+}
+
 if ( ! function_exists( 'wp_json_encode' ) ) {
 	/**
 	 * Encode data as JSON.
@@ -520,6 +544,10 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 	 * @return string|false
 	 */
 	function wp_json_encode( $data, $flags = 0 ) {
+		if ( array_key_exists( 'fgcbg_test_wp_json_encode_result', $GLOBALS ) ) {
+			return $GLOBALS['fgcbg_test_wp_json_encode_result'];
+		}
+
 		return json_encode( $data, $flags );
 	}
 }

@@ -156,7 +156,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 - ESNext (const/let, arrow functions, template literals, optional chaining, nullish coalescing)
 - jQuery for DOM manipulation (WooCommerce admin dependency)
-- All user-facing strings from `wp_add_inline_script()` data - never hardcoded
+- All user-facing strings from WordPress script data - never hardcoded
 - IIFE scope with `'use strict'`
 
 ### PHP Standards

@@ -9,92 +9,96 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-05-18T09:12:39+00:00\n"
+"POT-Creation-Date: 2026-06-10T09:14:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: free-gift-bulk-coupon-generator\n"
 
 #. Plugin Name of the plugin
-#: free-gift-bulk-coupon-generator.php
+#: free-gift-bulk-coupon-generator.php:3
 #: includes/class-fgcbg-admin-page.php:29
 msgid "Free Gift Coupons Bulk Coupon Generator"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: free-gift-bulk-coupon-generator.php
+#: free-gift-bulk-coupon-generator.php:4
 msgid "https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator"
 msgstr ""
 
 #. Description of the plugin
-#: free-gift-bulk-coupon-generator.php
+#: free-gift-bulk-coupon-generator.php:5
 msgid "Generate bulk free gift coupon codes that work with the Free Gift Coupons for WooCommerce plugin. Creates coupons with the proper data structure for free gift functionality."
 msgstr ""
 
 #. Author of the plugin
-#: free-gift-bulk-coupon-generator.php
+#: free-gift-bulk-coupon-generator.php:7
 msgid "EngineScript"
 msgstr ""
 
+#: includes/class-fgcbg-admin-assets.php:121
+msgid "Free Gift Coupons Bulk Coupon Generator could not load its admin script settings. Coupon generation controls may not work until this is resolved."
+msgstr ""
+
 #. translators: %d is the number of coupons to be generated.
-#: includes/class-fgcbg-admin-assets.php:107
+#: includes/class-fgcbg-admin-assets.php:140
 #, php-format
 msgid "You are about to generate %d coupons. This may take a while and could potentially timeout depending on your server settings. Do you want to continue?"
 msgstr ""
 
 #. translators: %d is the maximum number of coupons that can be generated in one run.
-#: includes/class-fgcbg-admin-assets.php:109
+#: includes/class-fgcbg-admin-assets.php:142
 #, php-format
 msgid "Maximum %d coupons allowed"
 msgstr ""
 
-#: includes/class-fgcbg-admin-assets.php:110
+#: includes/class-fgcbg-admin-assets.php:143
 msgid "Generating many coupons may take some time and could timeout"
 msgstr ""
 
-#: includes/class-fgcbg-admin-assets.php:111
+#: includes/class-fgcbg-admin-assets.php:144
 #: includes/class-fgcbg-ajax-handler.php:84
 msgid "Please select at least one product."
 msgstr ""
 
-#: includes/class-fgcbg-admin-assets.php:112
+#: includes/class-fgcbg-admin-assets.php:145
 msgid "Please enter a valid number of coupons (minimum 1)."
 msgstr ""
 
 #. translators: %d is the maximum number of coupons that can be generated in one run.
-#: includes/class-fgcbg-admin-assets.php:114
+#: includes/class-fgcbg-admin-assets.php:147
 #, php-format
 msgid "Maximum number of coupons is %d."
 msgstr ""
 
 #. translators: %d is the maximum coupon prefix length.
-#: includes/class-fgcbg-admin-assets.php:116
+#: includes/class-fgcbg-admin-assets.php:149
 #, php-format
 msgid "Coupon prefix must be %d characters or less."
 msgstr ""
 
 #. translators: 1: minimum random code length, 2: maximum random code length.
-#: includes/class-fgcbg-admin-assets.php:118
+#: includes/class-fgcbg-admin-assets.php:151
 #, php-format
 msgid "Please enter a random code length between %1$d and %2$d characters."
 msgstr ""
 
-#: includes/class-fgcbg-admin-assets.php:119
+#: includes/class-fgcbg-admin-assets.php:152
 msgid "Coupon generation is in progress. Are you sure you want to leave this page?"
 msgstr ""
 
 #. translators: %1$d is the current coupon count, %2$d is the total number of coupons to generate.
-#: includes/class-fgcbg-admin-assets.php:121
+#: includes/class-fgcbg-admin-assets.php:154
 #, php-format
 msgid "Generating coupons: %1$d of %2$d"
 msgstr ""
 
 #. translators: %d is the number of successfully generated coupons.
-#: includes/class-fgcbg-admin-assets.php:123
+#: includes/class-fgcbg-admin-assets.php:156
 #, php-format
 msgid "Successfully generated %d coupons."
 msgstr ""
 
-#: includes/class-fgcbg-admin-assets.php:124
+#: includes/class-fgcbg-admin-assets.php:157
 msgid "Failed to generate coupons. Please try again."
 msgstr ""
 

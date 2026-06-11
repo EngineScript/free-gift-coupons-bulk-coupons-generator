@@ -34,6 +34,14 @@ final class FGCBG_Admin_Assets {
 	private const STYLE_HANDLE = 'fgcbg-admin';
 
 	/**
+	 * Whether admin script data failed to load.
+	 *
+	 * @since 1.6.0
+	 * @var bool
+	 */
+	private bool $script_data_failed = false;
+
+	/**
 	 * Register asset hooks.
 	 *
 	 * @since 1.6.0
@@ -73,19 +81,44 @@ final class FGCBG_Admin_Assets {
 			FGCBG_PLUGIN_VERSION
 		);
 
-		$script_data = wp_json_encode(
-			$this->get_script_data(),
-			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-		);
-		if ( false === $script_data ) {
-			$script_data = '{}';
+		$script_data = $this->get_script_data();
+		if ( false === wp_json_encode( $script_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) ) {
+			$this->queue_script_data_failure_notice();
+			$script_data = array();
 		}
 
-		wp_add_inline_script(
-			self::SCRIPT_HANDLE,
-			'globalThis.fgcbgAdminConfig = Object.freeze(' . $script_data . ');',
-			'before'
-		);
+		if ( ! wp_localize_script( self::SCRIPT_HANDLE, 'fgcbgAdminConfig', $script_data ) ) {
+			$this->queue_script_data_failure_notice();
+		}
+	}
+
+	/**
+	 * Queue an admin notice when script data cannot be prepared.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	private function queue_script_data_failure_notice(): void {
+		if ( $this->script_data_failed ) {
+			return;
+		}
+
+		$this->script_data_failed = true;
+		add_action( 'admin_notices', array( $this, 'script_data_failure_notice' ) );
+	}
+
+	/**
+	 * Display the script data failure notice.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function script_data_failure_notice(): void {
+		if ( ! $this->script_data_failed ) {
+			return;
+		}
+
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'Free Gift Coupons Bulk Coupon Generator could not load its admin script settings. Coupon generation controls may not work until this is resolved.', 'free-gift-bulk-coupon-generator' ) . '</p></div>';
 	}
 
 	/**

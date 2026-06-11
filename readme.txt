@@ -117,7 +117,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 * Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a modern WordPress 6.8+ browser baseline.
 * Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script.
-* Hardened runtime JavaScript configuration with a frozen `fgcbgAdminConfig` object and JSON hex escaping.
+* Hardened runtime JavaScript configuration with WordPress-managed script data.
 * Simplified client-side validation so the first invalid field is tracked through a single validation list.
 
 **Fixed:**
@@ -133,7 +133,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * CSS custom properties for all colors.
 * `aria-describedby` attributes on all form fields for accessibility.
 * i18n-safe list formatting with `wp_sprintf()`.
-* All JavaScript strings provided via `wp_add_inline_script()` configuration data.
+* All JavaScript strings provided via WordPress script configuration data.
 * Named class constants for all important generation limits.
 
 **Changed:**
