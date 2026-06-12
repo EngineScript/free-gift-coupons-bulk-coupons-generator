@@ -24,6 +24,8 @@
 		warning: '#coupon-count-warning',
 	} );
 
+	const AJAX_ENDPOINT = 'admin-ajax.php';
+
 	function toPositiveInteger( value, fallback ) {
 		const parsed = Number.parseInt( value ?? fallback, 10 );
 
@@ -32,20 +34,6 @@
 
 	function message( key, fallback = '' ) {
 		return String( config[ key ] ?? fallback );
-	}
-
-	function getAjaxUrl() {
-		const configuredAjaxUrl = message( 'ajax_url' );
-
-		if ( configuredAjaxUrl !== '' ) {
-			return configuredAjaxUrl;
-		}
-
-		if ( typeof globalThis.ajaxurl === 'string' && globalThis.ajaxurl !== '' ) {
-			return globalThis.ajaxurl;
-		}
-
-		throw new Error( 'Missing WordPress AJAX URL.' );
 	}
 
 	function formatMessage( key, fallback, replacements ) {
@@ -420,7 +408,7 @@
 				body.append( 'product_ids[]', productId );
 			}
 
-			const response = await fetch( getAjaxUrl(), {
+			const response = await fetch( AJAX_ENDPOINT, {
 				body,
 				credentials: 'same-origin',
 				headers: {

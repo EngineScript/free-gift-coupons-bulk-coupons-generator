@@ -87,12 +87,14 @@ final class AjaxHandlerTest extends TestCase {
 	}
 
 	/**
-	 * AJAX generation rejects users without the WooCommerce management capability.
+	 * AJAX generation rejects users without the coupon publishing capability.
 	 */
-	public function test_generate_batch_rejects_user_without_manage_woocommerce(): void {
+	public function test_generate_batch_rejects_user_without_coupon_publish_capability(): void {
 		$GLOBALS['fgcbg_test_current_user_capabilities'] = array(
-			'manage_woocommerce' => false,
-			'edit_product'       => array( 123 ),
+			'manage_woocommerce'   => true,
+			'edit_product'         => array( 123 ),
+			'edit_shop_coupons'    => true,
+			'publish_shop_coupons' => false,
 		);
 
 		$_POST = array(
@@ -121,8 +123,8 @@ final class AjaxHandlerTest extends TestCase {
 	 */
 	public function test_generate_batch_rejects_uneditable_product_ids(): void {
 		$GLOBALS['fgcbg_test_current_user_capabilities'] = array(
-			'manage_woocommerce' => true,
-			'edit_product'       => array(),
+			'edit_product'         => array(),
+			'publish_shop_coupons' => true,
 		);
 
 		$_POST = array(

@@ -146,7 +146,7 @@ final class FGCBG_Plugin {
 			'woocommerce',
 			__( 'Free Gift Bulk Coupons', 'free-gift-bulk-coupon-generator' ),
 			__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
-			'manage_woocommerce',
+			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY,
 			'free-gift-bulk-coupon-generator',
 			array( $this->admin_page, 'render' )
 		);

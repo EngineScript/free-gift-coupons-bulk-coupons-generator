@@ -8,6 +8,8 @@
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use z4kn4fein\SemVer\SemverException;
+use z4kn4fein\SemVer\Version;
 
 /**
  * Tests for the main plugin entry point.
@@ -19,11 +21,6 @@ final class PluginBootstrapTest extends TestCase {
 	 * Hook suffix WordPress returns for the WooCommerce coupon generator submenu page.
 	 */
 	private const GENERATOR_PAGE_HOOK = 'woocommerce_page_free-gift-bulk-coupon-generator';
-
-	/**
-	 * Strict anchored SemVer 2.0.0 value expected in the plugin header.
-	 */
-	private const SEMANTIC_VERSION_PATTERN = '/\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\z/';
 
 	/**
 	 * Reset recorded asset state before each test.
@@ -78,13 +75,36 @@ final class PluginBootstrapTest extends TestCase {
 		fgcbg_test_define_woocommerce_marker();
 		fgcbg_init();
 
-		$plugin = FGCBG_Plugin::get_instance();
-		$assets = $this->get_plugin_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
-		$ajax   = $this->get_plugin_property( $plugin, 'ajax_handler', FGCBG_Ajax_Handler::class );
+		$plugin         = FGCBG_Plugin::get_instance();
+		$assets         = $this->get_object_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
+		$ajax           = $this->get_object_property( $plugin, 'ajax_handler', FGCBG_Ajax_Handler::class );
+		$generator      = $this->get_object_property( $plugin, 'generator', FGCBG_Coupon_Generator::class );
+		$ajax_generator = $this->get_object_property( $ajax, 'generator', FGCBG_Coupon_Generator::class );
 
+		$this->assertSame( $generator, $ajax_generator, 'Expected AJAX handler to use the plugin coupon generator instance.' );
 		$this->assertSame( 10, has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
 		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( $assets, 'enqueue' ) ) );
 		$this->assertSame( 10, has_action( 'wp_ajax_fgcbg_generate_batch', array( $ajax, 'generate_batch' ) ) );
+	}
+
+	/**
+	 * The coupon generator submenu requires coupon publishing permission.
+	 */
+	public function test_admin_menu_requires_coupon_publish_capability(): void {
+		fgcbg_test_define_woocommerce_marker();
+		fgcbg_init();
+
+		$plugin = FGCBG_Plugin::get_instance();
+		$plugin->add_admin_menu();
+
+		$this->assertNotEmpty( $GLOBALS['fgcbg_test_submenu_pages'] );
+
+		$submenu_pages = $GLOBALS['fgcbg_test_submenu_pages'];
+		$submenu_page  = end( $submenu_pages );
+
+		$this->assertIsArray( $submenu_page );
+		$this->assertSame( 'woocommerce', $submenu_page[0] );
+		$this->assertSame( FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY, $submenu_page[3] );
 	}
 
 	/**
@@ -95,7 +115,7 @@ final class PluginBootstrapTest extends TestCase {
 		fgcbg_init();
 
 		$plugin = FGCBG_Plugin::get_instance();
-		$assets = $this->get_plugin_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
+		$assets = $this->get_object_property( $plugin, 'admin_assets', FGCBG_Admin_Assets::class );
 
 		$this->assertInstanceOf( FGCBG_Admin_Assets::class, $assets );
 
@@ -121,7 +141,7 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertArrayNotHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_inline_scripts'] );
 		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
-		$this->assertArrayHasKey( 'ajax_url', $localized_script['data'] );
+		$this->assertArrayNotHasKey( 'ajax_url', $localized_script['data'] );
 		$this->assertArrayNotHasKey( 'fgcbg_i18n', $localized_script['data'] );
 	}
 
@@ -161,31 +181,31 @@ final class PluginBootstrapTest extends TestCase {
 	}
 
 	/**
-	 * Read a private object property from the plugin singleton.
+	 * Read a private object property.
 	 *
 	 * The test fails through PHPUnit assertions when the property does not
 	 * exist or when its value is not an instance of the expected class.
 	 *
 	 * @template TObject of object
-	 * @param FGCBG_Plugin          $plugin         Plugin instance.
+	 * @param object                $object         Object instance.
 	 * @param string                $property       Property name.
 	 * @param class-string<TObject> $expected_class Expected object class.
 	 * @return TObject
 	 */
-	private function get_plugin_property( FGCBG_Plugin $plugin, string $property, string $expected_class ) {
-		$reflection_class = new ReflectionClass( $plugin );
+	private function get_object_property( object $object, string $property, string $expected_class ) {
+		$reflection_class = new ReflectionClass( $object );
 		$this->assertTrue(
 			$reflection_class->hasProperty( $property ),
-			sprintf( 'Expected plugin property "%s" to exist.', $property )
+			sprintf( 'Expected object property "%s" to exist.', $property )
 		);
 
 		$reflection_property = $reflection_class->getProperty( $property );
-		$property_value      = $reflection_property->getValue( $plugin );
+		$property_value      = $reflection_property->getValue( $object );
 
 		$this->assertInstanceOf(
 			$expected_class,
 			$property_value,
-			sprintf( 'Expected plugin property "%s" to be an instance of %s.', $property, $expected_class )
+			sprintf( 'Expected object property "%s" to be an instance of %s.', $property, $expected_class )
 		);
 
 		return $property_value;
@@ -209,11 +229,23 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertSame( 1, $match_count, sprintf( 'Expected plugin file "%s" to contain a Version header.', $plugin_file ) );
 		$this->assertArrayHasKey( 1, $matches, sprintf( 'Expected Version header in "%s" to capture the version number.', $plugin_file ) );
-		$this->assertMatchesRegularExpression(
-			self::SEMANTIC_VERSION_PATTERN,
-			$matches[1],
-			sprintf( 'Expected Version header in "%s" to contain a semantic version like 1.2.3.', $plugin_file )
-		);
+
+		try {
+			$parsed_version = Version::parse( $matches[1] );
+			$this->assertSame(
+				$matches[1],
+				(string) $parsed_version,
+				sprintf( 'Expected Version header in "%s" to contain a canonical SemVer 2.0.0 value.', $plugin_file )
+			);
+		} catch ( SemverException $exception ) {
+			$this->fail(
+				sprintf(
+					'Expected Version header in "%s" to contain a valid SemVer 2.0.0 value: %s',
+					$plugin_file,
+					$exception->getMessage()
+				)
+			);
+		}
 
 		return $matches[1];
 	}
@@ -257,6 +289,7 @@ final class PluginBootstrapTest extends TestCase {
 			$GLOBALS['fgcbg_test_enqueued'],
 			$GLOBALS['fgcbg_test_inline_scripts'],
 			$GLOBALS['fgcbg_test_localized_scripts'],
+			$GLOBALS['fgcbg_test_submenu_pages'],
 			$GLOBALS['fgcbg_test_wp_json_encode_result'],
 			$GLOBALS['fgcbg_test_wp_localize_script_result']
 		);
@@ -268,5 +301,6 @@ final class PluginBootstrapTest extends TestCase {
 
 		$GLOBALS['fgcbg_test_inline_scripts'] = array();
 		$GLOBALS['fgcbg_test_localized_scripts'] = array();
+		$GLOBALS['fgcbg_test_submenu_pages'] = array();
 	}
 }

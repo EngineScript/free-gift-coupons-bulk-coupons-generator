@@ -18,6 +18,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class FGCBG_Ajax_Handler {
 
 	/**
+	 * Capability required to mint generated coupons.
+	 *
+	 * @since 1.6.0
+	 * @var string
+	 */
+	public const GENERATE_COUPONS_CAPABILITY = 'publish_shop_coupons';
+
+	/**
 	 * Default number of coupons generated per AJAX request.
 	 *
 	 * @since 1.6.0
@@ -62,7 +70,7 @@ final class FGCBG_Ajax_Handler {
 	public function generate_batch(): never {
 		check_ajax_referer( 'fgcbg_ajax_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( self::GENERATE_COUPONS_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-bulk-coupon-generator' ) ), 403 );
 		}
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **AJAX Request URL Hardening**: Removed the runtime-configured AJAX URL from the admin script and now post coupon-generation requests to the fixed same-origin `admin-ajax.php` endpoint.
+- **Coupon Capability Enforcement**: Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
+
 ### Changed
 
 - **Modern JavaScript Admin UI**: Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a cleaner WordPress 6.8+ browser baseline.
