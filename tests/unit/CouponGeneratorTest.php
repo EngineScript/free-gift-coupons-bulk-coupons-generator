@@ -11,20 +11,24 @@ use PHPUnit\Framework\TestCase;
  * Tests for WooCommerce coupon creation behavior.
  */
 final class CouponGeneratorTest extends TestCase {
+	use FGCBG_Test_Stub_State;
+
 	/**
 	 * Reset the WooCommerce test doubles.
 	 */
 	protected function setUp(): void {
 		parent::setUp();
 
-		$GLOBALS['fgcbg_test_products'] = array(
-			123 => new FGCBG_Test_Product( 'Sample Mug' ),
-			321 => new FGCBG_Test_Product( '<strong>Gift</strong> <script>alert(1)</script>Card' ),
-			456 => new FGCBG_Test_Product( 'Sticker Pack' ),
-			789 => new FGCBG_Test_Product( 'Sample Hoodie - Blue', 456 ),
+		$this->set_test_products(
+			array(
+				123 => new FGCBG_Test_Product( 'Sample Mug' ),
+				321 => new FGCBG_Test_Product( '<strong>Gift</strong> <script>alert(1)</script>Card' ),
+				456 => new FGCBG_Test_Product( 'Sticker Pack' ),
+				789 => new FGCBG_Test_Product( 'Sample Hoodie - Blue', 456 ),
+			)
 		);
-		$GLOBALS['fgcbg_test_coupons']  = array();
-		$GLOBALS['fgcbg_test_passwords'] = array();
+		$this->clear_test_coupons();
+		$this->set_test_passwords( array() );
 	}
 
 	/**
@@ -36,9 +40,9 @@ final class CouponGeneratorTest extends TestCase {
 		$generated = $generator->generate_coupons( array( 123, 456 ), 1, 'GIFT' );
 
 		$this->assertSame( 1, $generated );
-		$this->assertCount( 1, $GLOBALS['fgcbg_test_coupons'] );
+		$this->assertCount( 1, $this->get_test_coupons() );
 
-		$coupon = $GLOBALS['fgcbg_test_coupons'][0];
+		$coupon = $this->get_test_coupon();
 
 		$this->assertStringStartsWith( 'gift', $coupon->get_code() );
 		$this->assertSame( 'free_gift', $coupon->get_discount_type() );
@@ -74,7 +78,7 @@ final class CouponGeneratorTest extends TestCase {
 
 		$this->assertSame( 1, $generated );
 
-		$coupon = $GLOBALS['fgcbg_test_coupons'][0];
+		$coupon = $this->get_test_coupon();
 
 		$this->assertSame(
 			array(
@@ -98,7 +102,7 @@ final class CouponGeneratorTest extends TestCase {
 		$generated = $generator->generate_coupons( array( 999 ), 3 );
 
 		$this->assertSame( 0, $generated );
-		$this->assertSame( array(), $GLOBALS['fgcbg_test_coupons'] );
+		$this->assertSame( array(), $this->get_test_coupons() );
 	}
 
 	/**
@@ -112,7 +116,7 @@ final class CouponGeneratorTest extends TestCase {
 		$this->assertSame( 1, $result['generated'] );
 		$this->assertCount( 1, $result['codes'] );
 
-		$coupon = $GLOBALS['fgcbg_test_coupons'][0];
+		$coupon = $this->get_test_coupon();
 
 		$this->assertStringStartsWith( 'summergi', $coupon->get_code() );
 		$this->assertSame( $coupon->get_code(), $result['codes'][0] );
@@ -144,8 +148,11 @@ final class CouponGeneratorTest extends TestCase {
 		$generated = $generator->generate_coupons( array( 321 ), 1 );
 
 		$this->assertSame( 1, $generated );
-		$this->assertStringNotContainsString( '<script>', $GLOBALS['fgcbg_test_coupons'][0]->get_prop( 'description' ) );
-		$this->assertStringNotContainsString( '<strong>', $GLOBALS['fgcbg_test_coupons'][0]->get_prop( 'description' ) );
+
+		$coupon = $this->get_test_coupon();
+
+		$this->assertStringNotContainsString( '<script>', $coupon->get_prop( 'description' ) );
+		$this->assertStringNotContainsString( '<strong>', $coupon->get_prop( 'description' ) );
 	}
 
 	/**
@@ -164,17 +171,19 @@ final class CouponGeneratorTest extends TestCase {
 		remove_filter( 'fgcbg_max_coupons_per_batch', $filter );
 
 		$this->assertSame( 2, $generated );
-		$this->assertCount( 2, $GLOBALS['fgcbg_test_coupons'] );
+		$this->assertCount( 2, $this->get_test_coupons() );
 	}
 
 	/**
 	 * Duplicate generated codes are skipped and retried.
 	 */
 	public function test_duplicate_coupon_codes_are_retried(): void {
-		$GLOBALS['fgcbg_test_passwords'] = array(
-			'duplicate1',
-			'duplicate1',
-			'unique2222',
+		$this->set_test_passwords(
+			array(
+				'duplicate1',
+				'duplicate1',
+				'unique2222',
+			)
 		);
 
 		$generator = new FGCBG_Coupon_Generator();
@@ -183,6 +192,6 @@ final class CouponGeneratorTest extends TestCase {
 
 		$this->assertSame( 2, $result['generated'] );
 		$this->assertSame( array( 'duplicate1', 'unique2222' ), $result['codes'] );
-		$this->assertCount( 2, $GLOBALS['fgcbg_test_coupons'] );
+		$this->assertCount( 2, $this->get_test_coupons() );
 	}
 }

@@ -17,6 +17,8 @@ use z4kn4fein\SemVer\Version;
  * This suite targets PHP 8.2+, matching the plugin minimum.
  */
 final class PluginBootstrapTest extends TestCase {
+	use FGCBG_Test_Stub_State;
+
 	/**
 	 * Hook suffix WordPress returns for the WooCommerce coupon generator submenu page.
 	 */
@@ -28,14 +30,14 @@ final class PluginBootstrapTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->reset_asset_globals();
+		$this->reset_test_asset_state();
 	}
 
 	/**
 	 * Reset recorded asset state after each test.
 	 */
 	protected function tearDown(): void {
-		$this->reset_asset_globals();
+		$this->reset_test_asset_state();
 
 		parent::tearDown();
 	}
@@ -97,12 +99,8 @@ final class PluginBootstrapTest extends TestCase {
 		$plugin = FGCBG_Plugin::get_instance();
 		$plugin->add_admin_menu();
 
-		$this->assertNotEmpty( $GLOBALS['fgcbg_test_submenu_pages'] );
+		$submenu_page = $this->get_last_recorded_submenu_page();
 
-		$submenu_pages = $GLOBALS['fgcbg_test_submenu_pages'];
-		$submenu_page  = end( $submenu_pages );
-
-		$this->assertIsArray( $submenu_page );
 		$this->assertSame( 'woocommerce', $submenu_page[0] );
 		$this->assertSame( FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY, $submenu_page[3] );
 	}
@@ -123,23 +121,26 @@ final class PluginBootstrapTest extends TestCase {
 
 		$admin_script_path = FGCBG_PLUGIN_PATH . 'assets/js/admin.js';
 		$admin_script_url  = FGCBG_PLUGIN_URL . 'assets/js/admin.js';
+		$scripts           = $this->get_recorded_scripts();
+		$styles            = $this->get_recorded_styles();
 
-		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['scripts'] );
-		$this->assertSame( $admin_script_url, $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['src'] );
+		$this->assertArrayHasKey( 'fgcbg-admin', $scripts );
+		$this->assertSame( $admin_script_url, $scripts['fgcbg-admin']['src'] );
 		$this->assertFileExists( $admin_script_path, sprintf( 'Expected enqueued admin script "%s" to exist.', $admin_script_path ) );
-		$this->assertSame( array( 'wc-enhanced-select' ), $GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['dependencies'] );
+		$this->assertSame( array( 'wc-enhanced-select' ), $scripts['fgcbg-admin']['dependencies'] );
 		$this->assertSame(
 			array(
 				'in_footer' => true,
 				'strategy'  => 'defer',
 			),
-			$GLOBALS['fgcbg_test_enqueued']['scripts']['fgcbg-admin']['args']
+			$scripts['fgcbg-admin']['args']
 		);
-		$this->assertArrayHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_enqueued']['styles'] );
+		$this->assertArrayHasKey( 'fgcbg-admin', $styles );
 
 		$localized_script = $this->get_recorded_localized_script( 'fgcbg-admin' );
+		$inline_scripts   = $this->get_recorded_inline_scripts();
 
-		$this->assertArrayNotHasKey( 'fgcbg-admin', $GLOBALS['fgcbg_test_inline_scripts'] );
+		$this->assertArrayNotHasKey( 'fgcbg-admin', $inline_scripts );
 		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
 		$this->assertArrayNotHasKey( 'ajax_url', $localized_script['data'] );
 		$this->assertArrayNotHasKey( 'fgcbg_i18n', $localized_script['data'] );
@@ -151,7 +152,7 @@ final class PluginBootstrapTest extends TestCase {
 	public function test_admin_assets_queue_notice_when_script_data_cannot_be_encoded(): void {
 		$assets = new FGCBG_Admin_Assets();
 
-		$GLOBALS['fgcbg_test_wp_json_encode_result'] = false;
+		$this->set_test_json_encode_result( false );
 
 		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
@@ -248,59 +249,5 @@ final class PluginBootstrapTest extends TestCase {
 		}
 
 		return $matches[1];
-	}
-
-	/**
-	 * Get localized script data recorded by the WordPress test stub.
-	 *
-	 * The test fails through PHPUnit assertions when the script handle or
-	 * requested localization entry has not been recorded.
-	 *
-	 * @param string $handle Script handle.
-	 * @param int    $index  Zero-based localization entry index.
-	 * @return array{data: array<string,mixed>, object_name: string}
-	 */
-	private function get_recorded_localized_script( string $handle, int $index = 0 ): array {
-		$this->assertArrayHasKey(
-			$handle,
-			$GLOBALS['fgcbg_test_localized_scripts'],
-			sprintf( 'Expected localized script data for handle "%s" to be recorded.', $handle )
-		);
-		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ] );
-		$this->assertArrayHasKey(
-			$index,
-			$GLOBALS['fgcbg_test_localized_scripts'][ $handle ],
-			sprintf( 'Expected localized script data entry %d for handle "%s" to be recorded.', $index, $handle )
-		);
-		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
-		$this->assertArrayHasKey( 'data', $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
-		$this->assertArrayHasKey( 'object_name', $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ] );
-		$this->assertIsArray( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ]['data'] );
-		$this->assertIsString( $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ]['object_name'] );
-
-		return $GLOBALS['fgcbg_test_localized_scripts'][ $handle ][ $index ];
-	}
-
-	/**
-	 * Clear WordPress asset globals used by the bootstrap stubs.
-	 */
-	private function reset_asset_globals(): void {
-		unset(
-			$GLOBALS['fgcbg_test_enqueued'],
-			$GLOBALS['fgcbg_test_inline_scripts'],
-			$GLOBALS['fgcbg_test_localized_scripts'],
-			$GLOBALS['fgcbg_test_submenu_pages'],
-			$GLOBALS['fgcbg_test_wp_json_encode_result'],
-			$GLOBALS['fgcbg_test_wp_localize_script_result']
-		);
-
-		$GLOBALS['fgcbg_test_enqueued'] = array(
-			'scripts' => array(),
-			'styles'  => array(),
-		);
-
-		$GLOBALS['fgcbg_test_inline_scripts'] = array();
-		$GLOBALS['fgcbg_test_localized_scripts'] = array();
-		$GLOBALS['fgcbg_test_submenu_pages'] = array();
 	}
 }
