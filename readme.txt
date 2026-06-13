@@ -115,7 +115,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 **Security:**
 
-* Removed the runtime-configured AJAX URL from the admin script and now post coupon-generation requests to the fixed same-origin `admin-ajax.php` endpoint.
+* Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 * Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
 
 **Changed:**
@@ -124,6 +124,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script.
 * Hardened runtime JavaScript configuration with WordPress-managed script data.
 * Simplified client-side validation so the first invalid field is tracked through a single validation list.
+* Prefer WordPress plugin path and datetime APIs for plugin includes and generated coupon expiry calculations.
+* Added VIPWPCS to Composer development dependencies for local standards testing.
 
 **Fixed:**
 

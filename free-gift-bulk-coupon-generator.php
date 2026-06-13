@@ -32,12 +32,12 @@ if ( ! defined( 'FGCBG_PLUGIN_VERSION' ) ) {
 }
 
 // Load class files.
-require_once __DIR__ . '/includes/class-fgcbg-dependencies.php';
-require_once __DIR__ . '/includes/class-fgcbg-coupon-generator.php';
-require_once __DIR__ . '/includes/class-fgcbg-ajax-handler.php';
-require_once __DIR__ . '/includes/class-fgcbg-admin-assets.php';
-require_once __DIR__ . '/includes/class-fgcbg-admin-page.php';
-require_once __DIR__ . '/includes/class-fgcbg-plugin.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-dependencies.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-coupon-generator.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-ajax-handler.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-admin-assets.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-admin-page.php';
+require_once FGCBG_PLUGIN_PATH . 'includes/class-fgcbg-plugin.php';
 
 /**
  * Helper function to check if plugin is loaded.

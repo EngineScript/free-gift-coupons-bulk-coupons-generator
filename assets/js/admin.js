@@ -24,7 +24,7 @@
 		warning: '#coupon-count-warning',
 	} );
 
-	const AJAX_ENDPOINT = 'admin-ajax.php';
+	const AJAX_ENDPOINT = message( 'ajax_url', globalThis.ajaxurl ?? 'admin-ajax.php' );
 
 	function toPositiveInteger( value, fallback ) {
 		const parsed = Number.parseInt( value ?? fallback, 10 );

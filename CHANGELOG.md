@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- **AJAX Request URL Hardening**: Removed the runtime-configured AJAX URL from the admin script and now post coupon-generation requests to the fixed same-origin `admin-ajax.php` endpoint.
+- **AJAX Request Routing**: Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 - **Coupon Capability Enforcement**: Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
 
 ### Changed
@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Asset Loading**: Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script for better loading performance.
 - **JavaScript Configuration**: Renamed the runtime config object to `fgcbgAdminConfig`, froze it with `Object.freeze()`, and JSON hex-escaped the inline config payload for stronger script-safety.
 - **Validation Flow**: Simplified client-side validation so the first invalid field is tracked through a single validation list instead of repeated conditional chains.
+- **WordPress API Usage**: Prefer WordPress plugin path and datetime APIs for plugin includes and generated coupon expiry calculations.
+- **Development Tooling**: Added VIPWPCS to the Composer development dependencies for local standards testing.
 
 ### Fixed
 

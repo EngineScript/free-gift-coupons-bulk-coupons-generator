@@ -142,7 +142,7 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertArrayNotHasKey( 'fgcbg-admin', $inline_scripts );
 		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
-		$this->assertArrayNotHasKey( 'ajax_url', $localized_script['data'] );
+		$this->assertSame( admin_url( 'admin-ajax.php' ), $localized_script['data']['ajax_url'] );
 		$this->assertArrayNotHasKey( 'fgcbg_i18n', $localized_script['data'] );
 	}
 

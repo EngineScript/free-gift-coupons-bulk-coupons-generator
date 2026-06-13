@@ -337,7 +337,7 @@ final class FGCBG_Coupon_Generator {
 		$coupon->set_discount_type( self::DISCOUNT_TYPE );
 		$coupon->set_individual_use( true );
 		$coupon->set_usage_limit( 1 );
-		$coupon->set_date_expires( time() + ( $params['expiry_days'] * DAY_IN_SECONDS ) );
+		$coupon->set_date_expires( current_datetime()->getTimestamp() + ( $params['expiry_days'] * DAY_IN_SECONDS ) );
 	}
 
 	/**

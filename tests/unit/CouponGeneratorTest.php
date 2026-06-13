@@ -60,6 +60,7 @@ final class CouponGeneratorTest extends TestCase {
 		$this->assertSame( 'free_gift', $coupon->get_discount_type() );
 		$this->assertTrue( $coupon->get_prop( 'individual_use' ) );
 		$this->assertSame( 1, $coupon->get_prop( 'usage_limit' ) );
+		$this->assertSame( DAY_IN_SECONDS + ( 365 * DAY_IN_SECONDS ), $coupon->get_prop( 'date_expires' ) );
 		$this->assertSame( array( 123, 456 ), $coupon->get_meta( '_fgcbg_product_ids' ) );
 		$this->assertTrue( $coupon->get_meta( '_fgcbg_generated' ) );
 		$this->assertSame( $expected_generation_date, $coupon->get_meta( '_fgcbg_generation_date' ) );

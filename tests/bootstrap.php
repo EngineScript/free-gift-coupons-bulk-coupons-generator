@@ -754,16 +754,35 @@ if ( ! function_exists( 'current_time' ) ) {
 	 *
 	 * @param string $type Time format requested.
 	 * @param int    $gmt  Whether to use GMT.
-	 * @return string
+	 * @return int|string
 	 */
 	function current_time( $type = 'mysql', $gmt = 0 ) {
-		unset( $type, $gmt );
+		unset( $gmt );
 
-		if ( isset( $GLOBALS['fgcbg_test_current_time'] ) ) {
-			return (string) $GLOBALS['fgcbg_test_current_time'];
+		$current_time = isset( $GLOBALS['fgcbg_test_current_time'] )
+			? (string) $GLOBALS['fgcbg_test_current_time']
+			: fgcbg_test_default_current_time();
+
+		if ( 'timestamp' === $type ) {
+			return (int) strtotime( $current_time );
 		}
 
-		return fgcbg_test_default_current_time();
+		return $current_time;
+	}
+}
+
+if ( ! function_exists( 'current_datetime' ) ) {
+	/**
+	 * Return a stable current datetime for tests.
+	 *
+	 * @return DateTimeImmutable
+	 */
+	function current_datetime() {
+		$current_time = isset( $GLOBALS['fgcbg_test_current_time'] )
+			? (string) $GLOBALS['fgcbg_test_current_time']
+			: (string) fgcbg_test_default_current_time();
+
+		return new DateTimeImmutable( '@' . (string) strtotime( $current_time ) );
 	}
 }
 
