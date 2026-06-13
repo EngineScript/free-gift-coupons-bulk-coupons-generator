@@ -29,13 +29,25 @@ final class CouponGeneratorTest extends TestCase {
 		);
 		$this->clear_test_coupons();
 		$this->set_test_passwords( array() );
+		$this->reset_test_current_time();
+	}
+
+	/**
+	 * Reset mutable test clock state.
+	 */
+	protected function tearDown(): void {
+		$this->reset_test_current_time();
+
+		parent::tearDown();
 	}
 
 	/**
 	 * Free gift coupons get the metadata required by Free Gift Coupons for WooCommerce.
 	 */
 	public function test_generates_free_gift_coupon_with_expected_metadata(): void {
-		$generator = new FGCBG_Coupon_Generator();
+		$generator                = new FGCBG_Coupon_Generator();
+		$this->set_test_current_time( gmdate( 'Y-m-d H:i:s', DAY_IN_SECONDS ) );
+		$expected_generation_date = $this->get_test_current_time();
 
 		$generated = $generator->generate_coupons( array( 123, 456 ), 1, 'GIFT' );
 
@@ -50,7 +62,7 @@ final class CouponGeneratorTest extends TestCase {
 		$this->assertSame( 1, $coupon->get_prop( 'usage_limit' ) );
 		$this->assertSame( array( 123, 456 ), $coupon->get_meta( '_fgcbg_product_ids' ) );
 		$this->assertTrue( $coupon->get_meta( '_fgcbg_generated' ) );
-		$this->assertSame( '2026-05-15 12:00:00', $coupon->get_meta( '_fgcbg_generation_date' ) );
+		$this->assertSame( $expected_generation_date, $coupon->get_meta( '_fgcbg_generation_date' ) );
 		$this->assertSame(
 			array(
 				123 => array(

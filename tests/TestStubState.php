@@ -82,6 +82,34 @@ trait FGCBG_Test_Stub_State {
 	}
 
 	/**
+	 * Set the current time returned by the WordPress current_time() stub.
+	 *
+	 * @param string $current_time Current time in MySQL datetime format.
+	 * @return void
+	 */
+	private function set_test_current_time( string $current_time ): void {
+		$GLOBALS['fgcbg_test_current_time'] = $current_time;
+	}
+
+	/**
+	 * Reset the WordPress current_time() stub to its default test clock.
+	 *
+	 * @return void
+	 */
+	private function reset_test_current_time(): void {
+		unset( $GLOBALS['fgcbg_test_current_time'] );
+	}
+
+	/**
+	 * Get the current time returned by the WordPress current_time() stub.
+	 *
+	 * @return string
+	 */
+	private function get_test_current_time(): string {
+		return current_time( 'mysql' );
+	}
+
+	/**
 	 * Set the fallback current_user_can() result.
 	 *
 	 * @param bool $can Whether the user has unspecified capabilities.

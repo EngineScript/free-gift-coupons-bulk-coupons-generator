@@ -741,12 +741,29 @@ if ( ! function_exists( 'wp_sprintf' ) ) {
 
 if ( ! function_exists( 'current_time' ) ) {
 	/**
-	 * Return a stable current time for tests.
+	 * Return the default test clock value.
 	 *
 	 * @return string
 	 */
-	function current_time() {
-		return '2026-05-15 12:00:00';
+	function fgcbg_test_default_current_time() {
+		return gmdate( 'Y-m-d H:i:s', 0 );
+	}
+
+	/**
+	 * Return a stable current time for tests.
+	 *
+	 * @param string $type Time format requested.
+	 * @param int    $gmt  Whether to use GMT.
+	 * @return string
+	 */
+	function current_time( $type = 'mysql', $gmt = 0 ) {
+		unset( $type, $gmt );
+
+		if ( isset( $GLOBALS['fgcbg_test_current_time'] ) ) {
+			return (string) $GLOBALS['fgcbg_test_current_time'];
+		}
+
+		return fgcbg_test_default_current_time();
 	}
 }
 
