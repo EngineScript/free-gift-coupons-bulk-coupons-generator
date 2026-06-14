@@ -124,12 +124,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script.
 * Hardened runtime JavaScript configuration with WordPress-managed script data.
 * Simplified client-side validation so the first invalid field is tracked through a single validation list.
-* Prefer WordPress plugin path and datetime APIs for plugin includes and generated coupon expiry calculations.
+* Prefer WordPress datetime APIs for generated coupon expiry calculations.
 * Added VIPWPCS to Composer development dependencies for local standards testing.
 
 **Fixed:**
 
 * Removed a useless conditional in admin form validation reported by static analysis.
+* Load bootstrap class files with analyzer-resolvable paths while retaining the plugin path constant for runtime asset paths.
 
 = 1.6.0 =
 

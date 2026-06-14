@@ -18,12 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Asset Loading**: Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script for better loading performance.
 - **JavaScript Configuration**: Renamed the runtime config object to `fgcbgAdminConfig`, froze it with `Object.freeze()`, and JSON hex-escaped the inline config payload for stronger script-safety.
 - **Validation Flow**: Simplified client-side validation so the first invalid field is tracked through a single validation list instead of repeated conditional chains.
-- **WordPress API Usage**: Prefer WordPress plugin path and datetime APIs for plugin includes and generated coupon expiry calculations.
+- **WordPress API Usage**: Prefer WordPress datetime APIs for generated coupon expiry calculations.
 - **Development Tooling**: Added VIPWPCS to the Composer development dependencies for local standards testing.
 
 ### Fixed
 
 - **Static Analysis Finding**: Removed a useless conditional in admin form validation where the first invalid field check always evaluated the same way.
+- **Psalm Include Resolution**: Load bootstrap class files with analyzer-resolvable paths while retaining the plugin path constant for runtime asset paths.
 
 ## [1.6.0] - 2026-05-17
 
