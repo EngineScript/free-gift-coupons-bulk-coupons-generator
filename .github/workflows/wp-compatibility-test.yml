@@ -1399,6 +1399,10 @@ jobs:
               public function get_status() {
                   return $this->status;
               }
+
+              public function is_purchasable() {
+                  return 'publish' === $this->status;
+              }
           }
 
           if ( ! function_exists( 'wc_get_product' ) ) {
@@ -1578,6 +1582,7 @@ jobs:
                       'requires_plugins' => 'Requires Plugins',
                       'requires_wp'      => 'Requires at least',
                       'requires_php'     => 'Requires PHP',
+                      'tested_wp'        => 'Tested up to',
                       'update_uri'       => 'Update URI',
                       'text_domain'      => 'Text Domain',
                   ]);
@@ -1585,7 +1590,9 @@ jobs:
                   $this->assertSame('woocommerce', $headers['requires_plugins']);
                   $this->assertSame('7.0', $headers['requires_wp']);
                   $this->assertSame('8.2', $headers['requires_php']);
-                  $this->assertSame('https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator', $headers['update_uri']);
+                  $this->assertSame('7.1', $headers['tested_wp']);
+                  // WordPress.org does not allow an Update URI header, and Plugin Check rejects it.
+                  $this->assertSame('', $headers['update_uri']);
                   $this->assertSame('free-gift-bulk-coupon-generator', $headers['text_domain']);
               }
 
@@ -1609,6 +1616,8 @@ jobs:
                   $this->assertStringContainsString('Sticker Pack', $coupon->get_prop('description'));
                   $this->assertSame([123, 456], $coupon->get_meta('_fgcbg_product_ids'));
                   $this->assertTrue($coupon->get_meta('_fgcbg_generated'));
+                  $this->assertSame('no', $coupon->get_meta('_wc_free_gift_coupon_free_shipping'));
+                  $this->assertSame([], $coupon->get_meta('_wc_fgc_product_sync_ids'));
                   $this->assertSame(
                       [
                           123 => [
@@ -1729,6 +1738,7 @@ jobs:
                   $GLOBALS['fgcbg_test_products'] = [
                       123 => new FGCBG_WP_Test_Product('Sample Mug'),
                       500 => new FGCBG_WP_Test_Product('Retired Mug', 0, 'trash'),
+                      600 => new FGCBG_WP_Test_Product('Unreleased Mug', 0, 'draft'),
                   ];
                   $GLOBALS['fgcbg_test_coupons'] = [];
                   $GLOBALS['fgcbg_test_log']     = [];
@@ -1776,6 +1786,18 @@ jobs:
                   $this->assertCount(2, $GLOBALS['fgcbg_test_coupons']);
                   $this->assertSame($response['data']['codes'][0], $GLOBALS['fgcbg_test_coupons'][0]->get_code());
                   $this->assertStringStartsWith('gift', $response['data']['codes'][0]);
+                  $this->assertArrayNotHasKey('warning', $response['data']);
+              }
+
+              public function test_unpurchasable_product_is_accepted_with_a_warning() {
+                  $this->log_in('administrator', ['publish_shop_coupons', 'edit_product']);
+
+                  $response = $this->send(['product_ids' => ['123', '600'], 'batch_size' => '1']);
+
+                  $this->assertTrue($response['success']);
+                  $this->assertSame(1, $response['data']['generated']);
+                  $this->assertStringContainsString('Unreleased Mug', $response['data']['warning']);
+                  $this->assertStringNotContainsString('Sample Mug', $response['data']['warning']);
               }
 
               public function test_request_with_a_wrong_nonce_is_refused() {

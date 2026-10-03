@@ -102,7 +102,32 @@ final class FGCBG_Ajax_Handler {
 			);
 		}
 
-		wp_send_json_success( $result );
+		wp_send_json_success( $this->add_purchasability_warning( $result, $product_ids ) );
+	}
+
+	/**
+	 * Add a warning to the response when a gift product is not purchasable.
+	 *
+	 * The coupons are still created, as Free Gift Coupons for WooCommerce
+	 * saves such a gift with a warning of its own.
+	 *
+	 * @since 1.7.0
+	 * @param array{generated:int, codes:array<int, string>} $result      Generation result.
+	 * @param array<int>                                     $product_ids Selected product IDs.
+	 * @return array{generated:int, codes:array<int, string>, warning?:string} Result, with `warning` when needed.
+	 */
+	private function add_purchasability_warning( array $result, array $product_ids ): array {
+		$product_names = $this->generator->get_unpurchasable_product_names( $product_ids );
+
+		if ( ! empty( $product_names ) ) {
+			$result['warning'] = sprintf(
+				/* translators: %s: List of gift product names. */
+				__( 'These gift products are not purchasable and cannot be gifted until they are published, in stock, and have a price: %s.', 'free-gift-bulk-coupon-generator' ),
+				wp_sprintf( '%l', $product_names )
+			);
+		}
+
+		return $result;
 	}
 
 	/**

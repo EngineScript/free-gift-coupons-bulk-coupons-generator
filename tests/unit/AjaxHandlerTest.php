@@ -24,6 +24,7 @@ final class AjaxHandlerTest extends TestCase {
 			array(
 				123 => new FGCBG_Test_Product( 'Sample Mug' ),
 				500 => new FGCBG_Test_Product( 'Retired Mug', 0, 'trash' ),
+				600 => new FGCBG_Test_Product( 'Unreleased Mug', 0, 'draft' ),
 			)
 		);
 		$this->reset_test_generation_state();
@@ -85,6 +86,7 @@ final class AjaxHandlerTest extends TestCase {
 			$this->assertSame( 1, $response->response['data']['generated'] );
 			$this->assertCount( 1, $response->response['data']['codes'] );
 			$this->assertSame( array( 123 ), $this->get_test_coupon()->get_meta( '_fgcbg_product_ids' ) );
+			$this->assertArrayNotHasKey( 'warning', $response->response['data'], 'No warning for purchasable products.' );
 			return;
 		}
 
@@ -293,6 +295,25 @@ final class AjaxHandlerTest extends TestCase {
 		$this->assertSame( 400, $response['status'] );
 		$this->assertSame( 'Please select no more than 20 products.', $response['data']['message'] );
 		$this->assertSame( array(), $this->get_test_coupons() );
+	}
+
+	/**
+	 * A gift that cannot be bought is accepted with a warning, as Free Gift Coupons does.
+	 */
+	public function test_generate_batch_warns_about_unpurchasable_products(): void {
+		$response = $this->send_request(
+			array(
+				'product_ids' => array( '123', '600' ),
+				'batch_size'  => '2',
+			)
+		);
+
+		$this->assertTrue( $response['success'] );
+		$this->assertSame( 2, $response['data']['generated'] );
+		$this->assertStringContainsString( 'not purchasable', $response['data']['warning'] );
+		$this->assertStringContainsString( 'Unreleased Mug', $response['data']['warning'] );
+		$this->assertStringNotContainsString( 'Sample Mug', $response['data']['warning'] );
+		$this->assertSame( array( 123, 600 ), $this->get_test_coupon()->get_meta( '_fgcbg_product_ids' ) );
 	}
 
 	/**

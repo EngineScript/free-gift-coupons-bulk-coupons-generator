@@ -238,6 +238,7 @@
 				generated: 0,
 				remaining: total,
 				total,
+				warning: '',
 			};
 
 			this.prepareBatchGeneration();
@@ -322,6 +323,11 @@
 				state.collectedCodes.push( ...response.data.codes.map( String ) );
 			}
 
+			// Every request reports the same products, so the first warning is enough.
+			if ( state.warning === '' && typeof response.data?.warning === 'string' ) {
+				state.warning = response.data.warning;
+			}
+
 			return generatedInBatch;
 		}
 
@@ -388,6 +394,10 @@
 				this.showSuccessMessage( formatMessage( 'generation_complete', [
 					[ '%d', state.generated ],
 				] ) );
+			}
+
+			if ( state.warning !== '' ) {
+				this.showWarningMessage( state.warning );
 			}
 		}
 
@@ -769,7 +779,7 @@
 
 		/** Remove every notice this script has shown. */
 		clearNotices() {
-			document.querySelectorAll( '.fgcbg-error-message, .fgcbg-success-message' ).forEach( ( notice ) => {
+			document.querySelectorAll( '.fgcbg-error-message, .fgcbg-success-message, .fgcbg-warning-message' ).forEach( ( notice ) => {
 				notice.remove();
 			} );
 		}
@@ -795,6 +805,17 @@
 		showSuccessMessage( text ) {
 			this.clearNotices();
 			this.insertNoticeBeforeForm( buildNotice( 'notice notice-success fgcbg-success-message', text ) );
+			speak( text, 'polite' );
+		}
+
+		/**
+		 * Display a warning notice below any other notice, without removing it.
+		 *
+		 * @param {string} text - Warning text.
+		 * @returns {void}
+		 */
+		showWarningMessage( text ) {
+			this.insertNoticeBeforeForm( buildNotice( 'notice notice-warning fgcbg-warning-message', text ) );
 			speak( text, 'polite' );
 		}
 

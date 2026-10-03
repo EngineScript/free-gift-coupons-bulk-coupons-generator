@@ -2,12 +2,11 @@
 /**
  * Plugin Name: Free Gift Coupons Bulk Coupon Generator
  * Plugin URI: https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator
- * Update URI: https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator
  * Description: Generate bulk free gift coupon codes that work with the Free Gift Coupons for WooCommerce plugin. Creates coupons with the proper data structure for free gift functionality.
  * Version: 1.6.0
  * Author: EngineScript
  * Requires at least: 7.0
- * Tested up to: 7.0
+ * Tested up to: 7.1
  * Requires PHP: 8.2
  * Requires Plugins: woocommerce
  * WC requires at least: 10.8

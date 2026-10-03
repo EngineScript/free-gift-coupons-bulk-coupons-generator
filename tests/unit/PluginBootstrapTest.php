@@ -113,9 +113,9 @@ final class PluginBootstrapTest extends TestCase {
 	}
 
 	/**
-	 * The plugin header declares its requirements and its update source.
+	 * The plugin header declares its requirements and no foreign update source.
 	 */
-	public function test_plugin_header_declares_requirements_and_update_source(): void {
+	public function test_plugin_header_declares_requirements(): void {
 		$contents = file_get_contents( FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php' );
 
 		$this->assertIsString( $contents );
@@ -128,12 +128,15 @@ final class PluginBootstrapTest extends TestCase {
 				'Requires PHP: 8.2',
 				'Requires Plugins: woocommerce',
 				'WC requires at least: 10.8',
-				'Update URI: https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator',
+				'Tested up to: 7.1',
 				'Text Domain: free-gift-bulk-coupon-generator',
 			) as $header
 		) {
 			$this->assertContains( '* ' . $header, $lines, sprintf( 'Expected plugin header "%s".', $header ) );
 		}
+
+		// WordPress.org does not allow an Update URI header, and Plugin Check rejects it.
+		$this->assertStringNotContainsString( 'Update URI:', $contents );
 	}
 
 	/**

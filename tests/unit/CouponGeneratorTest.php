@@ -83,6 +83,9 @@ final class CouponGeneratorTest extends TestCase {
 		$this->assertSame( array( 123, 456 ), $coupon->get_meta( '_fgcbg_product_ids' ) );
 		$this->assertTrue( $coupon->get_meta( '_fgcbg_generated' ) );
 		$this->assertSame( $expected_generation_date, $coupon->get_meta( '_fgcbg_generation_date' ) );
+		// Free Gift Coupons for WooCommerce 3.8.2 saves these with every coupon.
+		$this->assertSame( 'no', $coupon->get_meta( '_wc_free_gift_coupon_free_shipping' ) );
+		$this->assertSame( array(), $coupon->get_meta( '_wc_fgc_product_sync_ids' ) );
 		$this->assertSame(
 			array(
 				123 => array(
@@ -184,6 +187,20 @@ final class CouponGeneratorTest extends TestCase {
 		$this->assertFalse( $generator->are_products_usable( array( 999 ) ) );
 		$this->assertFalse( $generator->are_products_usable( array( 123, 999 ) ) );
 		$this->assertFalse( $generator->are_products_usable( array( 123, 500 ) ) );
+	}
+
+	/**
+	 * Products that cannot be bought are named, so the caller can warn about them.
+	 */
+	public function test_unpurchasable_products_are_named(): void {
+		$generator = new FGCBG_Coupon_Generator();
+
+		$this->assertSame( array(), $generator->get_unpurchasable_product_names( array( 123, 456 ) ) );
+		$this->assertSame( array( 'Unreleased Mug' ), $generator->get_unpurchasable_product_names( array( 123, 600 ) ) );
+		$this->assertSame( array(), $generator->get_unpurchasable_product_names( array( 500 ) ), 'A trashed product is not a valid gift at all.' );
+
+		// The coupon is still created, as Free Gift Coupons saves such a gift too.
+		$this->assertSame( 1, $generator->generate_coupons( array( 600 ), 1 ) );
 	}
 
 	/**

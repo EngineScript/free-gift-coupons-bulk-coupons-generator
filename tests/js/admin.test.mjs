@@ -220,6 +220,32 @@ test( 'a run of 25 is sent as requests of 10, 10, and 5 and reports success once
 	assert.equal( after.defaultPrevented, false, 'The leave warning is removed after the run.' );
 } );
 
+test( 'a warning from the server is shown once, after the success notice, and cleared by the next attempt', async () => {
+	const warning = 'These gift products are not purchasable and cannot be gifted until they are published, in stock, and have a price: Unreleased Mug.';
+	const withWarning = ( count, first ) => {
+		const response = okResponse( count, first );
+		response.data.warning = warning;
+		return response;
+	};
+
+	view = await loadPage( { responses: [ withWarning( 10, 0 ), withWarning( 5, 10 ) ] } );
+	selectProducts( view, [ '123', '600' ] );
+	setField( view, view.count, '15' );
+	submitForm( view );
+	await waitForRun( view );
+
+	const success = formatted( 'generation_complete', [ [ '%d', 15 ] ] );
+	const shown = Array.from( view.document.querySelectorAll( '.fgcbg-success-message, .fgcbg-warning-message' ), ( notice ) => notice.textContent );
+
+	assert.deepEqual( shown, [ success, warning ] );
+	assert.ok( view.document.querySelector( '.fgcbg-warning-message' ).classList.contains( 'notice-warning' ) );
+	assert.deepEqual( view.spoken.slice( -2 ), [ [ 'polite', success ], [ 'polite', warning ] ] );
+
+	setField( view, view.count, '0' );
+	submitForm( view );
+	assert.deepEqual( notices( view, 'warning' ), [] );
+} );
+
 test( 'more than 25 coupons asks first, and nothing is sent when declined', async () => {
 	view = await loadPage( { confirmResult: false } );
 	selectProducts( view, [ '123' ] );

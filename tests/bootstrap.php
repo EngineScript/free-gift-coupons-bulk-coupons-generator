@@ -875,6 +875,15 @@ if ( ! class_exists( 'FGCBG_Test_Product' ) ) {
 		}
 
 		/**
+		 * Whether the product can be bought. Only published products can, here.
+		 *
+		 * @return bool
+		 */
+		public function is_purchasable() {
+			return 'publish' === $this->status;
+		}
+
+		/**
 		 * Get product name.
 		 *
 		 * @return string

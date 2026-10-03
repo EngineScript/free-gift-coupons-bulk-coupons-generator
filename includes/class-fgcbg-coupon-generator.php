@@ -190,6 +190,36 @@ final class FGCBG_Coupon_Generator {
 	}
 
 	/**
+	 * Get the names of the given products that are not purchasable.
+	 *
+	 * Free Gift Coupons for WooCommerce saves such a product as a gift but
+	 * warns that it cannot be gifted, because WooCommerce will not keep an
+	 * unpurchasable item in the cart or add it to an order. Drafts, products
+	 * without a price, and private products the shopper cannot see are
+	 * examples.
+	 *
+	 * @since 1.7.0
+	 * @param array<int> $product_ids Product IDs to check.
+	 * @return array<int, string> Plain-text product names.
+	 */
+	public function get_unpurchasable_product_names( array $product_ids ): array {
+		$unpurchasable = array_filter(
+			$this->validate_products( $product_ids ),
+			/**
+			 * Keep products that cannot be bought.
+			 *
+			 * @param WC_Product $product Product.
+			 * @return bool
+			 */
+			static function ( $product ): bool {
+				return ! $product->is_purchasable();
+			}
+		);
+
+		return $this->get_product_names( $unpurchasable );
+	}
+
+	/**
 	 * Validate products for coupon generation.
 	 *
 	 * @since 1.0.0
@@ -397,14 +427,7 @@ final class FGCBG_Coupon_Generator {
 	 * @return void
 	 */
 	private function set_coupon_properties( WC_Coupon $coupon, string $code, array $valid_products, array $params ): void {
-		$product_names = array();
-		foreach ( $valid_products as $product ) {
-			$product_name = sanitize_text_field( wp_strip_all_tags( $product->get_name() ) );
-			if ( '' !== $product_name ) {
-				$product_names[] = $product_name;
-			}
-		}
-		$products_text = wp_sprintf( '%l', $product_names );
+		$products_text = wp_sprintf( '%l', $this->get_product_names( $valid_products ) );
 
 		$coupon->set_code( $code );
 		$coupon->set_description(
@@ -421,6 +444,25 @@ final class FGCBG_Coupon_Generator {
 	}
 
 	/**
+	 * Get plain-text names for products, skipping empty ones.
+	 *
+	 * @since 1.7.0
+	 * @param array<int, WC_Product> $products Product objects.
+	 * @return array<int, string> Names with tags stripped.
+	 */
+	private function get_product_names( array $products ): array {
+		$product_names = array();
+		foreach ( $products as $product ) {
+			$product_name = sanitize_text_field( wp_strip_all_tags( $product->get_name() ) );
+			if ( '' !== $product_name ) {
+				$product_names[] = $product_name;
+			}
+		}
+
+		return $product_names;
+	}
+
+	/**
 	 * Set coupon metadata.
 	 *
 	 * The `$gift_info` argument is required for generated coupons to work with
@@ -429,12 +471,17 @@ final class FGCBG_Coupon_Generator {
 	 * products or variations to add as gifts.
 	 *
 	 * @since 1.0.0
+	 * @since 1.7.0 Also saves `_wc_free_gift_coupon_free_shipping` and
+	 *              `_wc_fgc_product_sync_ids`, as Free Gift Coupons does.
 	 * @param WC_Coupon                                                         $coupon    The coupon object.
 	 * @param array<int, array{product_id:int, variation_id:int, quantity:int}> $gift_info Gift information array.
 	 * @return void
 	 */
 	private function set_coupon_metadata( WC_Coupon $coupon, array $gift_info ): void {
 		$coupon->update_meta_data( '_wc_free_gift_coupon_data', $gift_info );
+		// Free Gift Coupons saves these two with every coupon; the values are its defaults (no free shipping, no quantity sync).
+		$coupon->update_meta_data( '_wc_free_gift_coupon_free_shipping', 'no' );
+		$coupon->update_meta_data( '_wc_fgc_product_sync_ids', array() );
 		$coupon->update_meta_data( '_fgcbg_generated', true );
 		$coupon->update_meta_data( '_fgcbg_product_ids', array_keys( $gift_info ) );
 		$coupon->update_meta_data( '_fgcbg_generation_date', current_time( 'mysql' ) );

@@ -50,6 +50,14 @@ class WC_Product {
 	 */
 	public function get_status() {
 	}
+
+	/**
+	 * Whether the product can be bought.
+	 *
+	 * @return bool
+	 */
+	public function is_purchasable() {
+	}
 }
 
 /**

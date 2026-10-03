@@ -2,7 +2,7 @@
 Contributors: enginescript
 Tags: woocommerce, coupons, bulk, free-gifts, gift-coupons
 Requires at least: 7.0
-Tested up to: 7.0
+Tested up to: 7.1
 Stable tag: 1.6.0
 Requires PHP: 8.2
 License: GPL v3 or later
@@ -117,10 +117,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 * Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 * Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
-* Added an `Update URI` header pointing at the GitHub repository, so WordPress does not match this plugin's slug against the wordpress.org plugin directory.
 * The random part of each coupon code is now drawn uniformly with `wp_rand()` from lower-case letters and digits without look-alike characters, and can no longer be changed by `random_password` filters.
 * The default random code length is now 12 characters instead of 8.
-* A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected.
+* A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected. Draft and other unpurchasable products are still accepted, with a warning naming them.
 * The translated submenu title is now escaped.
 
 **Changed:**
@@ -130,6 +129,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * Hardened runtime JavaScript configuration with WordPress-managed script data.
 * Simplified client-side validation so the first invalid field is tracked through a single validation list.
 * Raised the minimum supported WordPress version from 6.8 to 7.0.
+* Tested up to WordPress 7.1.
+* Generated coupons now also store the free-shipping and quantity-sync settings that Free Gift Coupons for WooCommerce saves with every coupon, set to its defaults.
 * Prefer WordPress datetime APIs for generated coupon expiry calculations.
 * Added VIPWPCS to Composer development dependencies for local standards testing.
 * Declared WooCommerce as a required plugin, added `WC requires at least: 10.8` and `WC tested up to: 11.1`, and declared compatibility with WooCommerce High-Performance Order Storage.

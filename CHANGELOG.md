@@ -11,10 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **AJAX Request Routing**: Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 - **Coupon Capability Enforcement**: Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
-- **Update Source**: Added an `Update URI` header pointing at the GitHub repository, so WordPress does not match this plugin's slug against the wordpress.org plugin directory when it checks for updates.
 - **Coupon Code Generation**: The random part of each code is now drawn uniformly with `wp_rand()` from lower-case letters and digits, without the look-alike characters `i`, `l`, `o`, `0`, and `1`. It no longer comes from `wp_generate_password()`, so `random_password` filters from other plugins cannot shorten or fix coupon codes.
 - **Default Code Length**: The default random code length is now 12 characters instead of 8. The allowed range of 8 to 24 is unchanged.
-- **Gift Product Checks**: A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected. Draft and private products are still accepted.
+- **Gift Product Checks**: A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected. Draft and other unpurchasable products are still accepted, as Free Gift Coupons for WooCommerce accepts them, and the screen now shows a warning naming them, because they cannot be gifted until they are published, in stock, and have a price.
 - **Menu Title Escaping**: The translated submenu title is now escaped, because WordPress prints submenu titles as HTML.
 
 ### Changed
@@ -26,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **WordPress API Usage**: Prefer WordPress datetime APIs for generated coupon expiry calculations.
 - **Development Tooling**: Added VIPWPCS to the Composer development dependencies for local standards testing.
 - **Minimum WordPress Version**: Raised the minimum supported WordPress version from 6.8 to 7.0.
+- **Tested Up To**: WordPress 7.1.
+- **Free Gift Coupons Metadata**: Generated coupons now also store `_wc_free_gift_coupon_free_shipping` (`no`) and `_wc_fgc_product_sync_ids` (empty), as Free Gift Coupons for WooCommerce does for every coupon it saves.
 - **Plugin Requirements**: Declared WooCommerce as a required plugin with the `Requires Plugins` header, so WordPress refuses activation without it. Added `WC requires at least: 10.8` and `WC tested up to: 11.1`, and declared compatibility with WooCommerce High-Performance Order Storage.
 - **Dependency Notices**: The WooCommerce and Free Gift Coupons notices are now shown only to users who can activate plugins, or to anyone on the generator screen, instead of to every user on every admin screen.
 - **Coupon Descriptions**: Generated coupon descriptions no longer end with "(Batch n/m)". The numbers counted within a single request of ten, not within the whole run.
