@@ -1,7 +1,7 @@
 === Free Gift Coupons Bulk Coupon Generator ===
 Contributors: enginescript
 Tags: woocommerce, coupons, bulk, free-gifts, gift-coupons
-Requires at least: 6.8
+Requires at least: 7.0
 Tested up to: 7.0
 Stable tag: 1.6.0
 Requires PHP: 8.2
@@ -23,14 +23,14 @@ Key features:
 * **Bulk Generation**: Create up to 100 free gift coupons at once with AJAX batch processing
 * **AJAX Product Search**: WooCommerce Select2-powered search - scales to any catalog size
 * **Progress Bar**: Real-time progress feedback during generation to reduce timeout risk
-* **Multi-Product Support**: Select multiple products as free gifts in a single coupon
+* **Multi-Product Support**: Select up to 20 products as free gifts in a single coupon
 * **Proper Data Structure**: Creates `$gift_info` arrays with correct product and variation ID mapping
 * **Custom Prefixes**: Add alphanumeric prefixes to coupon codes for easy organization
 * **Generated Code Export**: View generated codes one per line and download them as a `.txt` file
 * **Security First**: CSRF protection, input sanitization, output escaping, and capability checks
 * **User-Friendly Interface**: Clean, responsive admin interface with real-time validation
-* **Performance Optimized**: Batch processing and server-friendly delays
-* **Internationalization Ready**: Full i18n support with translation files
+* **Batch Processing**: Coupons are generated in requests of 10
+* **Internationalization Ready**: All interface text is translatable, and a translation template is included
 * **Clean Uninstall**: Leaves generated coupons intact so active promotions are not broken
 
 Perfect for:
@@ -44,37 +44,37 @@ This plugin is built with security as the top priority, implementing multiple la
 == Installation ==
 
 1. Purchase and install the Free Gift Coupons for WooCommerce plugin from https://woocommerce.com/products/free-gift-coupons/
-2. Upload the plugin files to the `/wp-content/plugins/free-gift-bulk-coupon-generator` directory, or install the plugin through the WordPress plugins screen directly.
+2. Download the plugin zip file from the latest release at https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/releases/latest and upload it under Plugins -> Add New Plugin -> Upload Plugin. Install from the release zip file, not from a copy of the repository, which also holds development files.
 3. Activate the plugin through the 'Plugins' screen in WordPress.
 4. Ensure WooCommerce is installed and activated.
-5. Navigate to WooCommerce -> Free Gift Bulk Coupons in your WordPress admin.
+5. Navigate to WooCommerce -> Coupon Generator in your WordPress admin.
 6. Select products, set the number of coupons, optionally add a custom prefix, and click "Generate Free Gift Coupons".
 
 == Frequently Asked Questions ==
 
 = What are the system requirements? =
 
-* WordPress 6.8 or higher
-* WooCommerce plugin installed and activated
+* WordPress 7.0 or higher
+* WooCommerce 10.8 or higher, installed and activated
 * Free Gift Coupons for WooCommerce plugin (required - purchase at https://woocommerce.com/products/free-gift-coupons/)
 * PHP 8.2 or higher
-* Administrator or Shop Manager capabilities
+* A user who can publish coupons and edit the selected products (Administrators and Shop Managers by default)
 
 = How many coupons can I generate at once? =
 
-The plugin allows up to 100 coupons per batch to prevent server timeouts and maintain performance. This limit is enforced both in the UI and server-side validation.
+Up to 100 coupons per run. The screen sends a run to the server in requests of 10 and shows progress as it goes. The server limits each request to 100 coupons; it does not limit how many runs a user starts.
 
 = Can I customize the coupon codes? =
 
-Yes! You can add a custom prefix to all generated coupon codes. Prefixes are alphanumeric, limited to 8 characters, and are added directly before the random code without a separator.
+Yes! You can add a custom prefix to all generated coupon codes. Prefixes are alphanumeric, limited to 8 characters, and are added directly before the random code without a separator. You can also set the length of the random part from 8 to 24 characters (12 by default). Codes are stored in lower case, and WooCommerce accepts them in any letter case.
 
 = Are the generated coupons secure? =
 
-Yes. Coupon codes are generated through WordPress's password-generation utility with alphanumeric output, and each generated code is checked for uniqueness before it is saved.
+Coupon codes are drawn with WordPress's `wp_rand()`, which uses PHP's cryptographic random source, from lower-case letters and digits without the look-alike characters i, l, o, 0, and 1. Each code is checked against existing coupons before it is saved. The default of 12 random characters is much harder to guess than the minimum of 8.
 
 = Which products are included as free gifts? =
 
-You can select one or more products or variations when generating coupons. Those selected items are stored in the free gift metadata used by the Free Gift Coupons for WooCommerce plugin.
+You can select up to 20 products or variations when generating coupons. Those selected items are stored in the free gift metadata used by the Free Gift Coupons for WooCommerce plugin. A request is refused if a selected product is in the trash.
 
 = What discount type is used for generated coupons? =
 
@@ -90,7 +90,7 @@ Deactivate and delete the plugin through the WordPress admin. Generated coupons 
 
 = Can developers extend the plugin? =
 
-Yes! The plugin includes numerous hooks and filters for developers to customize coupon generation, validation, and the admin interface.
+Yes! The plugin provides three actions and three filters around coupon generation. They are described in README.md in the GitHub repository.
 
 == License ==
 
@@ -117,20 +117,55 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 * Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 * Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
+* Added an `Update URI` header pointing at the GitHub repository, so WordPress does not match this plugin's slug against the wordpress.org plugin directory.
+* The random part of each coupon code is now drawn uniformly with `wp_rand()` from lower-case letters and digits without look-alike characters, and can no longer be changed by `random_password` filters.
+* The default random code length is now 12 characters instead of 8.
+* A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected.
+* The translated submenu title is now escaped.
 
 **Changed:**
 
-* Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a modern WordPress 6.8+ browser baseline.
-* Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script.
+* Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a modern browser baseline.
+* Removed the plugin's direct jQuery dependency and deferred the standalone admin script. The script depends on WooCommerce's enhanced select and on `wp-a11y`.
 * Hardened runtime JavaScript configuration with WordPress-managed script data.
 * Simplified client-side validation so the first invalid field is tracked through a single validation list.
+* Raised the minimum supported WordPress version from 6.8 to 7.0.
 * Prefer WordPress datetime APIs for generated coupon expiry calculations.
 * Added VIPWPCS to Composer development dependencies for local standards testing.
+* Declared WooCommerce as a required plugin, added `WC requires at least: 10.8` and `WC tested up to: 11.1`, and declared compatibility with WooCommerce High-Performance Order Storage.
+* Dependency notices are now shown only to users who can activate plugins, or to anyone on the generator screen.
+* Generated coupon descriptions no longer end with "(Batch n/m)".
+* `fgcbg_before_coupon_generation` and `fgcbg_after_coupon_generation` now receive the validated list of product IDs.
+* A request that creates no coupons now returns an error with an explanation instead of a success response with zero coupons.
+* Request values are read in one place, directly after the nonce and capability checks.
+* Removed the 0.1 second pause after every fiftieth coupon.
+* The coupon count and code length fields no longer rewrite themselves on every keystroke; they are brought into range when the field is left.
+* Error notices stay until the next attempt, only one notice is shown at a time, and errors and completion are announced to screen readers.
+* The admin script and styles are loaded by the hook suffix WordPress returns for the generator screen instead of a hardcoded name.
+* The page now says so when JavaScript is disabled or the script settings could not be loaded.
+* When a response cannot be read, the message now says that coupons may have been created.
+* Interface text no longer warns about PHP timeouts, which applied to single-request generation. The note under the coupon count now says that coupons are generated in small batches and to keep the page open.
+* The sidebar now says that coupons expire after 1 year "by default", because the period can be changed with a filter.
+* The prefix field's placeholder text is now translatable.
+* Corrected the documentation: menu location, WooCommerce requirement, capabilities, hook arguments, default code length, and the per-run limit, which the server does not enforce across requests.
+* Regenerated the translation template.
 
 **Fixed:**
 
 * Removed a useless conditional in admin form validation reported by static analysis.
-* Load bootstrap class files with analyzer-resolvable paths while retaining the plugin path constant for runtime asset paths.
+* Load bootstrap class files with analyzer-resolvable paths. The `FGCBG_PLUGIN_PATH` constant is still defined.
+* The Free Gift Coupons check no longer runs on `plugins_loaded`, where it loaded WooCommerce translations too early and could report the dependency as missing.
+* An error thrown by a `fgcbg_coupon_generated` callback no longer causes a saved coupon to be reported as failed and replaced.
+* A coupon that WooCommerce did not save is no longer reported as generated.
+* Coupon generation errors are now written to the WooCommerce log on every site, not only when `WP_DEBUG` is enabled.
+* The coupon prefix is confirmed to be a string before it is sanitized.
+* The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen.
+* Typing a two-digit code length such as 12 no longer ends up as 24.
+* The highlight on an invalid field is no longer removed when the field receives focus; invalid fields are marked with `aria-invalid`.
+* Success notices no longer accumulate across runs.
+* The generated-codes text area and the progress bar now have accessible names.
+* The "many coupons" caution text now meets the WCAG AA contrast ratio.
+* The entrance animation no longer applies to success notices from WordPress or other plugins.
 
 = 1.6.0 =
 

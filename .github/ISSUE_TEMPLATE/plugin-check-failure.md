@@ -8,7 +8,9 @@ assignees: []
 
 ## WordPress Plugin Check Failure
 
-The WordPress Plugin Check action has identified issues with the Free Gift Coupons Bulk Coupon Generator plugin.
+The Plugin Check job failed. Inspect the failure stage before attributing the failure to plugin code.
+
+**Failure stage:** `{{ env.FAILURE_STAGE }}`
 
 ### Details
 
@@ -18,7 +20,7 @@ The WordPress Plugin Check action has identified issues with the Free Gift Coupo
 
 ### Next Steps
 
-This issue has been automatically created because the WordPress Plugin Check found issues with the plugin that should be addressed. The check performed the following specific tests:
+When Plugin Check itself ran, review its output for the configured checks below:
 
 #### Categories
 
@@ -51,7 +53,7 @@ This issue has been automatically created because the WordPress Plugin Check fou
 
 1. Review the workflow logs for specific error messages and warnings
 2. Address each identified issue in the plugin code
-3. Test locally using the [WordPress Plugin Check tool](https://github.com/WordPress/plugin-check) to verify fixes
+3. Re-run the existing GitHub Plugin Check job to verify fixes
 4. Submit a pull request with the necessary changes
 
 Once all issues are fixed, please close this issue and reference it in the changelog.

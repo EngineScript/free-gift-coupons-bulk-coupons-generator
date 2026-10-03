@@ -23,20 +23,44 @@ final class AjaxHandlerTest extends TestCase {
 		$this->set_test_products(
 			array(
 				123 => new FGCBG_Test_Product( 'Sample Mug' ),
+				500 => new FGCBG_Test_Product( 'Retired Mug', 0, 'trash' ),
 			)
 		);
-		$this->clear_test_coupons();
+		$this->reset_test_generation_state();
 		$this->set_test_current_user_can( true );
 		$this->set_test_current_user_capabilities( array() );
 	}
 
 	/**
-	 * Clear request globals.
+	 * Clear request globals and stub state.
 	 */
 	protected function tearDown(): void {
 		$this->reset_test_request();
+		$this->reset_test_generation_state();
+		$this->set_test_current_user_can( true );
+		$this->set_test_current_user_capabilities( array() );
 
 		parent::tearDown();
+	}
+
+	/**
+	 * Send a request through the handler and return the JSON response it ends with.
+	 *
+	 * @param array<string, mixed> $post_data POST data. A valid nonce is added unless one is given.
+	 * @return array<string, mixed> Response recorded by the wp_send_json_*() stand-ins.
+	 */
+	private function send_request( array $post_data ): array {
+		$this->set_test_post_data( $post_data + array( 'nonce' => 'nonce-fgcbg_ajax_nonce' ) );
+
+		$handler = new FGCBG_Ajax_Handler( new FGCBG_Coupon_Generator() );
+
+		try {
+			$handler->generate_batch();
+		} catch ( FGCBG_Test_Json_Response $response ) {
+			return $response->response;
+		}
+
+		$this->fail( 'Expected JSON response exception.' );
 	}
 
 	/**
@@ -189,5 +213,177 @@ final class AjaxHandlerTest extends TestCase {
 		}
 
 		$this->fail( 'Expected JSON response exception.' );
+	}
+
+	/**
+	 * One uneditable product refuses the whole request, even next to an editable one.
+	 */
+	public function test_generate_batch_refuses_mixed_editable_and_uneditable_products(): void {
+		$this->set_test_products(
+			array(
+				123 => new FGCBG_Test_Product( 'Sample Mug' ),
+				456 => new FGCBG_Test_Product( 'Sticker Pack' ),
+			)
+		);
+		$this->set_test_current_user_capabilities(
+			array(
+				'edit_product'         => array( 123 ),
+				'publish_shop_coupons' => true,
+			)
+		);
+
+		$response = $this->send_request( array( 'product_ids' => array( '123', '456' ) ) );
+
+		$this->assertFalse( $response['success'] );
+		$this->assertSame( 403, $response['status'] );
+		$this->assertSame( array(), $this->get_test_coupons() );
+	}
+
+	/**
+	 * A request is refused while the free gift coupon type is not registered.
+	 */
+	public function test_generate_batch_requires_the_free_gift_coupon_type(): void {
+		$this->set_test_coupon_types( array( 'percent' => 'Percentage discount' ) );
+
+		$response = $this->send_request( array( 'product_ids' => array( '123' ) ) );
+
+		$this->assertFalse( $response['success'] );
+		$this->assertSame( 400, $response['status'] );
+		$this->assertSame( array(), $this->get_test_coupons() );
+	}
+
+	/**
+	 * A product in the trash refuses the whole request.
+	 */
+	public function test_generate_batch_refuses_trashed_products(): void {
+		foreach ( array( array( '500' ), array( '123', '500' ) ) as $product_ids ) {
+			$response = $this->send_request( array( 'product_ids' => $product_ids ) );
+
+			$this->assertFalse( $response['success'] );
+			$this->assertSame( 400, $response['status'] );
+			$this->assertStringContainsString( 'not available', $response['data']['message'] );
+			$this->assertSame( array(), $this->get_test_coupons() );
+		}
+	}
+
+	/**
+	 * An ID that is not a product refuses the request instead of being skipped.
+	 */
+	public function test_generate_batch_refuses_ids_that_are_not_products(): void {
+		$response = $this->send_request( array( 'product_ids' => array( '123', '999' ) ) );
+
+		$this->assertFalse( $response['success'] );
+		$this->assertSame( 400, $response['status'] );
+		$this->assertSame( array(), $this->get_test_coupons() );
+	}
+
+	/**
+	 * More products than one coupon can carry are refused.
+	 */
+	public function test_generate_batch_refuses_more_than_the_maximum_gift_products(): void {
+		$products = array();
+		for ( $product_id = 1; $product_id <= FGCBG_Coupon_Generator::MAX_GIFT_PRODUCTS + 1; $product_id++ ) {
+			$products[ $product_id ] = new FGCBG_Test_Product( 'Product ' . $product_id );
+		}
+		$this->set_test_products( $products );
+
+		$response = $this->send_request( array( 'product_ids' => array_map( 'strval', array_keys( $products ) ) ) );
+
+		$this->assertFalse( $response['success'] );
+		$this->assertSame( 400, $response['status'] );
+		$this->assertSame( 'Please select no more than 20 products.', $response['data']['message'] );
+		$this->assertSame( array(), $this->get_test_coupons() );
+	}
+
+	/**
+	 * A request that creates nothing ends in an error, not in an empty success.
+	 */
+	public function test_generate_batch_reports_an_error_when_nothing_was_created(): void {
+		$this->set_test_coupon_save_mode( 'no_id' );
+
+		$response = $this->send_request(
+			array(
+				'product_ids' => array( '123' ),
+				'batch_size'  => '1',
+			)
+		);
+
+		$this->assertFalse( $response['success'] );
+		$this->assertSame( 500, $response['status'] );
+		$this->assertStringContainsString( 'No coupons could be created', $response['data']['message'] );
+	}
+
+	/**
+	 * The batch size defaults to 10 and never exceeds the per-request maximum.
+	 */
+	public function test_generate_batch_bounds_the_batch_size(): void {
+		$expected = array(
+			'absent' => 10,
+			'0'      => 10,
+			'3'      => 3,
+			'500'    => FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH,
+		);
+
+		foreach ( $expected as $batch_size => $generated ) {
+			$this->clear_test_coupons();
+
+			$post_data = array( 'product_ids' => array( '123' ) );
+			if ( 'absent' !== $batch_size ) {
+				$post_data['batch_size'] = (string) $batch_size;
+			}
+
+			$response = $this->send_request( $post_data );
+
+			$this->assertTrue( $response['success'] );
+			$this->assertSame( $generated, $response['data']['generated'], sprintf( 'Batch size "%s".', $batch_size ) );
+			$this->assertCount( $generated, $this->get_test_coupons() );
+		}
+	}
+
+	/**
+	 * The random code length defaults to 12 and stays within the allowed range.
+	 */
+	public function test_generate_batch_bounds_the_code_length(): void {
+		$expected = array(
+			'absent' => FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH,
+			'3'      => FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
+			'16'     => 16,
+			'99'     => FGCBG_Coupon_Generator::MAX_CODE_LENGTH,
+		);
+
+		foreach ( $expected as $code_length => $length ) {
+			$post_data = array(
+				'product_ids' => array( '123' ),
+				'batch_size'  => '1',
+			);
+			if ( 'absent' !== $code_length ) {
+				$post_data['coupon_code_length'] = (string) $code_length;
+			}
+
+			$response = $this->send_request( $post_data );
+
+			$this->assertTrue( $response['success'] );
+			$this->assertSame( $length, strlen( $response['data']['codes'][0] ), sprintf( 'Code length "%s".', $code_length ) );
+		}
+	}
+
+	/**
+	 * A prefix that is not a string is ignored; a string prefix is reduced to letters and digits.
+	 */
+	public function test_generate_batch_sanitizes_the_prefix(): void {
+		$base = array(
+			'product_ids'        => array( '123' ),
+			'batch_size'         => '1',
+			'coupon_code_length' => '8',
+		);
+
+		$array_prefix = $this->send_request( $base + array( 'coupon_prefix' => array( 'GIFT' ) ) );
+		$this->assertTrue( $array_prefix['success'] );
+		$this->assertSame( 8, strlen( $array_prefix['data']['codes'][0] ) );
+
+		$markup_prefix = $this->send_request( $base + array( 'coupon_prefix' => '<b>Gi-ft!</b>' ) );
+		$this->assertTrue( $markup_prefix['success'] );
+		$this->assertStringStartsWith( 'gift', $markup_prefix['data']['codes'][0] );
+		$this->assertSame( 12, strlen( $markup_prefix['data']['codes'][0] ) );
 	}
 }

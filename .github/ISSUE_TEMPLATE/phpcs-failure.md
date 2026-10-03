@@ -8,18 +8,20 @@ assignees: []
 
 ## PHPCS WordPress Coding Standards Failure
 
-The automated PHP CodeSniffer (PHPCS) test has detected coding standard violations in the Free Gift Coupons Bulk Coupon Generator plugin.
+The PHPCS job failed. Setup and dependency failures do not establish coding-standard violations.
+
+**Failure stage:** `{{ env.FAILURE_STAGE }}`
 
 ### Details
 
 - **PHP Version:** {{ env.PHP_VERSION }}
-- **WordPress Version:** Latest
+- **WordPress Stubs:** See the resolved dependency versions in run diagnostics
 - **Test Date:** {{ date | date('YYYY-MM-DD HH:mm:ss') }}
 - **Workflow Run:** [View detailed logs]({{ env.WORKFLOW_URL }})
 
 ### Next Steps
 
-This issue has been automatically created because the Free Gift Coupons Bulk Coupon Generator plugin failed to meet WordPress coding standards. PHPCS checks for:
+If PHPCS reached analysis, inspect its output for violations of the configured standards:
 
 #### Checked Standards
 
@@ -41,26 +43,15 @@ This issue has been automatically created because the Free Gift Coupons Bulk Cou
 #### Recommended Actions
 
 1. **Review Logs**: Check the workflow logs for specific PHPCS violations
-2. **Local Testing**: Run PHPCS locally to see detailed error reports
+2. **Inspect GitHub Diagnostics**: Review the failed stage and its original runner logs
 3. **Auto-Fix**: Use `phpcbf` to automatically fix simple issues
 4. **Manual Fix**: Address security and logic issues manually
 5. **Validate**: Re-run PHPCS to confirm all issues are resolved
 
-#### Local Testing Commands
+#### Validation
 
-```bash
-# Install dependencies
-composer install
-
-# Run PHPCS checks
-./vendor/bin/phpcs --standard=WordPress free-gift-bulk-coupon-generator.php
-
-# Auto-fix simple issues
-./vendor/bin/phpcbf --standard=WordPress free-gift-bulk-coupon-generator.php
-
-# Check specific files
-./vendor/bin/phpcs --standard=WordPress-Extra --report=full free-gift-bulk-coupon-generator.php
-```
+Re-run the existing GitHub job after correcting the reported failure. Keep its
+remote dependency installation, cache policy, and configured rules unchanged.
 
 Once fixed, please close this issue and reference it in the changelog.
 

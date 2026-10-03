@@ -1,6 +1,9 @@
 <?php
 /**
- * PHPUnit bootstrap for local test runs.
+ * PHPUnit bootstrap for the unit suite.
+ *
+ * WordPress and WooCommerce are not loaded. The functions and classes below
+ * stand in for the parts of both that the plugin calls.
  *
  * @package FreeGiftCouponsBulkGenerator
  */
@@ -41,7 +44,9 @@ $GLOBALS['fgcbg_test_coupons']          = array();
 $GLOBALS['fgcbg_test_enqueued']         = array();
 $GLOBALS['fgcbg_test_inline_scripts']   = array();
 $GLOBALS['fgcbg_test_localized_scripts'] = array();
-$GLOBALS['fgcbg_test_passwords']        = array();
+$GLOBALS['fgcbg_test_rand_values']      = array();
+$GLOBALS['fgcbg_test_log']              = array();
+$GLOBALS['fgcbg_test_coupon_save_mode'] = 'ok';
 $GLOBALS['fgcbg_test_submenu_pages']    = array();
 $GLOBALS['fgcbg_test_current_user_can'] = true;
 $GLOBALS['fgcbg_test_is_admin']         = true;
@@ -317,28 +322,63 @@ if ( ! function_exists( 'wp_create_nonce' ) ) {
 	}
 }
 
-if ( ! function_exists( 'wp_generate_password' ) ) {
+if ( ! function_exists( 'wp_rand' ) ) {
 	/**
-	 * Generate a deterministic alphanumeric password for tests.
+	 * Return a random integer, or the next queued value when a test queued some.
 	 *
-	 * @param int  $length              Password length.
-	 * @param bool $special_chars       Whether to include special characters.
-	 * @param bool $extra_special_chars Whether to include extra special characters.
-	 * @return string
+	 * The plugin has no wp_generate_password() stand-in on purpose: coupon codes
+	 * must not depend on it, and a call would end the test run with an error.
+	 *
+	 * @param int|null $min Lower bound.
+	 * @param int|null $max Upper bound.
+	 * @return int
 	 */
-	function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ) {
-		unset( $special_chars, $extra_special_chars );
-
-		if ( ! empty( $GLOBALS['fgcbg_test_passwords'] ) ) {
-			return substr( (string) array_shift( $GLOBALS['fgcbg_test_passwords'] ), 0, (int) $length );
+	function wp_rand( $min = null, $max = null ) {
+		if ( ! empty( $GLOBALS['fgcbg_test_rand_values'] ) ) {
+			return (int) array_shift( $GLOBALS['fgcbg_test_rand_values'] );
 		}
 
-		static $counter = 0;
-		++$counter;
+		return random_int( (int) $min, (int) $max );
+	}
+}
 
-		$seed = 'a' . base_convert( (string) $counter, 10, 36 ) . 'b2c3d4e5f6g7h8';
+if ( ! class_exists( 'WP_Screen' ) ) {
+	/**
+	 * Minimal admin screen double.
+	 */
+	class WP_Screen {
+		/**
+		 * Screen ID.
+		 *
+		 * @var string
+		 */
+		public $id = '';
+	}
+}
 
-		return substr( str_repeat( $seed, 3 ), 0, (int) $length );
+if ( ! function_exists( 'get_current_screen' ) ) {
+	/**
+	 * Get the screen a test selected, if any.
+	 *
+	 * @return WP_Screen|null
+	 */
+	function get_current_screen() {
+		return $GLOBALS['fgcbg_test_current_screen'] ?? null;
+	}
+}
+
+if ( ! function_exists( 'wp_admin_notice' ) ) {
+	/**
+	 * Print an admin notice the way WordPress does, reduced to what tests read.
+	 *
+	 * @param string               $message Notice markup.
+	 * @param array<string, mixed> $args    Notice arguments.
+	 * @return void
+	 */
+	function wp_admin_notice( $message, $args = array() ) {
+		$type = isset( $args['type'] ) ? ' notice-' . $args['type'] : '';
+
+		echo '<div class="notice' . esc_attr( $type ) . '"><p>' . $message . '</p></div>';
 	}
 }
 
@@ -806,14 +846,32 @@ if ( ! class_exists( 'FGCBG_Test_Product' ) ) {
 		private $parent_id;
 
 		/**
+		 * Product post status.
+		 *
+		 * @var string
+		 */
+		private $status;
+
+		/**
 		 * Constructor.
 		 *
 		 * @param string $name      Product name.
 		 * @param int    $parent_id Parent product ID.
+		 * @param string $status    Product post status.
 		 */
-		public function __construct( $name, $parent_id = 0 ) {
+		public function __construct( $name, $parent_id = 0, $status = 'publish' ) {
 			$this->name      = $name;
 			$this->parent_id = $parent_id;
+			$this->status    = $status;
+		}
+
+		/**
+		 * Get product post status.
+		 *
+		 * @return string
+		 */
+		public function get_status() {
+			return $this->status;
 		}
 
 		/**
@@ -855,6 +913,10 @@ if ( ! function_exists( 'wc_get_coupon_types' ) ) {
 	 * @return array<string, string>
 	 */
 	function wc_get_coupon_types() {
+		if ( isset( $GLOBALS['fgcbg_test_coupon_types'] ) ) {
+			return $GLOBALS['fgcbg_test_coupon_types'];
+		}
+
 		return array(
 			'fixed_cart'    => 'Fixed cart discount',
 			'fixed_product' => 'Fixed product discount',
@@ -982,9 +1044,21 @@ if ( ! class_exists( 'WC_Coupon' ) ) {
 		/**
 		 * Save the coupon to the test store.
 		 *
+		 * The save mode lets a test reproduce a save that throws ('throw') or
+		 * one that returns without creating the coupon ('no_id').
+		 *
 		 * @return void
+		 * @throws RuntimeException When the save mode is 'throw'.
 		 */
 		public function save() {
+			if ( 'throw' === $GLOBALS['fgcbg_test_coupon_save_mode'] ) {
+				throw new RuntimeException( 'Coupon could not be saved.' );
+			}
+
+			if ( 'no_id' === $GLOBALS['fgcbg_test_coupon_save_mode'] ) {
+				return;
+			}
+
 			$this->id = count( $GLOBALS['fgcbg_test_coupons'] ) + 1;
 			$GLOBALS['fgcbg_test_coupons'][] = $this;
 		}
@@ -1040,7 +1114,7 @@ if ( ! class_exists( 'WC_Coupon' ) ) {
 
 if ( ! function_exists( 'wc_get_logger' ) ) {
 	/**
-	 * Get a minimal WooCommerce logger.
+	 * Get a minimal WooCommerce logger that records what the plugin logs.
 	 *
 	 * @return object
 	 */
@@ -1049,9 +1123,15 @@ if ( ! function_exists( 'wc_get_logger' ) ) {
 			/**
 			 * Record an error.
 			 *
+			 * @param string               $message Log message.
+			 * @param array<string, mixed> $context Log context.
 			 * @return void
 			 */
-			public function error() {
+			public function error( $message = '', $context = array() ) {
+				$GLOBALS['fgcbg_test_log'][] = array(
+					'message' => (string) $message,
+					'context' => $context,
+				);
 			}
 		};
 	}

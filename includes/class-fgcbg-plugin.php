@@ -24,7 +24,7 @@ final class FGCBG_Plugin {
 	 * @since 1.0.0
 	 * @var FGCBG_Plugin|null
 	 */
-	private static $instance = null;
+	private static ?self $instance = null;
 
 	/**
 	 * Coupon generator instance.
@@ -59,16 +59,23 @@ final class FGCBG_Plugin {
 	private FGCBG_Admin_Assets $admin_assets;
 
 	/**
+	 * Hook suffix of the generator screen, or an empty string when the screen
+	 * is not registered for the current user.
+	 *
+	 * @since 1.7.0
+	 * @var string
+	 */
+	private string $page_hook = '';
+
+	/**
 	 * Get plugin instance.
 	 *
 	 * @since 1.0.0
 	 * @return FGCBG_Plugin
-	 * @psalm-suppress PossiblyUnusedReturnValue Public singleton accessor for integrations and tests.
 	 */
 	public static function get_instance(): self {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
+		self::$instance ??= new self();
+
 		return self::$instance;
 	}
 
@@ -82,10 +89,16 @@ final class FGCBG_Plugin {
 	/**
 	 * Initialize plugin.
 	 *
+	 * The Free Gift Coupons notice is always registered in the admin and decides
+	 * for itself whether to print. The coupon-type lookup must not run here:
+	 * this method runs on `plugins_loaded`, before translations may be loaded
+	 * and before other plugins have registered their coupon types.
+	 *
 	 * @since 1.0.0
+	 * @since 1.7.0 Private; the dependency lookup moved into the notice callback.
 	 * @return void
 	 */
-	public function init(): void {
+	private function init(): void {
 		if ( ! FGCBG_Dependencies::has_woocommerce() ) {
 			add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
 			return;
@@ -100,39 +113,74 @@ final class FGCBG_Plugin {
 			add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 			$this->admin_assets->register_hooks();
 			$this->ajax_handler->register_hooks();
-
-			if ( ! FGCBG_Dependencies::has_free_gift_coupon_type() ) {
-				add_action( 'admin_notices', array( $this, 'free_gift_coupons_missing_notice' ) );
-			}
+			add_action( 'admin_notices', array( $this, 'free_gift_coupons_missing_notice' ) );
 		}
+	}
+
+	/**
+	 * Decide whether the current user should see a dependency notice.
+	 *
+	 * Users who can activate plugins see it on every admin screen. Anyone else
+	 * sees it only on the generator screen, where it explains why coupon
+	 * generation is unavailable.
+	 *
+	 * @since 1.7.0
+	 * @return bool True when a dependency notice may be shown.
+	 */
+	private function should_show_dependency_notice(): bool {
+		if ( current_user_can( 'activate_plugins' ) ) {
+			return true;
+		}
+
+		if ( '' === $this->page_hook ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+
+		return $screen instanceof WP_Screen && $screen->id === $this->page_hook;
 	}
 
 	/**
 	 * WooCommerce missing notice.
 	 *
 	 * @since 1.0.0
+	 * @since 1.7.0 Shown only to users who can act on it.
 	 * @return void
 	 */
 	public function woocommerce_missing_notice(): void {
+		if ( ! $this->should_show_dependency_notice() ) {
+			return;
+		}
+
 		$message = sprintf(
 			/* translators: %s: WooCommerce download link */
 			esc_html__( 'Free Gift Coupons Bulk Coupon Generator requires WooCommerce to be installed and active. You can download %s here.', 'free-gift-bulk-coupon-generator' ),
 			'<a href="' . esc_url( 'https://woocommerce.com/' ) . '" target="_blank" rel="noopener noreferrer">WooCommerce</a>'
 		);
 
-		echo '<div class="notice notice-error"><p>' . wp_kses_post( $message ) . '</p></div>';
+		wp_admin_notice( $message, array( 'type' => 'error' ) );
 	}
 
 	/**
 	 * Free Gift Coupons missing notice.
 	 *
+	 * Runs on `admin_notices`, after `init`, so the coupon-type lookup sees
+	 * every registered type and may load translations.
+	 *
 	 * @since 1.6.0
+	 * @since 1.7.0 Checks the dependency itself and is shown only to users who can act on it.
 	 * @return void
 	 */
 	public function free_gift_coupons_missing_notice(): void {
-		echo '<div class="notice notice-error"><p>';
-		esc_html_e( 'Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available.', 'free-gift-bulk-coupon-generator' );
-		echo '</p></div>';
+		if ( FGCBG_Dependencies::has_free_gift_coupon_type() || ! $this->should_show_dependency_notice() ) {
+			return;
+		}
+
+		wp_admin_notice(
+			esc_html__( 'Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available.', 'free-gift-bulk-coupon-generator' ),
+			array( 'type' => 'error' )
+		);
 	}
 
 	/**
@@ -142,13 +190,16 @@ final class FGCBG_Plugin {
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
-		add_submenu_page(
+		$page_hook = add_submenu_page(
 			'woocommerce',
 			__( 'Free Gift Bulk Coupons', 'free-gift-bulk-coupon-generator' ),
-			__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
+			esc_html__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
 			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY,
 			'free-gift-bulk-coupon-generator',
 			array( $this->admin_page, 'render' )
 		);
+
+		$this->page_hook = is_string( $page_hook ) ? $page_hook : '';
+		$this->admin_assets->set_page_hook( $this->page_hook );
 	}
 }

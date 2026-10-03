@@ -11,20 +11,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **AJAX Request Routing**: Coupon-generation requests now use the WordPress-provided admin AJAX URL from `admin_url()` instead of a hardcoded relative endpoint.
 - **Coupon Capability Enforcement**: Changed coupon generator access checks from the broad WooCommerce management capability to WooCommerce's coupon publishing capability before allowing free-gift coupon creation.
+- **Update Source**: Added an `Update URI` header pointing at the GitHub repository, so WordPress does not match this plugin's slug against the wordpress.org plugin directory when it checks for updates.
+- **Coupon Code Generation**: The random part of each code is now drawn uniformly with `wp_rand()` from lower-case letters and digits, without the look-alike characters `i`, `l`, `o`, `0`, and `1`. It no longer comes from `wp_generate_password()`, so `random_password` filters from other plugins cannot shorten or fix coupon codes.
+- **Default Code Length**: The default random code length is now 12 characters instead of 8. The allowed range of 8 to 24 is unchanged.
+- **Gift Product Checks**: A request is refused when a selected product is in the trash or is not a product, or when more than 20 products are selected. Draft and private products are still accepted.
+- **Menu Title Escaping**: The translated submenu title is now escaped, because WordPress prints submenu titles as HTML.
 
 ### Changed
 
-- **Modern JavaScript Admin UI**: Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a cleaner WordPress 6.8+ browser baseline.
-- **Asset Loading**: Removed the plugin's direct jQuery dependency, kept only WooCommerce's enhanced select dependency, and deferred the standalone admin script for better loading performance.
-- **JavaScript Configuration**: Renamed the runtime config object to `fgcbgAdminConfig`, froze it with `Object.freeze()`, and JSON hex-escaped the inline config payload for stronger script-safety.
+- **Modern JavaScript Admin UI**: Refactored the admin script to use native DOM APIs, `fetch()`, `URLSearchParams`, async batch generation, and class-based controller organization for a modern browser baseline.
+- **Asset Loading**: Removed the plugin's direct jQuery dependency and deferred the standalone admin script for better loading performance. The script depends on WooCommerce's enhanced select and on `wp-a11y`.
+- **JavaScript Configuration**: Renamed the runtime config object to `fgcbgAdminConfig`. It is passed with `wp_localize_script()`, and the script works on a frozen copy (`Object.freeze()`).
 - **Validation Flow**: Simplified client-side validation so the first invalid field is tracked through a single validation list instead of repeated conditional chains.
 - **WordPress API Usage**: Prefer WordPress datetime APIs for generated coupon expiry calculations.
 - **Development Tooling**: Added VIPWPCS to the Composer development dependencies for local standards testing.
+- **Minimum WordPress Version**: Raised the minimum supported WordPress version from 6.8 to 7.0.
+- **Plugin Requirements**: Declared WooCommerce as a required plugin with the `Requires Plugins` header, so WordPress refuses activation without it. Added `WC requires at least: 10.8` and `WC tested up to: 11.1`, and declared compatibility with WooCommerce High-Performance Order Storage.
+- **Dependency Notices**: The WooCommerce and Free Gift Coupons notices are now shown only to users who can activate plugins, or to anyone on the generator screen, instead of to every user on every admin screen.
+- **Coupon Descriptions**: Generated coupon descriptions no longer end with "(Batch n/m)". The numbers counted within a single request of ten, not within the whole run.
+- **Hook Arguments**: `fgcbg_before_coupon_generation` and `fgcbg_after_coupon_generation` now receive the validated list of product IDs, the same list `fgcbg_coupon_generated` receives, instead of the caller's raw argument.
+- **Failed Requests**: A request that creates no coupons now returns an error with an explanation instead of a success response with zero coupons.
+- **Request Handling**: Request values are read in one place, directly after the nonce and capability checks.
+- **Generation Delay**: Removed the 0.1 second pause after every fiftieth coupon. It dated from single-request generation and could not occur in batches of ten.
+- **Number Fields**: The coupon count and code length fields no longer rewrite themselves on every keystroke. They are brought into range when the field is left, and the server and submit-time checks still enforce the limits.
+- **Notices**: Error notices now stay until the next attempt instead of disappearing after five seconds, only one notice is shown at a time, and errors and completion are announced to screen readers.
+- **Screen Detection**: The admin script and styles are loaded by comparing with the hook suffix WordPress returns for the generator screen instead of a hardcoded name.
+- **Missing Script or Settings**: The page now says so when JavaScript is disabled or the script settings could not be loaded, and disables the form in the second case.
+- **Unreadable Responses**: When a response cannot be read, the message now says that coupons may have been created and to check WooCommerce > Coupons before generating again.
+- **Interface Text**: The large-run confirmation, the "many coupons" caution, and the note under the coupon count no longer warn about PHP timeouts, which applied to single-request generation. The note now says that coupons are generated in small batches and to keep the page open.
+- **Expiry Text**: The sidebar now says that coupons expire after 1 year "by default", because the period can be changed with the `fgcbg_coupon_expiry_days` filter.
+- **Prefix Placeholder**: The prefix field's placeholder text is now translatable.
+- **Hook Documentation**: The three actions and three filters are documented where they fire and in `README.md`, including their arguments.
+- **Documentation**: Corrected `README.md` and `readme.txt`: menu location (WooCommerce > Coupon Generator), WooCommerce 10.8 requirement, required capabilities, default code length, installing from the release zip file, and the per-run limit, which the server does not enforce across requests.
+- **Translation Template**: Regenerated `languages/free-gift-bulk-coupon-generator.pot`.
 
 ### Fixed
 
 - **Static Analysis Finding**: Removed a useless conditional in admin form validation where the first invalid field check always evaluated the same way.
-- **Psalm Include Resolution**: Load bootstrap class files with analyzer-resolvable paths while retaining the plugin path constant for runtime asset paths.
+- **Psalm Include Resolution**: Load bootstrap class files with analyzer-resolvable paths. The `FGCBG_PLUGIN_PATH` constant is still defined.
+- **Early Dependency Check**: The Free Gift Coupons check no longer runs on `plugins_loaded`. On translated sites it loaded WooCommerce translations too early, and it could report the dependency as missing before that plugin had registered its coupon type.
+- **Unreported Coupons**: An error thrown by a `fgcbg_coupon_generated` callback no longer causes a saved coupon to be reported as failed and replaced by another.
+- **Unsaved Coupons**: A coupon that WooCommerce did not save is no longer reported as generated.
+- **Error Logging**: Coupon generation errors are now written to the WooCommerce log on every site, not only when `WP_DEBUG` is enabled.
+- **Prefix Type Check**: The coupon prefix is confirmed to be a string before it is sanitized.
+- **Product Search Styles**: The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen.
+- **Code Length Field**: Typing a two-digit length such as 12 no longer ends up as 24.
+- **Invalid Field Highlight**: The highlight on an invalid field is no longer removed the moment the field receives focus. Invalid fields are also marked with `aria-invalid`, and the product search shows the highlight on its visible control.
+- **Success Notices**: Success notices no longer accumulate across runs.
+- **Accessible Names**: The generated-codes text area and the progress bar now have accessible names, and the decorative warning icon is hidden from screen readers.
+- **Caution Text Contrast**: The "many coupons" caution text now meets the WCAG AA contrast ratio.
+- **Notice Animation Scope**: The entrance animation no longer applies to success notices from WordPress or other plugins.
 
 ## [1.6.0] - 2026-05-17
 

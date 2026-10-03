@@ -83,22 +83,63 @@ final class FGCBG_Ajax_Handler {
 			);
 		}
 
-		$product_ids   = $this->get_post_absint_list( 'product_ids' );
-		$batch_size    = $this->get_batch_size();
-		$coupon_prefix = $this->get_post_text_value( 'coupon_prefix' );
-		$code_length   = $this->get_code_length();
+		// The nonce is verified above. Request values are read here and nowhere else.
+		$product_ids   = $this->to_absint_list( isset( $_POST['product_ids'] ) ? wp_unslash( $_POST['product_ids'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each scalar value is passed through absint() in to_absint_list().
+		$batch_size    = $this->to_batch_size( isset( $_POST['batch_size'] ) ? absint( wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE );
+		$coupon_prefix = $this->to_text( isset( $_POST['coupon_prefix'] ) ? wp_unslash( $_POST['coupon_prefix'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through sanitize_text_field() in to_text() after a string check.
+		$code_length   = $this->to_code_length( isset( $_POST['coupon_code_length'] ) ? absint( wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH );
 
+		$this->require_usable_products( $product_ids );
+
+		$result = $this->generator->generate_coupon_batch( $product_ids, $batch_size, $coupon_prefix, $code_length );
+
+		if ( $result['generated'] < 1 ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'No coupons could be created. If the selected products are valid, check WooCommerce > Status > Logs for details.', 'free-gift-bulk-coupon-generator' ),
+				),
+				500
+			);
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * End the request with an error unless the selected products can be used.
+	 *
+	 * The whole request is refused when any one product cannot be used, so a
+	 * coupon is never created for fewer gifts than were selected.
+	 *
+	 * @since 1.7.0
+	 * @param array<int> $product_ids Product IDs selected for free gift coupon generation.
+	 * @return void
+	 */
+	private function require_usable_products( array $product_ids ): void {
 		if ( empty( $product_ids ) ) {
 			wp_send_json_error( array( 'message' => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ) ), 400 );
+		}
+
+		if ( count( $product_ids ) > FGCBG_Coupon_Generator::MAX_GIFT_PRODUCTS ) {
+			wp_send_json_error(
+				array(
+					'message' => sprintf(
+						/* translators: %d: Maximum number of gift products per coupon. */
+						__( 'Please select no more than %d products.', 'free-gift-bulk-coupon-generator' ),
+						FGCBG_Coupon_Generator::MAX_GIFT_PRODUCTS
+					),
+				),
+				400
+			);
 		}
 
 		if ( ! $this->current_user_can_edit_products( $product_ids ) ) {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons for one or more selected products.', 'free-gift-bulk-coupon-generator' ) ), 403 );
 		}
 
-		$result = $this->generator->generate_coupon_batch( $product_ids, $batch_size, $coupon_prefix, $code_length );
-
-		wp_send_json_success( $result );
+		if ( ! $this->generator->are_products_usable( $product_ids ) ) {
+			wp_send_json_error( array( 'message' => __( 'One or more selected products are not available. Remove any product that is in the trash or has been deleted, then try again.', 'free-gift-bulk-coupon-generator' ) ), 400 );
+		}
 	}
 
 	/**
@@ -119,44 +160,34 @@ final class FGCBG_Ajax_Handler {
 	}
 
 	/**
-	 * Get a scalar text value from the current POST request.
+	 * Convert an unslashed request value to sanitized text.
 	 *
-	 * @since 1.6.0
-	 * @param string $key      POST field key.
-	 * @param string $fallback Default value.
+	 * Request values are strings or arrays. Anything that is not a string
+	 * yields an empty string.
+	 *
+	 * @since 1.7.0
+	 * @param mixed $value Unslashed request value.
 	 * @return string Sanitized text value.
 	 */
-	private function get_post_text_value( string $key, string $fallback = '' ): string {
-		if ( ! isset( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- AJAX nonce is verified before this helper is called.
-			return $fallback;
-		}
-
-		$value = wp_unslash( $_POST[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- AJAX nonce is verified before this helper is called; sanitized after scalar validation.
-		if ( ! is_scalar( $value ) ) {
-			return $fallback;
-		}
-
-		return sanitize_text_field( $value );
+	private function to_text( mixed $value ): string {
+		return is_string( $value ) ? sanitize_text_field( $value ) : '';
 	}
 
 	/**
-	 * Get a positive integer list from the current POST request.
+	 * Convert an unslashed request value to a list of unique positive integers.
 	 *
-	 * @since 1.6.0
-	 * @param string $key POST field key.
+	 * Nested arrays and other non-scalar entries are dropped.
+	 *
+	 * @since 1.7.0
+	 * @param mixed $value Unslashed request value.
 	 * @return array<int>
 	 */
-	private function get_post_absint_list( string $key ): array {
-		if ( ! isset( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- AJAX nonce is verified before this helper is called.
-			return array();
-		}
+	private function to_absint_list( mixed $value ): array {
+		$ids = array();
 
-		$values = (array) wp_unslash( $_POST[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- AJAX nonce is verified before this helper is called; sanitized below.
-		$ids    = array();
-
-		foreach ( $values as $value ) {
-			if ( is_scalar( $value ) ) {
-				$id = absint( $value );
+		foreach ( (array) $value as $item ) {
+			if ( is_scalar( $item ) ) {
+				$id = absint( $item );
 				if ( $id > 0 ) {
 					$ids[] = $id;
 				}
@@ -167,14 +198,13 @@ final class FGCBG_Ajax_Handler {
 	}
 
 	/**
-	 * Get the requested batch size from the current POST request.
+	 * Bound the requested batch size.
 	 *
-	 * @since 1.6.0
+	 * @since 1.7.0
+	 * @param int $batch_size Requested number of coupons for this request.
 	 * @return int
 	 */
-	private function get_batch_size(): int {
-		$batch_size = isset( $_POST['batch_size'] ) ? absint( wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- AJAX nonce is verified before this helper is called.
-
+	private function to_batch_size( int $batch_size ): int {
 		if ( $batch_size < 1 ) {
 			return self::DEFAULT_BATCH_SIZE;
 		}
@@ -183,14 +213,13 @@ final class FGCBG_Ajax_Handler {
 	}
 
 	/**
-	 * Get the requested random coupon code length from the current POST request.
+	 * Bound the requested random coupon code length.
 	 *
-	 * @since 1.6.0
+	 * @since 1.7.0
+	 * @param int $code_length Requested random code length.
 	 * @return int
 	 */
-	private function get_code_length(): int {
-		$code_length = isset( $_POST['coupon_code_length'] ) ? absint( wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- AJAX nonce is verified before this helper is called.
-
+	private function to_code_length( int $code_length ): int {
 		return max(
 			FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
 			min( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, $code_length )

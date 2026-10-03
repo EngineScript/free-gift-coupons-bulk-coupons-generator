@@ -1,10 +1,12 @@
 # This workflow performs comprehensive WordPress plugin compatibility and quality checks.
 # It runs multiple validation processes including:
 # - WordPress Plugin Check for WordPress.org compatibility
-# - PHPUnit tests across supported tooling PHP versions (8.2, 8.3, 8.4, 8.5)
-# - PHP compatibility testing for the plugin's PHP 8.2+ runtime target
-# - WordPress compatibility testing across multiple WP versions (6.8, latest, nightly)
+# - PHPUnit unit tests (tracked, no WordPress) and generated WordPress integration tests
+#   across supported PHP versions (8.2, 8.3, 8.4, 8.5)
+# - PHP compatibility testing across multiple PHP versions (8.2, 8.3, 8.4, 8.5)
+# - WordPress compatibility testing across multiple WP versions (7.0, latest, nightly)
 # - PHPStan static analysis for WordPress-specific code quality
+# - Admin script tests (Node.js test runner and jsdom)
 # - WordPress security vulnerability scanning using pattern analysis
 # - PHPCS code standards validation for WordPress coding standards
 # - Code quality analysis and automated issue creation for failures
@@ -27,25 +29,26 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   plugin-check:
     name: WP Plugin Check (PHP 8.3)
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
         with:
           # Always fetch the latest commit, disable any caching
           fetch-depth: 0
           clean: true
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -53,23 +56,29 @@ jobs:
           tools: composer:v2
 
       - name: Clear any existing composer cache
+        id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
           rm -rf vendor/ composer.lock || true
 
       - name: Install Composer dependencies (no cache)
+        id: install_composer_dependencies_no_cache
         run: |
           composer install --prefer-dist --no-progress --no-cache
 
       - name: Clean up potential artifact directories
+        id: clean_up_potential_artifact_directories
         run: |
-          echo "Removing artifact directories to prevent conflicts..."
+          echo "🧹 Removing any artifact directories to prevent conflicts..."
           rm -rf .reports 2>/dev/null || true
           rm -rf build 2>/dev/null || true
-          echo "Cleanup complete."
+          echo "✅ Cleanup complete"
 
       - name: Prepare Plugin Check build directory
+        id: prepare_plugin_check_build_directory
         run: |
+          # Stdlib-only automation fixtures run on this runner, not the workstation.
+          python3 .github/scripts/test-automation.py
           rm -rf plugin-check-build 2>/dev/null || true
 
           PLUGIN_SLUG="free-gift-bulk-coupon-generator"
@@ -78,19 +87,26 @@ jobs:
           mkdir -p "$BUILD_DIR"
 
           cp free-gift-bulk-coupon-generator.php "$BUILD_DIR/"
-          cp -r includes "$BUILD_DIR/"
-          cp -r assets "$BUILD_DIR/"
           cp readme.txt "$BUILD_DIR/"
           cp README.md "$BUILD_DIR/"
           cp CHANGELOG.md "$BUILD_DIR/"
           cp LICENSE "$BUILD_DIR/"
-          if [ -d languages ]; then
-            cp -r languages "$BUILD_DIR/"
-          fi
+          cp -r includes "$BUILD_DIR/"
+          cp -r assets "$BUILD_DIR/"
+          cp -r languages "$BUILD_DIR/"
+          # Inspect a release-shaped ZIP without publishing or changing the PCP input.
+          PACKAGE_ZIP="$RUNNER_TEMP/${PLUGIN_SLUG}-candidate.zip"
+          rm -f "$PACKAGE_ZIP"
+          (cd plugin-check-build && zip -qr "$PACKAGE_ZIP" "$PLUGIN_SLUG")
+          python3 .github/scripts/check-plugin-package.py "$BUILD_DIR" --zip "$PACKAGE_ZIP"
 
       - name: WordPress Plugin Check
-        uses: WordPress/plugin-check-action@98a1788320d0add90df2d8183934ecccbc4e05d2 # v1.1.7
+        id: wordpress_plugin_check
+        uses: WordPress/plugin-check-action@v1.1.9
         with:
+          # Comment only on trusted, same-repository human PRs. An empty token
+          # skips the action's optional comment, not checks or annotations.
+          repo-token: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && github.token || '' }}
           # Production-style plugin directory. Excludes repo-only files such as
           # .github, GEMINI.md, and other development artifacts.
           build-dir: './plugin-check-build/free-gift-bulk-coupon-generator'
@@ -114,19 +130,90 @@ jobs:
           wp-version: 'latest'
 
       - name: Handle plugin check completion
+        id: handle_plugin_check_completion
         if: ${{ always() }}
         run: |
-          echo "Plugin Check completed for PHP 8.3."
+          echo "Plugin Check job status: ${{ job.status }}"
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            clear_any_existing_composer_cache=${{ steps.clear_any_existing_composer_cache.outcome }}
+            install_composer_dependencies_no_cache=${{ steps.install_composer_dependencies_no_cache.outcome }}
+            clean_up_potential_artifact_directories=${{ steps.clean_up_potential_artifact_directories.outcome }}
+            prepare_plugin_check_build_directory=${{ steps.prepare_plugin_check_build_directory.outcome }}
+            wordpress_plugin_check=${{ steps.wordpress_plugin_check.outcome }}
+            handle_plugin_check_completion=${{ steps.handle_plugin_check_completion.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-plugin-check
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on plugin check failure
+        id: create_issue_on_plugin_check_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.clear_any_existing_composer_cache.outcome == 'failure' && 'clear_any_existing_composer_cache' || steps.install_composer_dependencies_no_cache.outcome == 'failure' && 'install_composer_dependencies_no_cache' || steps.clean_up_potential_artifact_directories.outcome == 'failure' && 'clean_up_potential_artifact_directories' || steps.prepare_plugin_check_build_directory.outcome == 'failure' && 'prepare_plugin_check_build_directory' || steps.wordpress_plugin_check.outcome == 'failure' && 'wordpress_plugin_check' || steps.handle_plugin_check_completion.outcome == 'failure' && 'handle_plugin_check_completion' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/plugin-check-failure.md
+          update_existing: false
+
+      - name: Mark job as failed after issue creation
+        id: mark_job_as_failed_after_issue_creation
+        if: ${{ failure() }}
+        run: |
+          echo "::error::Plugin Check job failed; see the failed step and reporting outcome."
+          exit 1
 
   phpcs:
     name: PHPCS (PHP 8.3)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -134,29 +221,92 @@ jobs:
           tools: composer:v2
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@5c2bcf28d7b060ef3c601d7b476d5430a7b46c27 # v4
+        id: install_composer_dependencies
+        uses: ramsey/composer-install@v4
         with:
           dependency-versions: highest
           composer-options: "--prefer-dist --no-progress"
 
       - name: Verify PHPCS standards
+        id: verify_phpcs_standards
         run: |
           # Verify the project-local PHPCS installation and registered standards.
           vendor/bin/phpcs -i
 
       - name: Run PHPCS
+        id: run_phpcs
         run: |
           vendor/bin/phpcs --standard=phpcs.xml
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            install_composer_dependencies=${{ steps.install_composer_dependencies.outcome }}
+            verify_phpcs_standards=${{ steps.verify_phpcs_standards.outcome }}
+            run_phpcs=${{ steps.run_phpcs.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-phpcs
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on PHPCS failure
+        id: create_issue_on_phpcs_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.install_composer_dependencies.outcome == 'failure' && 'install_composer_dependencies' || steps.verify_phpcs_standards.outcome == 'failure' && 'verify_phpcs_standards' || steps.run_phpcs.outcome == 'failure' && 'run_phpcs' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/phpcs-failure.md
+          update_existing: false
 
   vip-phpcs:
     name: WP VIP CS (PHP 8.3)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -164,30 +314,36 @@ jobs:
           tools: composer:v2
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@5c2bcf28d7b060ef3c601d7b476d5430a7b46c27 # v4
+        id: install_composer_dependencies
+        uses: ramsey/composer-install@v4
         with:
           dependency-versions: highest
           composer-options: "--prefer-dist --no-progress"
 
       - name: Install WordPress VIP Coding Standards
+        id: install_wordpress_vip_coding_standards
         run: |
           # Install PHPCS and WordPress VIP Coding Standards
           composer global config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-          composer global require --dev squizlabs/php_codesniffer:"^3.13.5"
-          composer global require --dev wp-coding-standards/wpcs:"^3.3"
+          composer global require --dev squizlabs/php_codesniffer:"^3.13.6"
+          composer global require --dev wp-coding-standards/wpcs:"^3.4.1"
           composer global require --dev automattic/vipwpcs:"^3.0.1"
           composer global require --dev dealerdirect/phpcodesniffer-composer-installer:"^1.2"
 
           # Add composer bin to PATH
-          echo "$HOME/.composer/vendor/bin" >> $GITHUB_PATH
+          VIP_BIN_DIR="$(composer global config bin-dir --absolute)"
+          echo "$VIP_BIN_DIR" >> "$GITHUB_PATH"
+          echo "VIP_PHPCS=$VIP_BIN_DIR/phpcs" >> "$GITHUB_ENV"
+          export PATH="$VIP_BIN_DIR:$PATH"
 
           # Verify installation and show available standards
-          phpcs -i
+          "$VIP_BIN_DIR/phpcs" -i
 
           # Verify VIP standards are available
-          phpcs -i | grep -i vip || echo "VIP standards not found, checking installation..."
+          "$VIP_BIN_DIR/phpcs" -i | grep -F WordPress-VIP-Go
 
       - name: Create VIP-specific PHPCS configuration
+        id: create_vip_specific_phpcs_configuration
         run: |
           cat > phpcs-vip.xml << 'EOF'
           <?xml version="1.0"?>
@@ -256,45 +412,107 @@ jobs:
           EOF
 
       - name: Run WordPress VIP PHPCS
+        id: run_wordpress_vip_phpcs
         run: |
-          echo "Running WordPress VIP Go coding standards scan..."
-          echo "This scan focuses on VIP-specific requirements, including:"
-          echo "   - File system operation restrictions"
-          echo "   - Performance and caching best practices"
-          echo "   - Security vulnerabilities specific to the VIP platform"
-          echo "   - User experience guidelines for enterprise WordPress"
-          echo "   - Uncached function usage patterns"
+          echo "🚀 Running WordPress VIP Go Coding Standards scan..."
+          echo "📋 This scan focuses on VIP-specific requirements including:"
+          echo "   • File system operation restrictions"
+          echo "   • Performance and caching best practices"
+          echo "   • Security vulnerabilities specific to VIP platform"
+          echo "   • User experience guidelines for enterprise WordPress"
+          echo "   • Uncached function usage patterns"
           echo ""
-          echo "Using standards: WordPress-VIP-Go, WordPressVIPMinimum"
-          echo "Scanning PHP files only (excluding JS/CSS to avoid deprecation warnings)"
+          echo "📦 Using standards: WordPress-VIP-Go, WordPressVIPMinimum"
+          echo "🎯 Scanning PHP files only (excluding JS/CSS to avoid deprecation warnings)"
           echo ""
 
           # Run VIP-specific PHPCS scan using our custom configuration
           # Only scan PHP files to avoid JS/CSS deprecation warnings
-          phpcs --standard=phpcs-vip.xml --extensions=php . || {
+          "$VIP_PHPCS" --standard=phpcs-vip.xml --extensions=php . || {
             echo ""
-            echo "WordPress VIP coding standards issues found."
-            echo "Note: These are VIP-specific recommendations for enterprise WordPress platforms."
-            echo "Many of these may not apply to standard WordPress installations."
-            echo "For more information: https://docs.wpvip.com/technical-references/code-quality-and-best-practices/"
+            echo "⚠️ WordPress VIP coding standards issues found."
+            echo "💡 Note: These are VIP-specific recommendations for enterprise WordPress platforms."
+            echo "🔧 Many of these may not apply to standard WordPress installations."
+            echo "📖 For more info: https://docs.wpvip.com/technical-references/code-quality-and-best-practices/"
             echo ""
             exit 1
           }
 
-          echo "WordPress VIP coding standards check completed successfully."
+          echo "✅ WordPress VIP coding standards check completed successfully!"
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            install_composer_dependencies=${{ steps.install_composer_dependencies.outcome }}
+            install_wordpress_vip_coding_standards=${{ steps.install_wordpress_vip_coding_standards.outcome }}
+            create_vip_specific_phpcs_configuration=${{ steps.create_vip_specific_phpcs_configuration.outcome }}
+            run_wordpress_vip_phpcs=${{ steps.run_wordpress_vip_phpcs.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-vip-phpcs
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on VIP PHPCS failure
+        id: create_issue_on_vip_phpcs_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.install_composer_dependencies.outcome == 'failure' && 'install_composer_dependencies' || steps.install_wordpress_vip_coding_standards.outcome == 'failure' && 'install_wordpress_vip_coding_standards' || steps.create_vip_specific_phpcs_configuration.outcome == 'failure' && 'create_vip_specific_phpcs_configuration' || steps.run_wordpress_vip_phpcs.outcome == 'failure' && 'run_wordpress_vip_phpcs' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/vip-phpcs-failure.md
+          update_existing: false
 
   phpmd:
     name: PHPMD (PHP 8.3)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
         with:
           # Always fetch the latest commit, disable any caching
           fetch-depth: 0
           clean: true
 
       - name: Verify latest commit
+        id: verify_latest_commit
         run: |
           echo "=== Git Information ==="
           echo "Current commit: $(git rev-parse HEAD)"
@@ -303,7 +521,8 @@ jobs:
           echo "=== End Git Information ==="
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -311,62 +530,101 @@ jobs:
           tools: composer:v2
 
       - name: Clear any existing composer cache
+        id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
           rm -rf vendor/ composer.lock || true
 
       - name: Install Composer dependencies (no cache)
+        id: install_composer_dependencies_no_cache
         run: |
           composer install --prefer-dist --no-progress --no-cache
 
       - name: Verify phpmd.xml content
+        id: verify_phpmd_xml_content
         run: |
           echo "=== Current phpmd.xml content ==="
           cat phpmd.xml
           echo "=== End phpmd.xml content ==="
 
       - name: Run PHPMD
+        id: run_phpmd
         run: |
           # Use WordPress-specific PHPMD configuration (WordPress snake_case compatible)
           echo "Using WordPress-specific PHPMD configuration (WordPress snake_case compatible)..."
-          vendor/bin/phpmd . text phpmd.xml --exclude vendor,tests,stubs,assets,.private
+          # A CLI --exclude replaces phpmd.xml exclude-patterns, so list every non-production path.
+          vendor/bin/phpmd . text phpmd.xml --exclude vendor,tests,stubs,assets,.private,node_modules
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            verify_latest_commit=${{ steps.verify_latest_commit.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            clear_any_existing_composer_cache=${{ steps.clear_any_existing_composer_cache.outcome }}
+            install_composer_dependencies_no_cache=${{ steps.install_composer_dependencies_no_cache.outcome }}
+            verify_phpmd_xml_content=${{ steps.verify_phpmd_xml_content.outcome }}
+            run_phpmd=${{ steps.run_phpmd.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-phpmd
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on PHPMD failure
+        id: create_issue_on_phpmd_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.verify_latest_commit.outcome == 'failure' && 'verify_latest_commit' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.clear_any_existing_composer_cache.outcome == 'failure' && 'clear_any_existing_composer_cache' || steps.install_composer_dependencies_no_cache.outcome == 'failure' && 'install_composer_dependencies_no_cache' || steps.verify_phpmd_xml_content.outcome == 'failure' && 'verify_phpmd_xml_content' || steps.run_phpmd.outcome == 'failure' && 'run_phpmd' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/phpmd-failure.md
+          update_existing: false
 
   psalm-analysis:
     name: Psalm Static Analysis (PHP 8.3)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
-
-      - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
-        with:
-          php-version: '8.3'
-          extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
-          coverage: none
-          tools: composer:v2
-
-      - name: Install Composer dependencies
-        uses: ramsey/composer-install@5c2bcf28d7b060ef3c601d7b476d5430a7b46c27 # v4
-        with:
-          dependency-versions: highest
-          composer-options: "--prefer-dist --no-progress"
-
-      - name: Verify Psalm installation
-        run: vendor/bin/psalm --version
-
-      - name: Run Psalm
-        run: |
-          vendor/bin/psalm --config=psalm.xml --show-info=true
-
-  security-check:
-    name: Security Scan (PHP 8.3)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
+        id: checkout_code
         uses: actions/checkout@v7
 
       - name: Setup PHP 8.3
+        id: setup_php_8_3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -375,15 +633,109 @@ jobs:
           tools: composer:v2
 
       - name: Install Composer dependencies
+        id: install_composer_dependencies
+        uses: ramsey/composer-install@v4
+        with:
+          dependency-versions: highest
+          composer-options: "--prefer-dist --no-progress"
+
+      - name: Verify Psalm installation
+        id: verify_psalm_installation
+        run: vendor/bin/psalm --version
+
+      - name: Run Psalm
+        id: run_psalm
+        run: |
+          vendor/bin/psalm --config=psalm.xml --show-info=true
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            install_composer_dependencies=${{ steps.install_composer_dependencies.outcome }}
+            verify_psalm_installation=${{ steps.verify_psalm_installation.outcome }}
+            run_psalm=${{ steps.run_psalm.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-psalm-analysis
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on Psalm failure
+        id: create_issue_on_psalm_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.install_composer_dependencies.outcome == 'failure' && 'install_composer_dependencies' || steps.verify_psalm_installation.outcome == 'failure' && 'verify_psalm_installation' || steps.run_psalm.outcome == 'failure' && 'run_psalm' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/psalm-failure.md
+          update_existing: false
+
+  security-check:
+    name: Security Scan (PHP 8.3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        id: checkout_code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP 8.3
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
+          coverage: none
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        id: install_composer_dependencies
         uses: ramsey/composer-install@v4
         with:
           dependency-versions: highest
           composer-options: "--prefer-dist --no-progress"
 
       - name: Security Check for known vulnerabilities in dependencies
+        id: security_check_for_known_vulnerabilities_in_dependencies
         uses: symfonycorp/security-checker-action@v5
 
       - name: WordPress Security Scan
+        id: wordpress_security_scan
         run: |
           echo "Performing WordPress plugin security analysis..."
 
@@ -457,11 +809,56 @@ jobs:
 
           echo "WordPress security scan completed."
 
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            install_composer_dependencies=${{ steps.install_composer_dependencies.outcome }}
+            security_check_for_known_vulnerabilities_in_dependencies=${{ steps.security_check_for_known_vulnerabilities_in_dependencies.outcome }}
+            wordpress_security_scan=${{ steps.wordpress_security_scan.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-security-check
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Create issue on security vulnerability
-        if: ${{ failure() }}
+        id: create_issue_on_security_vulnerability
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
         uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.install_composer_dependencies.outcome == 'failure' && 'install_composer_dependencies' || steps.security_check_for_known_vulnerabilities_in_dependencies.outcome == 'failure' && 'security_check_for_known_vulnerabilities_in_dependencies' || steps.wordpress_security_scan.outcome == 'failure' && 'wordpress_security_scan' || 'unknown_or_canceled' }}
           PHP_VERSION: '8.3'
           RUN_ID: ${{ github.run_id }}
           WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -469,20 +866,22 @@ jobs:
           filename: .github/ISSUE_TEMPLATE/security-failure.md
           update_existing: false
 
-
   phpstan-wordpress:
     name: PHPStan for WP (PHP 8.3)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
         with:
           # Always fetch the latest commit, disable any caching
           fetch-depth: 0
           clean: true
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -490,33 +889,207 @@ jobs:
           tools: composer:v2
 
       - name: Clear any existing composer cache
+        id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
           rm -rf vendor/ composer.lock || true
 
       - name: Install Composer dependencies (no cache)
+        id: install_composer_dependencies_no_cache
         run: |
           composer install --prefer-dist --no-progress --no-cache
 
       - name: Verify phpstan.neon content
+        id: verify_phpstan_neon_content
         run: |
           echo "=== Current phpstan.neon content ==="
           cat phpstan.neon
           echo "=== End phpstan.neon content ==="
 
       - name: PHPStan for WordPress Analysis
+        id: phpstan_for_wordpress_analysis
         run: |
           echo "Running PHPStan analysis with WordPress stubs..."
-          vendor/bin/phpstan analyze --no-progress --error-format=table
-          echo "PHPStan analysis completed successfully."
+          vendor/bin/phpstan analyse --no-progress --error-format=table
+          echo "✅ PHPStan analysis completed successfully!"
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            clear_any_existing_composer_cache=${{ steps.clear_any_existing_composer_cache.outcome }}
+            install_composer_dependencies_no_cache=${{ steps.install_composer_dependencies_no_cache.outcome }}
+            verify_phpstan_neon_content=${{ steps.verify_phpstan_neon_content.outcome }}
+            phpstan_for_wordpress_analysis=${{ steps.phpstan_for_wordpress_analysis.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-phpstan-wordpress
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on PHPStan failure
+        id: create_issue_on_phpstan_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.clear_any_existing_composer_cache.outcome == 'failure' && 'clear_any_existing_composer_cache' || steps.install_composer_dependencies_no_cache.outcome == 'failure' && 'install_composer_dependencies_no_cache' || steps.verify_phpstan_neon_content.outcome == 'failure' && 'verify_phpstan_neon_content' || steps.phpstan_for_wordpress_analysis.outcome == 'failure' && 'phpstan_for_wordpress_analysis' || 'unknown_or_canceled' }}
+          PHP_VERSION: '8.3'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/phpstan-failure.md
+          update_existing: false
+
+  admin-script-tests:
+    name: Admin Script Tests (Node 24)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        id: checkout_code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP 8.3
+        id: setup_php_8_3
+        uses: shivammathur/setup-php@v2
+        with:
+          # PHP renders the page markup and script settings the tests load.
+          php-version: '8.3'
+          coverage: none
+          tools: none
+
+      - name: Setup Node.js 24
+        id: setup_node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install npm dependencies
+        id: install_npm_dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm ls jsdom
+
+      - name: Run admin script tests
+        id: run_admin_script_tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          node --version
+          node --test --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination="$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/admin-script-tests.tap" \
+            "tests/js/**/*.test.mjs"
+          # A run that found no tests must not pass.
+          grep -Eq '^# pass [1-9]' "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/admin-script-tests.tap"
+          grep -q '^# fail 0$' "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/admin-script-tests.tap"
+          # This control must fail because of its assertion.
+          printf '%s\n' \
+            "import assert from 'node:assert/strict';" \
+            "import { test } from 'node:test';" \
+            "test( 'intentional failure', () => assert.equal( 1, 2, 'Admin script intentional assertion control' ) );" \
+            > "$RUNNER_TEMP/fgcbg-intentional-failure.test.mjs"
+          if node --test "$RUNNER_TEMP/fgcbg-intentional-failure.test.mjs" > "$RUNNER_TEMP/fgcbg-intentional-failure.txt" 2>&1; then
+            echo '::error::An intentionally failing assertion incorrectly succeeded.'
+            exit 1
+          fi
+          grep -q 'Admin script intentional assertion control' "$RUNNER_TEMP/fgcbg-intentional-failure.txt"
+          echo 'Intentional-assertion control failed as expected.'
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php_8_3=${{ steps.setup_php_8_3.outcome }}
+            setup_node=${{ steps.setup_node.outcome }}
+            install_npm_dependencies=${{ steps.install_npm_dependencies.outcome }}
+            run_admin_script_tests=${{ steps.run_admin_script_tests.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v node >/dev/null; then
+            node --version > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/node.txt"
+          fi
+          if command -v npm >/dev/null && [ -d node_modules ]; then
+            npm ls --all --depth=1 > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt" 2>&1 || true
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-admin-script-tests
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/node.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/admin-script-tests.tap
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Create issue on admin script test failure
+        id: create_issue_on_admin_script_test_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php_8_3.outcome == 'failure' && 'setup_php_8_3' || steps.setup_node.outcome == 'failure' && 'setup_node' || steps.install_npm_dependencies.outcome == 'failure' && 'install_npm_dependencies' || steps.run_admin_script_tests.outcome == 'failure' && 'run_admin_script_tests' || 'unknown_or_canceled' }}
+          NODE_VERSION: '24'
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/admin-script-test-failure.md
+          update_existing: false
 
   wp-version-test:
     name: Test WordPress ${{ matrix.wp-version }} with PHP ${{ matrix.php-version }} (${{ matrix.dependency-versions }} deps)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         php-version: ['8.2', '8.3', '8.4', '8.5']
-        wp-version: ['6.8', 'latest', 'nightly']
+        wp-version: ['7.0', 'latest', 'nightly']
         dependency-versions: ['highest']
         include:
           - php-version: '8.2'
@@ -536,10 +1109,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        id: checkout_code
+        uses: actions/checkout@v7
 
       - name: Setup PHP ${{ matrix.php-version }}
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+        id: setup_php
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
           extensions: mysqli, curl, zip, intl, gd, mbstring, fileinfo, xml
@@ -547,6 +1122,7 @@ jobs:
           tools: composer:v2
 
       - name: Use isolated Composer auth
+        id: use_isolated_composer_auth
         run: |
           # Avoid inheriting a masked or malformed GitHub OAuth token from Composer auth.
           composer_home="${RUNNER_TEMP}/composer-home"
@@ -561,6 +1137,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: PHP syntax lint
+        id: php_syntax_lint
         run: |
           find . \
             -path './vendor' -prune -o \
@@ -570,15 +1147,29 @@ jobs:
             -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: Install Subversion
+        id: install_subversion
+        timeout-minutes: 15
         run: sudo apt-get update && sudo apt-get install -y subversion
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@5c2bcf28d7b060ef3c601d7b476d5430a7b46c27 # v4
+        id: install_composer_dependencies
+        uses: ramsey/composer-install@v4
         with:
           dependency-versions: ${{ matrix.dependency-versions }}
           composer-options: "--prefer-dist --no-progress"
 
+      - name: Run unit tests
+        id: run_unit_tests
+        run: |
+          # The tracked unit suite needs no WordPress install. It runs here, on the
+          # Composer-resolved PHPUnit and with the tracked phpunit.xml and
+          # tests/bootstrap.php, before the next steps pin PHPUnit 9.6 and generate
+          # the WordPress integration bootstrap and configuration in their place.
+          vendor/bin/phpunit --version
+          vendor/bin/phpunit --configuration phpunit.xml --testsuite unit --fail-on-empty-test-suite
+
       - name: Pin PHPUnit for WordPress test suite
+        id: pin_phpunit_for_wordpress_test_suite
         run: |
           # The WordPress test library still calls PHPUnit APIs removed in PHPUnit 10+.
           # Keep this generated integration-test job on PHPUnit 9.6 while the rest
@@ -590,25 +1181,32 @@ jobs:
           fi
 
       - name: Verify PHPUnit dependency versions
+        id: verify_phpunit_dependency_versions
         run: |
           composer show phpunit/phpunit
           composer show yoast/phpunit-polyfills
           vendor/bin/phpunit --version | grep -E '^PHPUnit 9\.6\.'
 
       - name: Prepare Database
+        id: prepare_database
         run: |
           mysql -u root --password=root --host=127.0.0.1 --port=3306 -e "DROP DATABASE IF EXISTS wordpress_test;"
           mysqladmin -u root --password=root --host=127.0.0.1 --port=3306 --force create wordpress_test
 
       - name: Create tests directory structure
+        id: create_tests_directory_structure
         run: |
           mkdir -p tests/bin
           mkdir -p tests/bootstrap
 
       - name: Create WP tests install script
+        id: create_wp_tests_install_script
         run: |
           cat > tests/bin/install-wp-tests.sh << 'EOF'
           #!/usr/bin/env bash
+          set -euo pipefail
+          set +x
+          umask 077
 
           if [ $# -lt 3 ]; then
             echo "usage: $0 <db-name> <db-user> <db-pass> [db-host] [wp-version] [skip-database-creation]"
@@ -625,103 +1223,125 @@ jobs:
           WP_TESTS_DIR=${WP_TESTS_DIR-/tmp/wordpress-tests-lib}
           WP_CORE_DIR=${WP_CORE_DIR-/tmp/wordpress/}
 
+          # Only the isolated GitHub service database is in scope.
+          [[ $DB_NAME == wordpress_test && $DB_HOST == 127.0.0.1:3306 ]]
+          [[ $SKIP_DB_CREATE == true || $SKIP_DB_CREATE == false ]]
+
           download() {
-              if [ $(which curl) ]; then
-                  curl -fsSL "$1" > "$2";
-              elif [ $(which wget) ]; then
-                  wget -nv -O "$2" "$1"
-              fi
+              curl --fail --silent --show-error --location \
+                  --proto '=https' --proto-redir '=https' \
+                  --connect-timeout 20 --max-time 180 --retry 3 \
+                  "$1" --output "$2"
+              test -s "$2"
           }
 
-          if [[ $WP_VERSION =~ [0-9]+\.[0-9]+(\.[0-9]+)? ]]; then
-              WP_TESTS_TAG="tags/$WP_VERSION"
-          elif [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
-              WP_TESTS_TAG="trunk"
-          else
+          if [[ $WP_VERSION == latest ]]; then
               download https://api.wordpress.org/core/version-check/1.7/ /tmp/wp-latest.json
-              LATEST_VERSION=$(grep -o '"version":"[^"]*' /tmp/wp-latest.json | head -n 1 | sed 's/"version":"//')
-              if [[ -z "$LATEST_VERSION" ]]; then
-                  echo "Latest WordPress version could not be found"
-                  exit 1
-              fi
-              WP_TESTS_TAG="tags/$LATEST_VERSION"
+              WP_VERSION=$(php -r '
+                  $data = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
+                  $versions = [];
+                  foreach ($data["offers"] ?? [] as $offer) {
+                      if (($offer["response"] ?? null) !== "upgrade") {
+                          continue;
+                      }
+                      $version = $offer["current"] ?? null;
+                      if (!is_string($version) || !preg_match("/\A[0-9]+\.[0-9]+(?:\.[0-9]+)?\z/", $version)) {
+                          throw new RuntimeException("Invalid stable WordPress offer.");
+                      }
+                      $versions[$version] = true;
+                  }
+                  if (count($versions) !== 1) {
+                      throw new RuntimeException("Expected exactly one stable WordPress release.");
+                  }
+                  echo array_key_first($versions);
+              ' /tmp/wp-latest.json)
           fi
 
-          set -ex
+          if [[ $WP_VERSION =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+              WP_TESTS_TAG="tags/$WP_VERSION"
+          elif [[ $WP_VERSION == nightly || $WP_VERSION == trunk ]]; then
+              WP_TESTS_TAG=trunk
+          else
+              echo "Invalid WordPress version selector" >&2
+              exit 1
+          fi
+          WP_SOURCE_URL="https://develop.svn.wordpress.org/$WP_TESTS_TAG"
+          WP_REVISION=$(svn info --non-interactive --show-item revision "$WP_SOURCE_URL")
+          [[ $WP_REVISION =~ ^[0-9]+$ ]]
 
           install_wp() {
-              if [ -d $WP_CORE_DIR ]; then
-                  return;
-              fi
-
-              mkdir -p $WP_CORE_DIR
-
-              if [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
-                  mkdir -p /tmp/wordpress-nightly
-                  download https://wordpress.org/nightly-builds/wordpress-latest.zip  /tmp/wordpress-nightly/wordpress-nightly.zip
-                  unzip -q /tmp/wordpress-nightly/wordpress-nightly.zip -d /tmp/wordpress-nightly/
-                  mv /tmp/wordpress-nightly/wordpress/* $WP_CORE_DIR
+              # Do not silently reuse a partial install.
+              [[ ! -e $WP_CORE_DIR && ! -L $WP_CORE_DIR ]]
+              if [[ $WP_TESTS_TAG == trunk ]]; then
+                  # Nightly core and test fixtures use one immutable SVN snapshot.
+                  svn export --non-interactive --quiet -r "$WP_REVISION" \
+                      "$WP_SOURCE_URL/src@$WP_REVISION" "$WP_CORE_DIR"
               else
-                  if [ $WP_VERSION == 'latest' ]; then
-                      local ARCHIVE_NAME='latest'
-                  else
-                      local ARCHIVE_NAME="wordpress-$WP_VERSION"
-                  fi
-                  download https://wordpress.org/${ARCHIVE_NAME}.tar.gz  /tmp/wordpress.tar.gz
-                  tar --strip-components=1 -zxmf /tmp/wordpress.tar.gz -C $WP_CORE_DIR
+                  mkdir -p "$WP_CORE_DIR"
+                  download "https://wordpress.org/wordpress-$WP_VERSION.tar.gz" /tmp/wordpress.tar.gz
+                  tar --strip-components=1 -zxf /tmp/wordpress.tar.gz -C "$WP_CORE_DIR"
               fi
 
-              download https://raw.github.com/markoheijnen/wp-mysqli/master/db.php $WP_CORE_DIR/wp-content/db.php
+              # setup-php supplies native mysqli; never fetch a mutable third-party db.php.
+              php -r 'exit(extension_loaded("mysqli") ? 0 : 1);'
+              test ! -e "$WP_CORE_DIR/wp-content/db.php"
+              CORE_VERSION=$(php -r 'require $argv[1]; echo $wp_version;' "$WP_CORE_DIR/wp-includes/version.php")
+              SOURCE_VERSION=$(svn cat --non-interactive -r "$WP_REVISION" \
+                  "$WP_SOURCE_URL/src/wp-includes/version.php@$WP_REVISION" |
+                  php -r '$source = stream_get_contents(STDIN); if (!preg_match("/\\\$wp_version\s*=\s*\x27([^\x27]+)\x27/", $source, $match)) { exit(1); } echo $match[1];')
+              [[ ${CORE_VERSION%-src} == "${SOURCE_VERSION%-src}" ]]
+              if [[ $WP_TESTS_TAG != trunk ]]; then
+                  [[ ${CORE_VERSION%-src} == "$WP_VERSION" ]]
+              fi
+              mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+              printf 'core=%s\nsource=%s\nrevision=%s\n' "$CORE_VERSION" "$WP_TESTS_TAG" "$WP_REVISION" \
+                  > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt"
           }
 
           install_test_suite() {
-              if [[ $(uname -s) == 'Darwin' ]]; then
-                  local ioption='-i.bak'
-              else
-                  local ioption='-i'
-              fi
+              [[ ! -e $WP_TESTS_DIR && ! -L $WP_TESTS_DIR ]]
+              mkdir -p "$WP_TESTS_DIR"
+              svn co --non-interactive --quiet -r "$WP_REVISION" \
+                  "$WP_SOURCE_URL/tests/phpunit/includes@$WP_REVISION" "$WP_TESTS_DIR/includes"
+              svn co --non-interactive --quiet -r "$WP_REVISION" \
+                  "$WP_SOURCE_URL/tests/phpunit/data@$WP_REVISION" "$WP_TESTS_DIR/data"
 
-              if [ ! -d $WP_TESTS_DIR ]; then
-                  mkdir -p $WP_TESTS_DIR
-                  svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-                  svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
-              fi
-
-              if [ ! -f wp-tests-config.php ]; then
-                  download https://develop.svn.wordpress.org/${WP_TESTS_TAG}/wp-tests-config-sample.php "$WP_TESTS_DIR"/wp-tests-config.php
-                  WP_CORE_DIR=$(echo $WP_CORE_DIR | sed "s:/\+$::")
-                  sed $ioption "s:dirname( __FILE__ ) . '/src/':'$WP_CORE_DIR/':" "$WP_TESTS_DIR"/wp-tests-config.php
-                  sed $ioption "s/youremptytestdbnamehere/$DB_NAME/" "$WP_TESTS_DIR"/wp-tests-config.php
-                  sed $ioption "s/yourusernamehere/$DB_USER/" "$WP_TESTS_DIR"/wp-tests-config.php
-                  sed $ioption "s/yourpasswordhere/$DB_PASS/" "$WP_TESTS_DIR"/wp-tests-config.php
-                  sed $ioption "s|localhost|${DB_HOST}|" "$WP_TESTS_DIR"/wp-tests-config.php
+              if [ ! -f "$WP_TESTS_DIR/wp-tests-config.php" ]; then
+                  svn cat --non-interactive -r "$WP_REVISION" \
+                      "$WP_SOURCE_URL/wp-tests-config-sample.php@$WP_REVISION" \
+                      > "$WP_TESTS_DIR/wp-tests-config.php"
+                  export WP_TESTS_DIR WP_CORE_DIR DB_NAME DB_USER DB_PASS DB_HOST
+                  # Quote PHP literals safely; do not interpolate credentials through sed.
+                  php -r '
+                      $path = getenv("WP_TESTS_DIR") . "/wp-tests-config.php";
+                      $config = file_get_contents($path);
+                      $replacements = [
+                          "dirname( __FILE__ ) . \x27/src/\x27" => rtrim(getenv("WP_CORE_DIR"), "/") . "/",
+                          "\x27youremptytestdbnamehere\x27" => getenv("DB_NAME"),
+                          "\x27yourusernamehere\x27" => getenv("DB_USER"),
+                          "\x27yourpasswordhere\x27" => getenv("DB_PASS"),
+                          "\x27localhost\x27" => getenv("DB_HOST"),
+                      ];
+                      foreach ($replacements as $needle => $value) {
+                          if (substr_count($config, $needle) !== 1) {
+                              throw new RuntimeException("Unexpected WordPress test config template.");
+                          }
+                          $config = str_replace($needle, var_export($value, true), $config);
+                      }
+                      if (file_put_contents($path, $config) !== strlen($config)) {
+                          throw new RuntimeException("Cannot write WordPress test config.");
+                      }
+                  '
               fi
           }
 
           install_db() {
-              if [ ${SKIP_DB_CREATE} = "true" ]; then
-                  return 0
+              if [[ $SKIP_DB_CREATE == true ]]; then
+                  return
               fi
-
-              local PARTS=(${DB_HOST//\:/ })
-              local DB_HOSTNAME=${PARTS[0]};
-              local DB_SOCK_OR_PORT=${PARTS[1]};
-              local EXTRA=""
-
-              if ! [ -z $DB_HOSTNAME ] ; then
-                  if [ $(echo $DB_SOCK_OR_PORT | grep -e '^[0-9]\{1,\}$') ]; then
-                      EXTRA=" --host=$DB_HOSTNAME --port=$DB_SOCK_OR_PORT --protocol=tcp"
-                  elif ! [ -z $DB_SOCK_OR_PORT ] ; then
-                      EXTRA=" --socket=$DB_SOCK_OR_PORT"
-                  elif ! [ -z $DB_HOSTNAME ] ; then
-                      EXTRA=" --host=$DB_HOSTNAME --protocol=tcp"
-                  fi
-              fi
-
-              # First, ensure database doesn't exist (ignore errors)
-              mysql --user="$DB_USER" --password="$DB_PASS"$EXTRA -e "DROP DATABASE IF EXISTS $DB_NAME" || true
-              # Now create fresh database with force flag
-              mysqladmin create $DB_NAME --user="$DB_USER" --password="$DB_PASS"$EXTRA --force
+              # Fallback is limited to this job's disposable service and never drops a DB.
+              MYSQL_PWD="$DB_PASS" mysql --user="$DB_USER" --host=127.0.0.1 --port=3306 \
+                  -e 'CREATE DATABASE wordpress_test'
           }
 
           install_wp
@@ -731,6 +1351,7 @@ jobs:
           chmod +x tests/bin/install-wp-tests.sh
 
       - name: Create Bootstrap File
+        id: create_bootstrap_file
         run: |
           mkdir -p tests
           cat > tests/bootstrap.php << 'EOF'
@@ -738,10 +1359,19 @@ jobs:
           /**
            * PHPUnit bootstrap file for plugin tests.
            *
+           * WordPress is real in this job. WooCommerce and Free Gift Coupons for
+           * WooCommerce are not installed on the runner, so the classes and functions
+           * below stand in for the parts of WooCommerce that the plugin calls.
+           *
            * @package FreeGiftCouponsBulkGenerator
            */
 
+          define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills' );
           require_once '/tmp/wordpress-tests-lib/includes/functions.php';
+
+          $GLOBALS['fgcbg_test_products'] = array();
+          $GLOBALS['fgcbg_test_coupons']  = array();
+          $GLOBALS['fgcbg_test_log']      = array();
 
           if ( ! class_exists( 'WooCommerce' ) ) {
               class WooCommerce {}
@@ -750,10 +1380,12 @@ jobs:
           class FGCBG_WP_Test_Product {
               private $name;
               private $parent_id;
+              private $status;
 
-              public function __construct( $name, $parent_id = 0 ) {
-                  $this->name = $name;
+              public function __construct( $name, $parent_id = 0, $status = 'publish' ) {
+                  $this->name      = $name;
                   $this->parent_id = $parent_id;
+                  $this->status    = $status;
               }
 
               public function get_name() {
@@ -763,32 +1395,38 @@ jobs:
               public function get_parent_id() {
                   return $this->parent_id;
               }
+
+              public function get_status() {
+                  return $this->status;
+              }
           }
 
           if ( ! function_exists( 'wc_get_product' ) ) {
               function wc_get_product( $product_id ) {
-                  global $fgcbg_test_products;
-
-                  return $fgcbg_test_products[ $product_id ] ?? null;
+                  return $GLOBALS['fgcbg_test_products'][ $product_id ] ?? false;
               }
           }
 
           if ( ! function_exists( 'wc_get_coupon_types' ) ) {
               function wc_get_coupon_types() {
-                  return [
-                      'fixed_cart' => 'Fixed cart discount',
+                  if ( isset( $GLOBALS['fgcbg_test_coupon_types'] ) ) {
+                      return $GLOBALS['fgcbg_test_coupon_types'];
+                  }
+
+                  return array(
+                      'fixed_cart'    => 'Fixed cart discount',
                       'fixed_product' => 'Fixed product discount',
-                      'percent' => 'Percentage discount',
-                      'free_gift' => 'Free Gift',
-                  ];
+                      'percent'       => 'Percentage discount',
+                      'free_gift'     => 'Free Gift',
+                  );
               }
           }
 
           if ( ! class_exists( 'WC_Coupon' ) ) {
               class WC_Coupon {
-                  private $id = 0;
-                  private $props = [];
-                  private $meta = [];
+                  private $id    = 0;
+                  private $props = array();
+                  private $meta  = array();
 
                   public function set_code( $code ) {
                       $this->props['code'] = $code;
@@ -819,10 +1457,8 @@ jobs:
                   }
 
                   public function save() {
-                      global $fgcbg_test_coupons;
-
-                      $this->id = count( $fgcbg_test_coupons ) + 1;
-                      $fgcbg_test_coupons[] = $this;
+                      $this->id                        = count( $GLOBALS['fgcbg_test_coupons'] ) + 1;
+                      $GLOBALS['fgcbg_test_coupons'][] = $this;
                   }
 
                   public function get_id() {
@@ -850,17 +1486,17 @@ jobs:
           if ( ! function_exists( 'wc_get_logger' ) ) {
               function wc_get_logger() {
                   return new class() {
-                      public function error() {}
+                      public function error( $message = '', $context = array() ) {
+                          $GLOBALS['fgcbg_test_log'][] = (string) $message;
+                      }
                   };
               }
           }
 
           if ( ! function_exists( 'wc_get_coupon_id_by_code' ) ) {
               function wc_get_coupon_id_by_code( $code ) {
-                  global $fgcbg_test_coupons;
-
-                  foreach ( $fgcbg_test_coupons as $coupon ) {
-                      if ( method_exists( $coupon, 'get_code' ) && $coupon->get_code() === $code ) {
+                  foreach ( $GLOBALS['fgcbg_test_coupons'] as $coupon ) {
+                      if ( $coupon->get_code() === $code ) {
                           return $coupon->get_id();
                       }
                   }
@@ -869,84 +1505,108 @@ jobs:
               }
           }
 
-          if ( ! function_exists( 'wp_generate_password' ) ) {
-              function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ) {
-                  static $counter = 0;
-                  ++$counter;
+          function _manually_load_plugin() {
+              add_filter('widgets_init', function() {
+                  return;
+              }, 0);
 
-                  $seed = 'a' . base_convert( (string) $counter, 10, 36 ) . 'b2c3d4e5f6g7h8';
-
-                  return substr( str_repeat( $seed, 3 ), 0, (int) $length );
-              }
-          }
-
-          function _manually_load_fgcbg_plugin() {
               require dirname( dirname( __FILE__ ) ) . '/free-gift-bulk-coupon-generator.php';
           }
 
-          tests_add_filter( 'muplugins_loaded', '_manually_load_fgcbg_plugin' );
+          tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
           require '/tmp/wordpress-tests-lib/includes/bootstrap.php';
           EOF
 
       - name: Create Test File
+        id: create_test_file
         run: |
+          # The generated suite lives in tests/integration so that the WordPress
+          # configuration below does not pick up the tracked tests/unit suite,
+          # which has its own bootstrap and has already run.
           mkdir -p tests/integration
-          cat > tests/integration/FreeGiftCouponsBulkCouponGeneratorWpTest.php << 'EOF'
+          cat > tests/integration/FgcbgPluginTest.php << 'EOF'
           <?php
           /**
-           * Class FreeGiftCouponsBulkCouponGeneratorWpTest
+           * Class FgcbgPluginTest
            *
            * @package FreeGiftCouponsBulkGenerator
            */
 
-          class FreeGiftCouponsBulkCouponGeneratorWpTest extends WP_UnitTestCase {
-              protected function setUp(): void {
-                  parent::setUp();
+          class FgcbgPluginTest extends WP_UnitTestCase {
+              private const CODE_PATTERN = '/\A[abcdefghjkmnpqrstuvwxyz23456789]{12}\z/';
 
-                  global $fgcbg_test_products, $fgcbg_test_coupons;
+              public function set_up() {
+                  parent::set_up();
 
-                  $fgcbg_test_products = [
-                      123 => new FGCBG_WP_Test_Product( 'Sample Mug' ),
-                      456 => new FGCBG_WP_Test_Product( 'Sticker Pack' ),
-                      789 => new FGCBG_WP_Test_Product( 'Sample Hoodie - Blue', 456 ),
+                  $GLOBALS['fgcbg_test_products'] = [
+                      123 => new FGCBG_WP_Test_Product('Sample Mug'),
+                      456 => new FGCBG_WP_Test_Product('Sticker Pack'),
+                      500 => new FGCBG_WP_Test_Product('Retired Mug', 0, 'trash'),
+                      789 => new FGCBG_WP_Test_Product('Sample Hoodie - Blue', 456),
                   ];
-                  $fgcbg_test_coupons = [];
+                  $GLOBALS['fgcbg_test_coupons'] = [];
+                  $GLOBALS['fgcbg_test_log']     = [];
+              }
+
+              public function tear_down() {
+                  unset($GLOBALS['fgcbg_test_coupon_types']);
+                  wp_set_current_user(0);
+                  parent::tear_down();
               }
 
               public function test_plugin_loaded() {
                   $this->assertTrue(function_exists('fgcbg_init'), 'Plugin was not loaded correctly');
-                  $this->assertTrue(function_exists('fgcbg_is_loaded'));
-                  $this->assertTrue(class_exists('FGCBG_Plugin'));
+                  $this->assertTrue(fgcbg_is_loaded());
                   $this->assertTrue(class_exists('FGCBG_Coupon_Generator'));
-              }
-
-              public function test_plugin_hooks_registered() {
+                  $this->assertInstanceOf(FGCBG_Plugin::class, FGCBG_Plugin::get_instance());
                   $this->assertSame(10, has_action('plugins_loaded', 'fgcbg_init'));
+                  $this->assertSame(10, has_action('before_woocommerce_init', 'fgcbg_declare_woocommerce_compatibility'));
               }
 
               public function test_plugin_constants_defined() {
                   $this->assertTrue(defined('FGCBG_PLUGIN_VERSION'));
-                  $this->assertTrue(defined('FGCBG_PLUGIN_PATH'));
-                  $this->assertTrue(defined('FGCBG_PLUGIN_URL'));
                   $this->assertNotEmpty(FGCBG_PLUGIN_VERSION);
+                  $this->assertTrue(defined('FGCBG_PLUGIN_URL'));
+                  $this->assertTrue(defined('FGCBG_PLUGIN_PATH'));
+                  $this->assertFileExists(FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php');
+              }
+
+              public function test_plugin_header_declares_requirements() {
+                  $headers = get_file_data(FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php', [
+                      'version'          => 'Version',
+                      'requires_plugins' => 'Requires Plugins',
+                      'requires_wp'      => 'Requires at least',
+                      'requires_php'     => 'Requires PHP',
+                      'update_uri'       => 'Update URI',
+                      'text_domain'      => 'Text Domain',
+                  ]);
+                  $this->assertSame(FGCBG_PLUGIN_VERSION, $headers['version']);
+                  $this->assertSame('woocommerce', $headers['requires_plugins']);
+                  $this->assertSame('7.0', $headers['requires_wp']);
+                  $this->assertSame('8.2', $headers['requires_php']);
+                  $this->assertSame('https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator', $headers['update_uri']);
+                  $this->assertSame('free-gift-bulk-coupon-generator', $headers['text_domain']);
               }
 
               public function test_coupon_generation_creates_free_gift_metadata() {
-                  global $fgcbg_test_coupons;
-
                   $generator = new FGCBG_Coupon_Generator();
                   $generated = $generator->generate_coupons([123, 456], 1, 'GIFT');
 
                   $this->assertSame(1, $generated);
-                  $this->assertCount(1, $fgcbg_test_coupons);
+                  $this->assertCount(1, $GLOBALS['fgcbg_test_coupons']);
 
-                  $coupon = $fgcbg_test_coupons[0];
+                  $coupon = $GLOBALS['fgcbg_test_coupons'][0];
 
                   $this->assertStringStartsWith('gift', $coupon->get_code());
+                  $this->assertMatchesRegularExpression(self::CODE_PATTERN, substr($coupon->get_code(), 4));
                   $this->assertSame('free_gift', $coupon->get_discount_type());
                   $this->assertTrue($coupon->get_prop('individual_use'));
                   $this->assertSame(1, $coupon->get_prop('usage_limit'));
+                  $this->assertGreaterThan(time() + 364 * DAY_IN_SECONDS, $coupon->get_prop('date_expires'));
+                  $this->assertLessThanOrEqual(time() + 365 * DAY_IN_SECONDS, $coupon->get_prop('date_expires'));
+                  $this->assertStringContainsString('Sample Mug', $coupon->get_prop('description'));
+                  $this->assertStringContainsString('Sticker Pack', $coupon->get_prop('description'));
                   $this->assertSame([123, 456], $coupon->get_meta('_fgcbg_product_ids'));
                   $this->assertTrue($coupon->get_meta('_fgcbg_generated'));
                   $this->assertSame(
@@ -964,27 +1624,44 @@ jobs:
                       ],
                       $coupon->get_meta('_wc_free_gift_coupon_data')
                   );
+                  $this->assertSame([], $GLOBALS['fgcbg_test_log']);
+              }
+
+              public function test_generated_codes_use_the_code_alphabet_and_are_unique() {
+                  $generator = new FGCBG_Coupon_Generator();
+                  $result    = $generator->generate_coupon_batch([123], 30);
+
+                  $this->assertSame(30, $result['generated']);
+                  $this->assertCount(30, array_unique($result['codes']));
+                  foreach ($result['codes'] as $code) {
+                      $this->assertMatchesRegularExpression(self::CODE_PATTERN, $code);
+                  }
               }
 
               public function test_invalid_product_ids_do_not_create_coupons() {
-                  global $fgcbg_test_coupons;
-
                   $generator = new FGCBG_Coupon_Generator();
                   $generated = $generator->generate_coupons([999], 3);
 
                   $this->assertSame(0, $generated);
-                  $this->assertSame([], $fgcbg_test_coupons);
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+
+              public function test_trashed_products_are_not_usable() {
+                  $generator = new FGCBG_Coupon_Generator();
+
+                  $this->assertTrue($generator->are_products_usable([123, 456, 789]));
+                  $this->assertFalse($generator->are_products_usable([123, 500]));
+                  $this->assertSame(0, $generator->generate_coupons([500], 1));
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
               }
 
               public function test_variation_gift_coupon_metadata_uses_upstream_shape() {
-                  global $fgcbg_test_coupons;
-
                   $generator = new FGCBG_Coupon_Generator();
                   $generated = $generator->generate_coupons([789], 1);
 
                   $this->assertSame(1, $generated);
 
-                  $coupon = $fgcbg_test_coupons[0];
+                  $coupon = $GLOBALS['fgcbg_test_coupons'][0];
 
                   $this->assertSame(
                       [
@@ -999,19 +1676,165 @@ jobs:
                   $this->assertSame([789], $coupon->get_meta('_fgcbg_product_ids'));
               }
 
+              public function test_free_gift_notice_uses_the_core_admin_notice() {
+                  wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+                  $plugin = FGCBG_Plugin::get_instance();
+
+                  ob_start();
+                  $plugin->free_gift_coupons_missing_notice();
+                  $this->assertSame('', ob_get_clean(), 'No notice while the coupon type is registered.');
+
+                  $GLOBALS['fgcbg_test_coupon_types'] = ['percent' => 'Percentage discount'];
+
+                  ob_start();
+                  $plugin->free_gift_coupons_missing_notice();
+                  $html = ob_get_clean();
+
+                  $this->assertStringContainsString('notice-error', $html);
+                  $this->assertStringContainsString('requires Free Gift Coupons for WooCommerce', $html);
+
+                  wp_set_current_user(self::factory()->user->create(['role' => 'subscriber']));
+
+                  ob_start();
+                  $plugin->free_gift_coupons_missing_notice();
+                  $this->assertSame('', ob_get_clean(), 'Users who cannot activate plugins do not see the notice.');
+              }
+
               public function test_wordpress_version_compatibility() {
                   global $wp_version;
                   $this->assertNotEmpty($wp_version, 'WordPress version should be available');
 
                   // Test that we're running on a supported WordPress version
-                  $min_wp_version = '6.8';
-                  $this->assertTrue(version_compare($wp_version, $min_wp_version, '>='),
+                  $min_wp_version = '7.0';
+                  $this->assertTrue(version_compare(preg_replace('/-src$/', '', $wp_version), $min_wp_version, '>='),
                       "WordPress version {$wp_version} should be >= {$min_wp_version}");
+              }
+          }
+          EOF
+          cat > tests/integration/FgcbgAjaxTest.php << 'EOF'
+          <?php
+          /**
+           * Class FgcbgAjaxTest
+           *
+           * Sends requests through the real admin-ajax action with real WordPress
+           * nonces and capabilities.
+           *
+           * @package FreeGiftCouponsBulkGenerator
+           */
+
+          class FgcbgAjaxTest extends WP_Ajax_UnitTestCase {
+              public function set_up() {
+                  parent::set_up();
+
+                  $GLOBALS['fgcbg_test_products'] = [
+                      123 => new FGCBG_WP_Test_Product('Sample Mug'),
+                      500 => new FGCBG_WP_Test_Product('Retired Mug', 0, 'trash'),
+                  ];
+                  $GLOBALS['fgcbg_test_coupons'] = [];
+                  $GLOBALS['fgcbg_test_log']     = [];
+
+                  // The plugin registers this hook only in the admin, which the test bootstrap is not.
+                  ( new FGCBG_Ajax_Handler(new FGCBG_Coupon_Generator()) )->register_hooks();
+              }
+
+              private function log_in(string $role, array $capabilities = []): void {
+                  wp_set_current_user(self::factory()->user->create(['role' => $role]));
+                  $user = wp_get_current_user();
+                  foreach ($capabilities as $capability) {
+                      $user->add_cap($capability);
+                  }
+              }
+
+              private function send(array $post): array {
+                  $_POST = $post + ['nonce' => wp_create_nonce('fgcbg_ajax_nonce')];
+
+                  try {
+                      $this->_handleAjax('fgcbg_generate_batch');
+                  } catch (WPAjaxDieContinueException $exception) {
+                      unset($exception);
+                  }
+
+                  $response = json_decode($this->_last_response, true);
+                  $this->assertIsArray($response, 'The action must answer with JSON.');
+
+                  return $response;
+              }
+
+              public function test_action_is_registered() {
+                  $this->assertNotFalse(has_action('wp_ajax_fgcbg_generate_batch'));
+                  $this->assertFalse(has_action('wp_ajax_nopriv_fgcbg_generate_batch'));
+              }
+
+              public function test_authorized_request_creates_coupons() {
+                  $this->log_in('administrator', ['publish_shop_coupons', 'edit_product']);
+
+                  $response = $this->send(['product_ids' => ['123'], 'batch_size' => '2', 'coupon_prefix' => 'GIFT']);
+
+                  $this->assertTrue($response['success']);
+                  $this->assertSame(2, $response['data']['generated']);
+                  $this->assertCount(2, $response['data']['codes']);
+                  $this->assertCount(2, $GLOBALS['fgcbg_test_coupons']);
+                  $this->assertSame($response['data']['codes'][0], $GLOBALS['fgcbg_test_coupons'][0]->get_code());
+                  $this->assertStringStartsWith('gift', $response['data']['codes'][0]);
+              }
+
+              public function test_request_with_a_wrong_nonce_is_refused() {
+                  $this->log_in('administrator', ['publish_shop_coupons', 'edit_product']);
+                  $_POST = ['product_ids' => ['123'], 'nonce' => 'not-a-valid-nonce'];
+
+                  try {
+                      $this->_handleAjax('fgcbg_generate_batch');
+                      $this->fail('A wrong nonce must end the request.');
+                  } catch (WPAjaxDieStopException $exception) {
+                      $this->assertSame('-1', $exception->getMessage());
+                  }
+
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+
+              public function test_user_without_the_coupon_capability_is_refused() {
+                  $this->log_in('subscriber');
+
+                  $response = $this->send(['product_ids' => ['123']]);
+
+                  $this->assertFalse($response['success']);
+                  $this->assertStringContainsString('permission', $response['data']['message']);
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+
+              public function test_product_the_user_cannot_edit_is_refused() {
+                  $this->log_in('administrator', ['publish_shop_coupons']);
+
+                  $response = $this->send(['product_ids' => ['123']]);
+
+                  $this->assertFalse($response['success']);
+                  $this->assertStringContainsString('permission', $response['data']['message']);
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+
+              public function test_trashed_product_is_refused() {
+                  $this->log_in('administrator', ['publish_shop_coupons', 'edit_product']);
+
+                  $response = $this->send(['product_ids' => ['123', '500']]);
+
+                  $this->assertFalse($response['success']);
+                  $this->assertStringContainsString('not available', $response['data']['message']);
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+
+              public function test_request_without_products_is_refused() {
+                  $this->log_in('administrator', ['publish_shop_coupons', 'edit_product']);
+
+                  $response = $this->send(['product_ids' => [['nested' => '123']]]);
+
+                  $this->assertFalse($response['success']);
+                  $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
               }
           }
           EOF
 
       - name: Create PHPUnit Config
+        id: create_phpunit_config
         run: |
           cat > phpunit.xml << 'EOF'
           <?xml version="1.0"?>
@@ -1019,33 +1842,145 @@ jobs:
               bootstrap="tests/bootstrap.php"
               backupGlobals="false"
               colors="true"
+              failOnEmptyTestSuite="true"
+              failOnRisky="true"
+              failOnWarning="true"
           >
               <testsuites>
                   <testsuite name="Free Gift Coupons Bulk Coupon Generator">
-                      <file>./tests/integration/FreeGiftCouponsBulkCouponGeneratorWpTest.php</file>
+                      <directory suffix="Test.php">./tests/integration/</directory>
                   </testsuite>
               </testsuites>
           </phpunit>
           EOF
 
       - name: Setup WP Tests
+        id: setup_wp_tests
+        timeout-minutes: 15
         run: |
-          bash tests/bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wp-version }}
+          bash tests/bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wp-version }} true
 
       - name: Run plugin test
-        run: vendor/bin/phpunit --config phpunit.xml
+        id: run_plugin_test
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          vendor/bin/phpunit --config phpunit.xml --log-junit "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/junit.xml"
+          # Prove that the real generated config rejects an empty filtered suite.
+          if vendor/bin/phpunit --config phpunit.xml --do-not-cache-result \
+            --filter '__fgcbg_intentionally_no_matching_test__' \
+            > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-empty-suite.txt" 2>&1; then
+            echo '::error::An empty test suite incorrectly succeeded.'
+            exit 1
+          else
+            status=$?
+            [[ $status == 1 ]]
+            grep -q 'No tests executed' "$RUNNER_TEMP/free-gift-bulk-coupon-generator-empty-suite.txt"
+          fi
+          # This control must fail due to its assertion, not a setup/parse error.
+          cat > "$RUNNER_TEMP/FgcbgIntentionalFailureTest.php" << 'EOF'
+          <?php
+          final class FgcbgIntentionalFailureTest extends PHPUnit\Framework\TestCase {
+              public function test_intentional_failure(): void {
+                  $this->assertTrue(false, 'Free Gift Coupons Bulk Coupon Generator intentional assertion control');
+              }
+          }
+          EOF
+          if vendor/bin/phpunit --no-configuration --do-not-cache-result \
+            "$RUNNER_TEMP/FgcbgIntentionalFailureTest.php" \
+            > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-failing-suite.txt" 2>&1; then
+            echo '::error::An intentionally failing assertion incorrectly succeeded.'
+            exit 1
+          else
+            status=$?
+            [[ $status == 1 ]]
+            grep -q 'Free Gift Coupons Bulk Coupon Generator intentional assertion control' "$RUNNER_TEMP/free-gift-bulk-coupon-generator-failing-suite.txt"
+          fi
+          echo 'Empty-suite and intentional-assertion controls failed as expected.'
+
+      - name: Preserve diagnostic summary
+        id: preserve_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          STEP_RESULTS: |
+            checkout_code=${{ steps.checkout_code.outcome }}
+            setup_php=${{ steps.setup_php.outcome }}
+            use_isolated_composer_auth=${{ steps.use_isolated_composer_auth.outcome }}
+            php_syntax_lint=${{ steps.php_syntax_lint.outcome }}
+            install_subversion=${{ steps.install_subversion.outcome }}
+            install_composer_dependencies=${{ steps.install_composer_dependencies.outcome }}
+            run_unit_tests=${{ steps.run_unit_tests.outcome }}
+            pin_phpunit_for_wordpress_test_suite=${{ steps.pin_phpunit_for_wordpress_test_suite.outcome }}
+            verify_phpunit_dependency_versions=${{ steps.verify_phpunit_dependency_versions.outcome }}
+            prepare_database=${{ steps.prepare_database.outcome }}
+            create_tests_directory_structure=${{ steps.create_tests_directory_structure.outcome }}
+            create_wp_tests_install_script=${{ steps.create_wp_tests_install_script.outcome }}
+            create_bootstrap_file=${{ steps.create_bootstrap_file.outcome }}
+            create_test_file=${{ steps.create_test_file.outcome }}
+            create_phpunit_config=${{ steps.create_phpunit_config.outcome }}
+            setup_wp_tests=${{ steps.setup_wp_tests.outcome }}
+            run_plugin_test=${{ steps.run_plugin_test.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
+          printf '%s\n' "$STEP_RESULTS" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/steps.txt"
+          printf 'commit=%s\njob=%s\n' "$GITHUB_SHA" "$GITHUB_JOB" > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/run.txt"
+          if command -v php >/dev/null; then
+            php -r 'echo PHP_VERSION, PHP_EOL;' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/php.txt"
+          fi
+          if command -v composer >/dev/null && [ -f vendor/composer/installed.json ]; then
+            php -r '$data = json_decode(file_get_contents("vendor/composer/installed.json"), true, 512, JSON_THROW_ON_ERROR); foreach ($data["packages"] ?? $data as $package) { echo $package["name"], " ", $package["version"], PHP_EOL; }' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt"
+          fi
+          # Never upload config, authentication data, SQL, exports, or arbitrary logs.
+          # Refuse oversized or linked diagnostics instead of uploading them.
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type l -delete
+          find "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics" -type f -size +2M -delete
+
+      - name: Upload diagnostic summary
+        id: upload_diagnostics
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp-compat-${{ matrix.php-version }}-${{ matrix.wp-version }}-${{ matrix.dependency-versions }}
+          path: |
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/run.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/steps.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/php.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/dependencies.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/wordpress.txt
+            ${{ runner.temp }}/free-gift-bulk-coupon-generator-diagnostics/junit.xml
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Report test status
+        id: report_test_status
         if: ${{ always() }}
         run: |
           if [ ${{ job.status }} == 'success' ]; then
-            echo "Tests passed on PHP ${{ matrix.php-version }} with WordPress ${{ matrix.wp-version }}."
+            echo "✅ Tests passed successfully on PHP ${{ matrix.php-version }} with WordPress ${{ matrix.wp-version }}"
           else
-            echo "Tests failed on PHP ${{ matrix.php-version }} with WordPress ${{ matrix.wp-version }}."
+            echo "❌ Tests failed on PHP ${{ matrix.php-version }} with WordPress ${{ matrix.wp-version }}"
           fi
 
       - name: Ensure repository files available after failure
+        id: ensure_repository_files_available_after_failure
         if: ${{ failure() }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Create issue on test failure
+        id: create_issue_on_test_failure
+        if: ${{ failure() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_STAGE: ${{ steps.checkout_code.outcome == 'failure' && 'checkout_code' || steps.setup_php.outcome == 'failure' && 'setup_php' || steps.use_isolated_composer_auth.outcome == 'failure' && 'use_isolated_composer_auth' || steps.php_syntax_lint.outcome == 'failure' && 'php_syntax_lint' || steps.install_subversion.outcome == 'failure' && 'install_subversion' || steps.install_composer_dependencies.outcome == 'failure' && 'install_composer_dependencies' || steps.run_unit_tests.outcome == 'failure' && 'run_unit_tests' || steps.pin_phpunit_for_wordpress_test_suite.outcome == 'failure' && 'pin_phpunit_for_wordpress_test_suite' || steps.verify_phpunit_dependency_versions.outcome == 'failure' && 'verify_phpunit_dependency_versions' || steps.prepare_database.outcome == 'failure' && 'prepare_database' || steps.create_tests_directory_structure.outcome == 'failure' && 'create_tests_directory_structure' || steps.create_wp_tests_install_script.outcome == 'failure' && 'create_wp_tests_install_script' || steps.create_bootstrap_file.outcome == 'failure' && 'create_bootstrap_file' || steps.create_test_file.outcome == 'failure' && 'create_test_file' || steps.create_phpunit_config.outcome == 'failure' && 'create_phpunit_config' || steps.setup_wp_tests.outcome == 'failure' && 'setup_wp_tests' || steps.run_plugin_test.outcome == 'failure' && 'run_plugin_test' || steps.report_test_status.outcome == 'failure' && 'report_test_status' || steps.ensure_repository_files_available_after_failure.outcome == 'failure' && 'ensure_repository_files_available_after_failure' || 'unknown_or_canceled' }}
+          PHP_VERSION: ${{ matrix.php-version }}
+          WP_VERSION: ${{ matrix.wp-version }}
+          DEPENDENCY_VERSIONS: ${{ matrix.dependency-versions }}
+          RUN_ID: ${{ github.run_id }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/wp-version-test-failure.md
+          update_existing: false

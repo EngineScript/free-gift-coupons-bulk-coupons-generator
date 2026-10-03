@@ -72,13 +72,108 @@ trait FGCBG_Test_Stub_State {
 	}
 
 	/**
-	 * Set deterministic passwords returned by wp_generate_password().
+	 * Queue the random parts of the next coupon codes.
 	 *
-	 * @param array<int, string> $passwords Password queue.
+	 * The generator draws one wp_rand() value per character, so each code is
+	 * queued as the positions of its characters in the generator's alphabet.
+	 * An empty list returns the wp_rand() stand-in to real random values.
+	 *
+	 * @param array<int, string> $codes Random parts, in the order they will be generated.
 	 * @return void
 	 */
-	private function set_test_passwords( array $passwords ): void {
-		$GLOBALS['fgcbg_test_passwords'] = $passwords;
+	private function queue_test_coupon_codes( array $codes ): void {
+		$alphabet = (string) ( new ReflectionClassConstant( FGCBG_Coupon_Generator::class, 'CODE_ALPHABET' ) )->getValue();
+		$values   = array();
+
+		foreach ( $codes as $code ) {
+			foreach ( str_split( $code ) as $character ) {
+				$position = strpos( $alphabet, $character );
+
+				$this->assertNotFalse( $position, sprintf( 'Character "%s" is not in the coupon code alphabet.', $character ) );
+
+				$values[] = (int) $position;
+			}
+		}
+
+		$GLOBALS['fgcbg_test_rand_values'] = $values;
+	}
+
+	/**
+	 * Choose how the WooCommerce coupon stub saves: 'ok', 'no_id', or 'throw'.
+	 *
+	 * @param string $mode Save mode.
+	 * @return void
+	 */
+	private function set_test_coupon_save_mode( string $mode ): void {
+		$GLOBALS['fgcbg_test_coupon_save_mode'] = $mode;
+	}
+
+	/**
+	 * Get the messages the plugin wrote to the WooCommerce logger stub.
+	 *
+	 * @return array<int, string>
+	 */
+	private function get_test_log_messages(): array {
+		return array_column( $GLOBALS['fgcbg_test_log'] ?? array(), 'message' );
+	}
+
+	/**
+	 * Set the coupon types WooCommerce reports, or null for the default list.
+	 *
+	 * @param array<string, string>|null $types Coupon types keyed by slug.
+	 * @return void
+	 */
+	private function set_test_coupon_types( ?array $types ): void {
+		if ( null === $types ) {
+			unset( $GLOBALS['fgcbg_test_coupon_types'] );
+			return;
+		}
+
+		$GLOBALS['fgcbg_test_coupon_types'] = $types;
+	}
+
+	/**
+	 * Set the admin screen returned by get_current_screen(), or null for none.
+	 *
+	 * @param string|null $screen_id Screen ID.
+	 * @return void
+	 */
+	private function set_test_current_screen( ?string $screen_id ): void {
+		if ( null === $screen_id ) {
+			unset( $GLOBALS['fgcbg_test_current_screen'] );
+			return;
+		}
+
+		$screen     = new WP_Screen();
+		$screen->id = $screen_id;
+
+		$GLOBALS['fgcbg_test_current_screen'] = $screen;
+	}
+
+	/**
+	 * Remove every callback a test registered on the given hooks.
+	 *
+	 * @param array<int, string> $hooks Hook names.
+	 * @return void
+	 */
+	private function remove_test_hooks( array $hooks ): void {
+		foreach ( $hooks as $hook ) {
+			unset( $GLOBALS['fgcbg_test_hooks'][ $hook ] );
+		}
+	}
+
+	/**
+	 * Return coupon generation stubs to their defaults.
+	 *
+	 * @return void
+	 */
+	private function reset_test_generation_state(): void {
+		$this->clear_test_coupons();
+		$this->set_test_coupon_save_mode( 'ok' );
+		$this->set_test_coupon_types( null );
+
+		$GLOBALS['fgcbg_test_rand_values'] = array();
+		$GLOBALS['fgcbg_test_log']         = array();
 	}
 
 	/**

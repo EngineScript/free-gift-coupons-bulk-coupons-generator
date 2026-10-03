@@ -8,9 +8,9 @@ This is a WordPress plugin that generates bulk free gift coupon codes for WooCom
 
 - **Name:** Free Gift Coupons Bulk Coupon Generator
 - **Version:** 1.6.0
-- **WordPress Compatibility:** 6.8+
+- **WordPress Compatibility:** 7.0+
 - **PHP Compatibility:** 8.2+
-- **WooCommerce Compatibility:** 5.0+
+- **WooCommerce Compatibility:** 10.8+
 - **License:** GPL-3.0-or-later
 - **Text Domain:** free-gift-bulk-coupon-generator
 - **Dependencies:** WooCommerce, Free Gift Coupons for WooCommerce
@@ -51,7 +51,7 @@ languages/
 ### Plugin Initialization
 
 ```php
-function fgcbg_init() {
+function fgcbg_init(): void {
     FGCBG_Plugin::get_instance();
 }
 add_action( 'plugins_loaded', 'fgcbg_init' );
@@ -72,7 +72,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 - Always use `esc_html()`, `esc_attr()`, `esc_url()` for output
 - Sanitize input with `sanitize_text_field()`, `wp_unslash()`, `absint()` etc.
-- Use `current_user_can( 'manage_woocommerce' )` for capability checks
+- Use `current_user_can( 'publish_shop_coupons' )` for access to coupon generation, and `current_user_can( 'edit_product', $product_id )` for every selected product
 - AJAX: `check_ajax_referer()` for nonce verification, `wp_send_json_error()`/`wp_send_json_success()` for responses
 - Validate product IDs and coupon parameters
 - Bound coupon generation counts to prevent resource abuse
@@ -83,7 +83,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 - **WooCommerce API:** `WC_Coupon` class for coupon creation, `wc_get_product()` for validation
 - **Product Search:** WooCommerce Select2 AJAX search (`wc-product-search` class, `wc-enhanced-select` dependency)
 - **Database:** WordPress/WooCommerce APIs only, no direct SQL
-- **Internationalization:** All strings use `__()`, `esc_html__()`, `esc_html_e()`; JS strings via `wp_add_inline_script()` data
+- **Internationalization:** All strings use `__()`, `esc_html__()`, `esc_html_e()`; JS strings via `wp_localize_script()` data (`fgcbgAdminConfig`)
 - **Admin Interface:** Integrated into WooCommerce admin menu
 
 ## Plugin-Specific Context
@@ -101,15 +101,15 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 #### Coupon Security Features
 
-- **Unique Code Generation:** WordPress alphanumeric password generation with WooCommerce duplicate checks
+- **Unique Code Generation:** One `wp_rand()` draw per character from a fixed 31-symbol alphabet (no `wp_generate_password()`), with WooCommerce duplicate checks
 - **Input Validation:** Comprehensive sanitization of all coupon parameters
-- **Capability Checks:** `manage_woocommerce` permission required for all operations
+- **Capability Checks:** `publish_shop_coupons` to generate, `edit_product` for each selected product
 - **Nonce Verification:** AJAX nonce via `check_ajax_referer()`
 
 #### Performance Optimizations
 
 - **AJAX Batching:** Generates coupons in small batches (10 at a time) to avoid timeouts
-- **Server-Relief Delays:** Micro-delays every 50 coupons to prevent resource exhaustion
+- **Bounded Requests:** At most 100 coupons, 200 attempts, and 20 gift products per request
 - **WooCommerce AJAX Search:** No pre-loaded product lists - search-as-you-type via WooCommerce built-in
 - **Database Efficiency:** WooCommerce API usage for all coupon creation
 
@@ -124,7 +124,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 ### WooCommerce Integration
 
 - **WC_Coupon API:** Proper use of WooCommerce coupon creation methods
-- **Product Validation:** Verification of product existence via `wc_get_product()`
+- **Product Validation:** Verification via `wc_get_product()`; products in the trash and non-product IDs are refused
 - **Metadata Structure:** Correct `_wc_free_gift_coupon_data` format for Free Gift Coupons compatibility
 - **Coupon Properties:** Expiration, usage limits, individual use, discount type settings
 
@@ -132,15 +132,15 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 
 #### Actions
 
-- `fgcbg_before_coupon_generation` - Fired before coupon generation starts
-- `fgcbg_after_coupon_generation` - Fired after coupon generation completes
+- `fgcbg_before_coupon_generation` - Fired before the coupons of one request are generated
+- `fgcbg_after_coupon_generation` - Fired after the coupons of one request have been generated
 - `fgcbg_coupon_generated` - Fired after each individual coupon is created
 
 #### Filters
 
-- `fgcbg_coupon_code_length` - Filter the random portion length of generated coupon codes (default: 8, bounds: 8-24)
+- `fgcbg_coupon_code_length` - Filter the random portion length of generated coupon codes (default: 12, bounds: 8-24)
 - `fgcbg_coupon_expiry_days` - Filter the number of days until coupon expiry (default: 365)
-- `fgcbg_max_coupons_per_batch` - Filter the maximum number of coupons per batch (default: 100)
+- `fgcbg_max_coupons_per_batch` - Filter the maximum number of coupons one request can create (default: 100)
 
 ## Development Standards
 
@@ -155,7 +155,7 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 ### JavaScript Standards
 
 - ESNext (const/let, arrow functions, template literals, optional chaining, nullish coalescing)
-- jQuery for DOM manipulation (WooCommerce admin dependency)
+- Native DOM APIs and `fetch()`; no direct jQuery dependency (jQuery is used only to listen to WooCommerce's enhanced select)
 - All user-facing strings from WordPress script data - never hardcoded
 - IIFE scope with `'use strict'`
 
@@ -170,11 +170,11 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
 ### Error Handling
 
 - **AJAX:** `wp_send_json_error()` with translated messages
-- **Coupon Creation:** Try/catch with `wc_get_logger()` for debug-mode logging
+- **Coupon Creation:** Try/catch with `wc_get_logger()`; errors are logged on every site
 - **Graceful Degradation:** WooCommerce missing detection with admin notice
 
 ### Testing & Quality Assurance
 
-- **PHPStan Level 6:** Static analysis with WooCommerce stubs
+- **PHPStan Level 8:** Static analysis with WooCommerce stubs
 - **PHPCS WordPress Standards:** Full WordPress and WooCommerce coding standards
 - **PHPMD:** Code quality and complexity management

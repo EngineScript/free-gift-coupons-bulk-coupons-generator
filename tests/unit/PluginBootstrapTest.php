@@ -38,6 +38,10 @@ final class PluginBootstrapTest extends TestCase {
 	 */
 	protected function tearDown(): void {
 		$this->reset_test_asset_state();
+		$this->set_test_coupon_types( null );
+		$this->set_test_current_screen( null );
+		$this->set_test_current_user_can( true );
+		$this->set_test_current_user_capabilities( array() );
 
 		parent::tearDown();
 	}
@@ -102,7 +106,34 @@ final class PluginBootstrapTest extends TestCase {
 		$submenu_page = $this->get_last_recorded_submenu_page();
 
 		$this->assertSame( 'woocommerce', $submenu_page[0] );
+		$this->assertSame( 'Free Gift Bulk Coupons', $submenu_page[1] );
+		$this->assertSame( 'Coupon Generator', $submenu_page[2] );
 		$this->assertSame( FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY, $submenu_page[3] );
+		$this->assertSame( 'publish_shop_coupons', $submenu_page[3] );
+	}
+
+	/**
+	 * The plugin header declares its requirements and its update source.
+	 */
+	public function test_plugin_header_declares_requirements_and_update_source(): void {
+		$contents = file_get_contents( FGCBG_PLUGIN_PATH . 'free-gift-bulk-coupon-generator.php' );
+
+		$this->assertIsString( $contents );
+
+		$lines = array_map( 'trim', explode( "\n", $contents ) );
+
+		foreach (
+			array(
+				'Requires at least: 7.0',
+				'Requires PHP: 8.2',
+				'Requires Plugins: woocommerce',
+				'WC requires at least: 10.8',
+				'Update URI: https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator',
+				'Text Domain: free-gift-bulk-coupon-generator',
+			) as $header
+		) {
+			$this->assertContains( '* ' . $header, $lines, sprintf( 'Expected plugin header "%s".', $header ) );
+		}
 	}
 
 	/**
@@ -117,6 +148,8 @@ final class PluginBootstrapTest extends TestCase {
 
 		$this->assertInstanceOf( FGCBG_Admin_Assets::class, $assets );
 
+		// Registering the menu hands the assets object the hook suffix WordPress returned.
+		$plugin->add_admin_menu();
 		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
 		$admin_script_path = FGCBG_PLUGIN_PATH . 'assets/js/admin.js';
@@ -127,7 +160,7 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertArrayHasKey( 'fgcbg-admin', $scripts );
 		$this->assertSame( $admin_script_url, $scripts['fgcbg-admin']['src'] );
 		$this->assertFileExists( $admin_script_path, sprintf( 'Expected enqueued admin script "%s" to exist.', $admin_script_path ) );
-		$this->assertSame( array( 'wc-enhanced-select' ), $scripts['fgcbg-admin']['dependencies'] );
+		$this->assertSame( array( 'wc-enhanced-select', 'wp-a11y' ), $scripts['fgcbg-admin']['dependencies'] );
 		$this->assertSame(
 			array(
 				'in_footer' => true,
@@ -135,7 +168,7 @@ final class PluginBootstrapTest extends TestCase {
 			),
 			$scripts['fgcbg-admin']['args']
 		);
-		$this->assertArrayHasKey( 'fgcbg-admin', $styles );
+		$this->assertSame( array( 'woocommerce_admin_styles', 'fgcbg-admin' ), array_keys( $styles ), 'The WooCommerce admin styles are queued ahead of the plugin styles.' );
 
 		$localized_script = $this->get_recorded_localized_script( 'fgcbg-admin' );
 		$inline_scripts   = $this->get_recorded_inline_scripts();
@@ -144,6 +177,32 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
 		$this->assertSame( admin_url( 'admin-ajax.php' ), $localized_script['data']['ajax_url'] );
 		$this->assertArrayNotHasKey( 'fgcbg_i18n', $localized_script['data'] );
+		$this->assertSame( 'nonce-fgcbg_ajax_nonce', $localized_script['data']['nonce'] );
+		$this->assertSame( FGCBG_Ajax_Handler::DEFAULT_BATCH_SIZE, $localized_script['data']['batch_size'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH, $localized_script['data']['max_coupon_count_value'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MIN_CODE_LENGTH, $localized_script['data']['min_code_length'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, $localized_script['data']['max_code_length'] );
+		$this->assertArrayHasKey( 'response_unreadable', $localized_script['data'] );
+	}
+
+	/**
+	 * Assets load only on the screen whose hook suffix WordPress returned.
+	 */
+	public function test_admin_assets_are_not_enqueued_on_other_screens(): void {
+		$assets = new FGCBG_Admin_Assets();
+
+		// No hook suffix: the current user was not given the generator screen.
+		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
+		$this->assertSame( array(), $this->get_recorded_scripts() );
+		$this->assertSame( array(), $this->get_recorded_styles() );
+
+		$assets->set_page_hook( self::GENERATOR_PAGE_HOOK );
+		$assets->enqueue( 'index.php' );
+		$this->assertSame( array(), $this->get_recorded_scripts() );
+		$this->assertSame( array(), $this->get_recorded_styles() );
+
+		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
+		$this->assertArrayHasKey( 'fgcbg-admin', $this->get_recorded_scripts() );
 	}
 
 	/**
@@ -151,6 +210,7 @@ final class PluginBootstrapTest extends TestCase {
 	 */
 	public function test_admin_assets_queue_notice_when_script_data_cannot_be_encoded(): void {
 		$assets = new FGCBG_Admin_Assets();
+		$assets->set_page_hook( self::GENERATOR_PAGE_HOOK );
 
 		$this->set_test_json_encode_result( false );
 
@@ -161,6 +221,44 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertSame( 10, has_action( 'admin_notices', array( $assets, 'script_data_failure_notice' ) ) );
 		$this->assertSame( 'fgcbgAdminConfig', $localized_script['object_name'] );
 		$this->assertSame( array(), $localized_script['data'] );
+
+		ob_start();
+		$assets->script_data_failure_notice();
+		$notice = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'notice-error', $notice );
+		$this->assertStringContainsString( 'could not load its admin script settings', $notice );
+	}
+
+	/**
+	 * The Free Gift Coupons notice checks the coupon type when it prints and
+	 * is shown only to users who can act on it or who are on the generator screen.
+	 */
+	public function test_free_gift_coupons_notice_depends_on_coupon_type_and_user(): void {
+		fgcbg_test_define_woocommerce_marker();
+		fgcbg_init();
+
+		$plugin = FGCBG_Plugin::get_instance();
+		$plugin->add_admin_menu();
+
+		$this->assertSame( 10, has_action( 'admin_notices', array( $plugin, 'free_gift_coupons_missing_notice' ) ) );
+		$this->assertSame( '', $this->capture_notice( $plugin, 'free_gift_coupons_missing_notice' ), 'No notice while the coupon type is registered.' );
+
+		$this->set_test_coupon_types( array( 'percent' => 'Percentage discount' ) );
+
+		$notice = $this->capture_notice( $plugin, 'free_gift_coupons_missing_notice' );
+		$this->assertStringContainsString( 'notice-error', $notice );
+		$this->assertStringContainsString( 'requires Free Gift Coupons for WooCommerce', $notice );
+
+		// A user who cannot activate plugins sees it only on the generator screen.
+		$this->set_test_current_user_can( false );
+		$this->assertSame( '', $this->capture_notice( $plugin, 'free_gift_coupons_missing_notice' ) );
+
+		$this->set_test_current_screen( 'dashboard' );
+		$this->assertSame( '', $this->capture_notice( $plugin, 'free_gift_coupons_missing_notice' ) );
+
+		$this->set_test_current_screen( self::GENERATOR_PAGE_HOOK );
+		$this->assertStringContainsString( 'notice-error', $this->capture_notice( $plugin, 'free_gift_coupons_missing_notice' ) );
 	}
 
 	/**
@@ -179,6 +277,29 @@ final class PluginBootstrapTest extends TestCase {
 		$this->assertFalse( has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
 		$this->assertFalse( has_action( 'admin_enqueue_scripts' ) );
 		$this->assertFalse( has_action( 'wp_ajax_fgcbg_generate_batch' ) );
+
+		$notice = $this->capture_notice( $plugin, 'woocommerce_missing_notice' );
+
+		$this->assertStringContainsString( 'notice-error', $notice );
+		$this->assertStringContainsString( 'requires WooCommerce to be installed and active', $notice );
+		$this->assertStringContainsString( 'href="https://woocommerce.com/"', $notice );
+
+		$this->set_test_current_user_can( false );
+		$this->assertSame( '', $this->capture_notice( $plugin, 'woocommerce_missing_notice' ), 'Users who cannot activate plugins do not see the notice.' );
+	}
+
+	/**
+	 * Call a notice callback and return what it printed.
+	 *
+	 * @param FGCBG_Plugin $plugin Plugin instance.
+	 * @param string       $method Notice method name.
+	 * @return string Printed markup.
+	 */
+	private function capture_notice( FGCBG_Plugin $plugin, string $method ): string {
+		ob_start();
+		$plugin->$method();
+
+		return (string) ob_get_clean();
 	}
 
 	/**

@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="WordPress Plugin Coding Standards">
     <description>WordPress coding standards</description>
 
@@ -27,43 +27,10 @@
 
         <!-- Allow longer lines for readability -->
         <exclude name="Generic.Files.LineLength"/>
-
-        <!-- Allow direct database queries when using $wpdb properly -->
-        <exclude name="WordPress.DB.DirectDatabaseQuery"/>
     </rule>
 
     <!-- WordPress documentation standards -->
     <rule ref="WordPress-Docs"/>
-
-    <!-- COMMENTED OUT: These rules enforce spaces instead of tabs, which conflicts with WordPress standards -->
-    <!-- WordPress standards actually require TABS for indentation, not spaces -->
-    <!--
-    <rule ref="Generic.WhiteSpace.DisallowTabIndent">
-    </rule>
-    <rule ref="Generic.WhiteSpace.ScopeIndent">
-        <properties>
-            <property name="indent" value="4"/>
-            <property name="tabIndent" value="false"/>
-        </properties>
-    </rule>
-    -->
-
-    <!-- COMMENTED OUT: Disallow Rule Flagging Space Indents - not needed with tab indentation -->
-    <!--
-    <rule ref="Generic.WhiteSpace.DisallowSpaceIndent">
-        <exclude name="Generic.WhiteSpace.DisallowSpaceIndent"/>
-    </rule>
-
-    <rule ref="Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed">
-        <exclude name="Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed"/>
-    </rule>
-    -->
-
-    <!-- COMMENTED OUT: Disallow inline tabs - WordPress allows tabs for indentation -->
-    <!--
-    <rule ref="Universal.WhiteSpace.DisallowInlineTabs">
-    </rule>
-    -->
 
     <!-- Additional WordPress-specific spacing rules -->
     <rule ref="WordPress.WhiteSpace.ControlStructureSpacing"/>
@@ -95,11 +62,10 @@
     <!-- WordPress security and best practices -->
     <rule ref="WordPress.Security"/>
 
-    <!-- WooCommerce registers this capability when active. -->
+    <!-- WooCommerce registers this meta capability for products when active. -->
     <rule ref="WordPress.WP.Capabilities">
         <properties>
             <property name="custom_capabilities" type="array">
-                <element value="manage_woocommerce"/>
                 <element value="edit_product"/>
             </property>
         </properties>
@@ -126,9 +92,7 @@
     </rule>
 
     <!-- PHPCSExtra standards for additional code quality checks -->
-    <rule ref="Modernize">
-        <exclude name="Modernize.FunctionCalls.Dirname.Nested"/>
-    </rule>
+    <rule ref="Modernize"/>
 
     <!-- Allow PHP short array syntax. -->
     <rule ref="Universal.Arrays.DisallowShortArraySyntax">
@@ -140,7 +104,7 @@
     </rule>
 
     <!-- Set minimum WordPress version for deprecated function checks -->
-    <config name="minimum_wp_version" value="6.8"/>
+    <config name="minimum_wp_version" value="7.0"/>
     <config name="testVersion" value="8.2-"/>
 
     <!-- Show progress -->

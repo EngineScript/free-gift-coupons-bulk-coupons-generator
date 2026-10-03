@@ -5,6 +5,8 @@
  * @package FreeGiftCouponsBulkGenerator
  */
 
+namespace {
+
 if ( ! defined( 'FGCBG_PLUGIN_URL' ) ) {
 	define( 'FGCBG_PLUGIN_URL', '' );
 }
@@ -39,6 +41,14 @@ class WC_Product {
 	 * @return int
 	 */
 	public function get_parent_id() {
+	}
+
+	/**
+	 * Get the product post status.
+	 *
+	 * @return string
+	 */
+	public function get_status() {
 	}
 }
 
@@ -174,4 +184,25 @@ function wc_get_coupon_id_by_code( $code ) {
  * @return WC_Logger
  */
 function wc_get_logger() {
+}
+
+} // End of the global namespace.
+
+namespace Automattic\WooCommerce\Utilities {
+
+	/**
+	 * Minimal WooCommerce feature-compatibility contract used by this plugin.
+	 */
+	class FeaturesUtil {
+		/**
+		 * Declare compatibility with a WooCommerce feature.
+		 *
+		 * @param string $feature_id             Feature ID.
+		 * @param string $plugin_file            Main plugin file path.
+		 * @param bool   $positive_compatibility Whether the plugin is compatible.
+		 * @return bool
+		 */
+		public static function declare_compatibility( string $feature_id, string $plugin_file, bool $positive_compatibility = true ): bool {
+		}
+	}
 }

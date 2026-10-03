@@ -1,5 +1,6 @@
 # Local private files
 AGENTS.md
+CLAUDE.md
 .private/
 .vscode/
 
@@ -41,6 +42,8 @@ temp/
 tmp/
 
 # Dependencies, tests, and build artifacts
+# Dev-tool lock resolved on the maintainer's PHP; CI resolves dependencies itself.
+composer.lock
 build/
 coverage/
 dist/

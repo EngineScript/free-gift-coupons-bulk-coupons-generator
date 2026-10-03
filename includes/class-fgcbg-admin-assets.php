@@ -42,6 +42,28 @@ final class FGCBG_Admin_Assets {
 	private bool $script_data_failed = false;
 
 	/**
+	 * Hook suffix of the generator screen, as returned by add_submenu_page().
+	 *
+	 * Empty until the screen is registered, and when the current user may not
+	 * open it.
+	 *
+	 * @since 1.7.0
+	 * @var string
+	 */
+	private string $page_hook = '';
+
+	/**
+	 * Set the hook suffix of the generator screen.
+	 *
+	 * @since 1.7.0
+	 * @param string $page_hook Hook suffix returned by add_submenu_page(), or an empty string.
+	 * @return void
+	 */
+	public function set_page_hook( string $page_hook ): void {
+		$this->page_hook = $page_hook;
+	}
+
+	/**
 	 * Register asset hooks.
 	 *
 	 * @since 1.6.0
@@ -55,24 +77,35 @@ final class FGCBG_Admin_Assets {
 	 * Enqueue admin scripts and styles.
 	 *
 	 * @since 1.6.0
+	 * @since 1.7.0 Recognizes the screen by its registered hook suffix and loads
+	 *              the WooCommerce admin styles that the product search needs.
 	 * @param string $hook The current admin page hook.
 	 * @return void
 	 */
 	public function enqueue( string $hook ): void {
-		if ( 'woocommerce_page_free-gift-bulk-coupon-generator' !== $hook ) {
+		if ( '' === $this->page_hook || $this->page_hook !== $hook ) {
 			return;
 		}
 
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
 			FGCBG_PLUGIN_URL . 'assets/js/admin.js',
-			array( 'wc-enhanced-select' ),
+			array( 'wc-enhanced-select', 'wp-a11y' ),
 			FGCBG_PLUGIN_VERSION,
 			array(
 				'in_footer' => true,
 				'strategy'  => 'defer',
 			)
 		);
+
+		/*
+		 * The product search is a WooCommerce enhanced select. Its styles ship in
+		 * the WooCommerce admin stylesheet, which WooCommerce enqueues only on its
+		 * own screens. Queue it here, ahead of the plugin stylesheet. It is not
+		 * declared as a dependency, so the plugin styles still load if the handle
+		 * is ever missing.
+		 */
+		wp_enqueue_style( 'woocommerce_admin_styles' );
 
 		wp_enqueue_style(
 			self::STYLE_HANDLE,
@@ -136,25 +169,24 @@ final class FGCBG_Admin_Assets {
 			'min_code_length'        => FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
 			'max_code_length'        => FGCBG_Coupon_Generator::MAX_CODE_LENGTH,
 			'nonce'                  => wp_create_nonce( 'fgcbg_ajax_nonce' ),
-			/* translators: %d is the number of coupons to be generated. */
-			'confirm_large_batch'    => __( 'You are about to generate %d coupons. This may take a while and could potentially timeout depending on your server settings. Do you want to continue?', 'free-gift-bulk-coupon-generator' ),
-			/* translators: %d is the maximum number of coupons that can be generated in one run. */
+			/* translators: %d: Number of coupons to generate. */
+			'confirm_large_batch'    => __( 'You are about to generate %d coupons. Do you want to continue?', 'free-gift-bulk-coupon-generator' ),
+			/* translators: %d: Maximum number of coupons per run. */
 			'max_coupons_warning'    => __( 'Maximum %d coupons allowed', 'free-gift-bulk-coupon-generator' ),
-			'many_coupons_warning'   => __( 'Generating many coupons may take some time and could timeout', 'free-gift-bulk-coupon-generator' ),
+			'many_coupons_warning'   => __( 'Generating many coupons may take some time.', 'free-gift-bulk-coupon-generator' ),
 			'select_product'         => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ),
 			'invalid_coupon_count'   => __( 'Please enter a valid number of coupons (minimum 1).', 'free-gift-bulk-coupon-generator' ),
-			/* translators: %d is the maximum number of coupons that can be generated in one run. */
+			/* translators: %d: Maximum number of coupons per run. */
 			'max_coupon_count'       => __( 'Maximum number of coupons is %d.', 'free-gift-bulk-coupon-generator' ),
-			/* translators: %d is the maximum coupon prefix length. */
-			'prefix_too_long'        => __( 'Coupon prefix must be %d characters or less.', 'free-gift-bulk-coupon-generator' ),
-			/* translators: 1: minimum random code length, 2: maximum random code length. */
+			/* translators: 1: Minimum random code length, 2: Maximum random code length. */
 			'code_length_invalid'    => __( 'Please enter a random code length between %1$d and %2$d characters.', 'free-gift-bulk-coupon-generator' ),
 			'generation_in_progress' => __( 'Coupon generation is in progress. Are you sure you want to leave this page?', 'free-gift-bulk-coupon-generator' ),
-			/* translators: %1$d is the current coupon count, %2$d is the total number of coupons to generate. */
+			/* translators: 1: Number of coupons generated so far, 2: Total number of coupons to generate. */
 			'generating_progress'    => __( 'Generating coupons: %1$d of %2$d', 'free-gift-bulk-coupon-generator' ),
-			/* translators: %d is the number of successfully generated coupons. */
+			/* translators: %d: Number of coupons generated. */
 			'generation_complete'    => __( 'Successfully generated %d coupons.', 'free-gift-bulk-coupon-generator' ),
 			'generation_failed'      => __( 'Failed to generate coupons. Please try again.', 'free-gift-bulk-coupon-generator' ),
+			'response_unreadable'    => __( 'The server response could not be read, so some coupons may have been created without being listed here. Check WooCommerce > Coupons before generating again.', 'free-gift-bulk-coupon-generator' ),
 		);
 	}
 }

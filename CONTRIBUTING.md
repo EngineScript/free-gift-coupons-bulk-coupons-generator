@@ -1,26 +1,25 @@
 # Contributing to Free Gift Coupons Bulk Coupon Generator
 
-Thank you for considering contributing to Free Gift Coupons Bulk Coupon Generator! This document provides guidelines and instructions for contributors.
+Thank you for considering a contribution to Free Gift Coupons Bulk Coupon Generator. This guide keeps development, code quality, and review expectations aligned with this plugin.
 
 ## Code of Conduct
 
-This project follows the [WordPress Community Code of Conduct](https://make.wordpress.org/handbook/community-code-of-conduct/). By participating, you're expected to uphold this code.
+This project follows the [WordPress Community Code of Conduct](https://make.wordpress.org/handbook/community-code-of-conduct/). By participating, you are expected to uphold this code.
 
 ## Development Environment
 
 ### Requirements
 
 - **PHP**: 8.2 or higher
-- **WordPress**: 6.8 or higher
+- **WordPress**: 7.0 or higher
 - **WooCommerce**: Required for plugin functionality
 - **Free Gift Coupons for WooCommerce**: Required for end-to-end free gift coupon behavior
-- **Composer**: For dependency management
-- **Node.js**: 16+ (if working with build tools)
+- **Composer**: For dependency management and quality tools
 - **Git**: For version control
 
 ### Setup
 
-1. Fork the repository on GitHub
+1. Fork the repository on GitHub.
 2. Clone your fork locally:
 
    ```bash
@@ -42,64 +41,26 @@ This project follows the [WordPress Community Code of Conduct](https://make.word
 
 ## Coding Standards
 
-### WordPress Coding Standards
+This project follows [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/) for PHP, JavaScript, CSS, HTML, and accessibility.
 
-This project adheres to **WordPress Coding Standards**:
-
-- **PHP**: [WordPress PHP Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/)
-- **JavaScript**: [WordPress JavaScript Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/javascript/)
-- **CSS**: [WordPress CSS Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/css/)
-- **HTML**: [WordPress HTML Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/html/)
+Project-owned JavaScript should use modern ES2025+ syntax for the WordPress 7.0+ browser support baseline. Prefer native DOM APIs, `const`/`let`, arrow functions, optional chaining, nullish coalescing, template literals, and modules where appropriate. Use legacy JavaScript patterns only when a WordPress or WooCommerce integration requires them.
 
 ### Key Principles
 
-1. **Security First**: All code must follow OWASP security guidelines
-
-   - Input validation and sanitization
-   - Output escaping with context-appropriate functions
-   - CSRF protection with nonces
-   - Capability checks for admin functions
-
-2. **Performance**: Optimize for efficiency
-
-   - Use WordPress caching mechanisms
-   - Minimize database queries
-   - Conditional loading of assets
-
-3. **Internationalization**: All user-facing strings must be translatable
-
-   - Use `__()`, `_e()`, `esc_html__()`, `esc_html_e()` functions
-   - Text domain: `free-gift-bulk-coupon-generator`
-
-4. **Accessibility**: Follow WCAG guidelines
-
-   - Proper semantic markup
-   - Keyboard navigation support
-   - Screen reader compatibility
+1. **Security First**: Validate and sanitize input, escape output, protect forms with nonces, and check capabilities before privileged actions.
+2. **Performance**: Use WordPress caching mechanisms, avoid unnecessary database work, and enqueue assets only where needed.
+3. **Internationalization**: Mark user-facing strings with WordPress i18n functions and use the `free-gift-bulk-coupon-generator` text domain.
+4. **Accessibility**: Use semantic markup and preserve keyboard and screen reader behavior in admin UI changes.
 
 ## Code Quality Tools
 
-### PHP CodeSniffer (PHPCS)
-
-Run coding standards checks:
+Run the main checks before submitting a pull request:
 
 ```bash
 composer run phpcs
-```
-
-### PHPStan
-
-Run static analysis:
-
-```bash
 composer run phpstan
-```
-
-### PHPUnit
-
-Run tests (when available):
-
-```bash
+composer run phpmd
+composer run psalm
 composer test
 ```
 
@@ -108,8 +69,18 @@ composer test
 ```text
 free-gift-bulk-coupon-generator/
 |-- free-gift-bulk-coupon-generator.php # Main plugin file
-|-- includes/                           # Plugin source files
+|-- includes/                           # Plugin PHP classes
+|   |-- class-fgcbg-plugin.php
+|   |-- class-fgcbg-dependencies.php
+|   |-- class-fgcbg-coupon-generator.php
+|   |-- class-fgcbg-ajax-handler.php
+|   |-- class-fgcbg-admin-assets.php
+|   `-- class-fgcbg-admin-page.php
 |-- assets/                             # Admin CSS and JavaScript
+|-- languages/                          # Translation template
+|   `-- free-gift-bulk-coupon-generator.pot
+|-- tests/                              # PHPUnit tests
+|-- stubs/                              # Static-analysis stubs
 |-- README.md                           # Project documentation
 |-- readme.txt                          # WordPress.org readme
 |-- CHANGELOG.md                        # Version history
@@ -119,56 +90,42 @@ free-gift-bulk-coupon-generator/
 |-- phpcs.xml                           # PHPCS configuration
 |-- phpstan.neon                        # PHPStan configuration
 |-- phpmd.xml                           # PHPMD configuration
-|-- languages/                          # Translation files
-|   `-- free-gift-bulk-coupon-generator.pot
-`-- .github/                            # GitHub workflows
-    `-- workflows/
+`-- .github/                            # GitHub workflows and templates
 ```
 
 ## Making Changes
 
 ### Before You Start
 
-1. Check existing [issues](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues) and [pull requests](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/pulls)
-2. Create an issue for significant changes to discuss the approach
-3. Follow the existing code patterns and conventions
+1. Check existing [issues](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues) and [pull requests](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/pulls).
+2. Create an issue for significant behavior changes.
+3. Follow the existing code patterns in the relevant `includes/` class.
 
 ### Code Requirements
 
-#### Security
+- **Input validation**: Validate all user input before use.
+- **Output escaping**: Use `esc_html()`, `esc_attr()`, `esc_url()`, or another context-appropriate escaping function.
+- **Sanitization**: Use WordPress sanitizers such as `sanitize_text_field()`, `sanitize_textarea_field()`, and `absint()`.
+- **Nonce verification**: Use WordPress nonces for forms and state-changing requests.
+- **Capability checks**: Verify permissions with `current_user_can()`.
+- **PHPDoc**: Add `@param`, `@return`, and `@since` tags for new public functions and methods.
 
-- **Input Validation**: Validate all user inputs
-- **Output Escaping**: Use `esc_html()`, `esc_attr()`, `esc_url()` as appropriate
-- **Sanitization**: Use `sanitize_text_field()`, `sanitize_textarea_field()`, etc.
-- **Nonce Verification**: Protect forms with WordPress nonces
-- **Capability Checks**: Verify user permissions with `current_user_can()`
-
-#### Documentation
-
-- **PHPDoc**: All functions must have PHPDoc comments
-- **@since**: Include version tags for new functions
-- **Inline Comments**: Explain complex logic
-- **Security Notes**: Document security measures taken
-
-#### Example Function
+### Example Function
 
 ```php
 /**
- * Example function with proper documentation
+ * Example function with proper documentation.
  *
- * @since 1.5.13
+ * @since 1.6.0
  * @param string $input User input to process.
  * @return string Sanitized output.
  */
-function fgcbg_example_function( $input ) {
-    // Security: Validate and sanitize input.
+function fgcbg_example_function( string $input ): string {
     if ( ! current_user_can( 'manage_options' ) ) {
         return '';
     }
 
     $sanitized = sanitize_text_field( $input );
-
-    // Additional processing.
 
     return esc_html( $sanitized );
 }
@@ -176,57 +133,51 @@ function fgcbg_example_function( $input ) {
 
 ### Testing
 
-1. **Manual Testing**:
+1. **Manual testing**:
 
-   - Test in WordPress 6.8+ and the latest version
-   - Test with PHP 8.2 and 8.3+ for development tooling
-   - Verify admin interface functionality
-   - Verify WooCommerce coupon creation and Free Gift Coupons metadata
+   - Test with WordPress 7.0 or higher.
+   - Test with PHP 8.2 or higher.
+   - Verify the generator screen at **WooCommerce > Coupon Generator**.
+   - Verify product search, batch generation progress, and the generated code export.
+   - Verify WooCommerce coupon creation and Free Gift Coupons metadata.
 
-2. **Automated Testing**:
+2. **Automated testing**:
 
-   - Run PHPCS for coding standards
-   - Run PHPStan for static analysis
-   - Ensure CI/CD tests pass
-
-### Performance Guidelines
-
-1. **Batch Generation**: Keep coupon creation server-friendly and bounded
-2. **Conditional Loading**: Only load admin assets on the generator screen
-3. **Database Queries**: Minimize WooCommerce product and coupon lookups
-4. **Hook Priority**: Use appropriate hook priorities
+   - Run PHPCS for coding standards.
+   - Run PHPStan and Psalm for static analysis.
+   - Run PHPMD for code quality checks.
+   - Run PHPUnit tests.
 
 ## Submitting Changes
 
 ### Pull Request Process
 
-1. **Create Feature Branch**:
+1. Create a feature branch:
 
    ```bash
    git checkout -b feature/description-of-change
    ```
 
-2. **Make Changes**:
+2. Make your changes:
 
-   - Follow coding standards
-   - Add/update tests if applicable
-   - Update documentation
+   - Follow WordPress coding standards.
+   - Add or update tests where useful.
+   - Update documentation when behavior changes.
 
-3. **Test Changes**:
+3. Run checks:
 
    ```bash
-   composer run phpcs
-   composer run phpstan
+   composer run check-all
    ```
 
-4. **Commit Changes**:
+4. Commit your changes:
 
    ```bash
    git add .
-   git commit -m "feat: add coupon generation option"
+   git commit -m "fix: preserve free gift coupon metadata"
    ```
 
-5. **Push and Create PR**:
+5. Push and open a pull request:
 
    ```bash
    git push origin feature/description-of-change
@@ -241,77 +192,52 @@ Use [Conventional Commits](https://conventionalcommits.org/):
 - `docs:` Documentation changes
 - `style:` Code style changes
 - `refactor:` Code refactoring
-- `test:` Test additions/changes
+- `test:` Test additions or changes
 - `chore:` Maintenance tasks
 
-Examples:
-
-```text
-feat: add coupon prefix validation
-fix: preserve free gift coupon metadata
-docs: update installation instructions
-style: fix PHPCS formatting violations
-```
-
-### Pull Request Checklist
+## Pull Request Checklist
 
 - [ ] Code follows WordPress coding standards
-- [ ] All functions have proper PHPDoc documentation
-- [ ] Security best practices implemented
-- [ ] PHPCS and PHPStan checks pass
-- [ ] Manual testing completed
-- [ ] Documentation updated if needed
-- [ ] CHANGELOG.md updated
+- [ ] Public functions and methods have useful PHPDoc
+- [ ] Security best practices are implemented
+- [ ] PHPCS, PHPStan, PHPMD, Psalm, and PHPUnit checks pass
+- [ ] Manual testing is complete
+- [ ] Documentation is updated if needed
+- [ ] CHANGELOG.md and readme.txt are updated if behavior changes
 
 ## Version Management
 
-### Updating Versions
-
 When releasing new versions, update these files:
 
-- `free-gift-bulk-coupon-generator.php` (plugin header)
+- `free-gift-bulk-coupon-generator.php` plugin header and `FGCBG_PLUGIN_VERSION`
+- `includes/` version-dependent UI copy if needed
 - `README.md`
 - `readme.txt`
 - `CHANGELOG.md`
 - `languages/free-gift-bulk-coupon-generator.pot`
 
-### Semantic Versioning
-
 This project follows [Semantic Versioning](https://semver.org/):
 
 - **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
+- **MINOR**: New features
+- **PATCH**: Bug fixes
 
 ## Support Channels
 
 - **Issues**: [GitHub Issues](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/discussions)
-- **Security**: Email [security@enginescript.com](mailto:security@enginescript.com) for security issues
+- **Security**: Report security issues privately through the [vulnerability report form](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/security/advisories/new); see [SECURITY.md](SECURITY.md)
 
 ## Resources
-
-### WordPress Development
 
 - [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
 - [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/)
 - [WordPress Security Guidelines](https://developer.wordpress.org/plugins/security/)
-
-### Security Resources
-
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [WordPress Security Handbook](https://make.wordpress.org/core/handbook/testing/reporting-security-vulnerabilities/)
-
-### Tools
-
 - [PHP_CodeSniffer](https://github.com/squizlabs/PHP_CodeSniffer)
 - [PHPStan](https://phpstan.org/)
 - [WordPress Plugin Check](https://wordpress.org/plugins/plugin-check/)
 
 ## License
 
-By contributing to Free Gift Coupons Bulk Coupon Generator, you agree that your contributions will be licensed under the [GPL-3.0-or-later](LICENSE) license.
-
----
-
-Thank you for contributing to Free Gift Coupons Bulk Coupon Generator!
+By contributing to Free Gift Coupons Bulk Coupon Generator, you agree that your contributions will be licensed under [GPL-3.0-or-later](LICENSE).

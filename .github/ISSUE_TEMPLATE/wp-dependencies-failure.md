@@ -35,13 +35,6 @@ The WordPress dependencies monitoring action detected issues with dependencies. 
 
 ### Next Steps
 
-- **WordPress Core Updates:** WordPress core may have been updated with breaking changes
-- **Plugin Dependencies:** Dependencies used by the plugin may be outdated or incompatible
-- **API Changes:** WordPress APIs used by the plugin may have changed
-- **Deprecated Functions:** The plugin may be using deprecated WordPress functions
-
-### Next Steps
-
 1. Review the workflow logs at the link above
 2. Check for specific dependency warnings or errors
 3. Update WordPress core compatibility if needed

@@ -48,10 +48,21 @@ final class FGCBG_Admin_Page {
 	 * Render admin form.
 	 *
 	 * @since 1.0.0
+	 * @since 1.7.0 Adds notices for a missing script and for missing script settings.
 	 * @return void
 	 */
 	private function render_admin_form(): void {
 		?>
+		<noscript>
+			<div class="notice notice-error inline">
+				<p><?php esc_html_e( 'The coupon generator needs JavaScript. Enable JavaScript in your browser and reload this page.', 'free-gift-bulk-coupon-generator' ); ?></p>
+			</div>
+		</noscript>
+
+		<div id="fgcbg-config-error" class="notice notice-error inline fgcbg-config-error" role="alert" hidden>
+			<p><?php esc_html_e( 'The coupon generator could not load its settings, so coupons cannot be generated. Reload this page. If the problem continues, contact your site administrator.', 'free-gift-bulk-coupon-generator' ); ?></p>
+		</div>
+
 		<form class="fgcbg-form">
 
 			<table class="form-table">
@@ -69,14 +80,14 @@ final class FGCBG_Admin_Page {
 
 			<div id="fgcbg-progress" class="fgcbg-progress" hidden>
 				<div class="fgcbg-progress-track">
-					<div id="fgcbg-progress-bar" class="fgcbg-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+					<div id="fgcbg-progress-bar" class="fgcbg-progress-bar" role="progressbar" aria-label="<?php esc_attr_e( 'Coupon generation progress', 'free-gift-bulk-coupon-generator' ); ?>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
 				</div>
 				<p id="fgcbg-progress-text" class="fgcbg-progress-text"></p>
 			</div>
 
 			<div id="fgcbg-results" class="fgcbg-results" hidden>
-				<h2><?php esc_html_e( 'Generated Coupon Codes', 'free-gift-bulk-coupon-generator' ); ?></h2>
-				<textarea id="fgcbg-generated-codes" class="large-text code" rows="10" readonly aria-describedby="fgcbg-generated-codes-description"></textarea>
+				<h2 id="fgcbg-results-heading"><?php esc_html_e( 'Generated Coupon Codes', 'free-gift-bulk-coupon-generator' ); ?></h2>
+				<textarea id="fgcbg-generated-codes" class="large-text code" rows="10" readonly aria-labelledby="fgcbg-results-heading" aria-describedby="fgcbg-generated-codes-description"></textarea>
 				<p id="fgcbg-generated-codes-description" class="description">
 					<?php esc_html_e( 'One coupon code per line.', 'free-gift-bulk-coupon-generator' ); ?>
 				</p>
@@ -137,7 +148,7 @@ final class FGCBG_Admin_Page {
 				<p class="description" id="coupon-count-description">
 					<?php
 					printf(
-						/* translators: %d is the maximum number of coupons that can be generated in one run. */
+						/* translators: %d: Maximum number of coupons per run. */
 						esc_html__( 'Enter the number of coupons to generate (maximum %d).', 'free-gift-bulk-coupon-generator' ),
 						esc_html( (string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH )
 					);
@@ -145,8 +156,8 @@ final class FGCBG_Admin_Page {
 				</p>
 				<div class="fgcbg-warning-box">
 					<p class="fgcbg-warning-text">
-						<span class="dashicons dashicons-warning fgcbg-warning-icon"></span>
-						<?php esc_html_e( 'Note: Coupon generation can be time-consuming. Generating large numbers of coupons may cause the page to timeout based on your server\'s PHP timeout settings. If you need to generate many coupons, consider doing it in smaller batches.', 'free-gift-bulk-coupon-generator' ); ?>
+						<span class="dashicons dashicons-warning fgcbg-warning-icon" aria-hidden="true"></span>
+						<?php esc_html_e( 'Note: Coupons are generated in small batches, so a large run can take a while. Keep this page open until it finishes.', 'free-gift-bulk-coupon-generator' ); ?>
 					</p>
 				</div>
 			</td>
@@ -168,7 +179,7 @@ final class FGCBG_Admin_Page {
 			</th>
 			<td>
 				<input type="text" name="coupon_prefix" id="coupon_prefix"
-						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="e.g. GIFT" aria-describedby="coupon-prefix-description">
+						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="<?php esc_attr_e( 'e.g. GIFT', 'free-gift-bulk-coupon-generator' ); ?>" aria-describedby="coupon-prefix-description">
 				<p class="description" id="coupon-prefix-description">
 					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFT).', 'free-gift-bulk-coupon-generator' ); ?>
 				</p>
@@ -198,7 +209,7 @@ final class FGCBG_Admin_Page {
 				<p class="description" id="coupon-code-length-description">
 					<?php
 					printf(
-						/* translators: 1: minimum random code length, 2: maximum random code length, 3: maximum prefix length, 4: maximum total coupon code length. */
+						/* translators: 1: Minimum random code length, 2: Maximum random code length, 3: Maximum prefix length, 4: Maximum total coupon code length. */
 						esc_html__( 'Number of random characters after the optional prefix (%1$d-%2$d characters). With a %3$d-character prefix, the total coupon code is at most %4$d characters.', 'free-gift-bulk-coupon-generator' ),
 						esc_html( (string) FGCBG_Coupon_Generator::MIN_CODE_LENGTH ),
 						esc_html( (string) FGCBG_Coupon_Generator::MAX_CODE_LENGTH ),
@@ -226,13 +237,13 @@ final class FGCBG_Admin_Page {
 				<li>
 					<?php
 					printf(
-						/* translators: %d is the maximum number of coupons that can be generated in one run. */
+						/* translators: %d: Maximum number of coupons per run. */
 						esc_html__( 'Maximum %d coupons can be generated at once', 'free-gift-bulk-coupon-generator' ),
 						esc_html( (string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH )
 					);
 					?>
 				</li>
-				<li><?php esc_html_e( 'Coupons are set to expire after 1 year', 'free-gift-bulk-coupon-generator' ); ?></li>
+				<li><?php esc_html_e( 'Coupons are set to expire after 1 year by default', 'free-gift-bulk-coupon-generator' ); ?></li>
 				<li><?php esc_html_e( 'Each coupon can only be used once', 'free-gift-bulk-coupon-generator' ); ?></li>
 				<li><?php esc_html_e( 'Coupons are set for individual use only', 'free-gift-bulk-coupon-generator' ); ?></li>
 				<li><?php esc_html_e( 'Generated coupons appear in WooCommerce > Coupons', 'free-gift-bulk-coupon-generator' ); ?></li>

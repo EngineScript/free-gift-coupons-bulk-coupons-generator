@@ -36,14 +36,21 @@ documentation:
 # Coupon generation functionality
 coupon:
   - changed-files:
-    - any-glob-to-any-file: '**/coupon*.php'
-    - any-glob-to-any-file: '**/generate*.php'
+    - any-glob-to-any-file: '**/*coupon*.php'
+    - any-glob-to-any-file: '**/*ajax*.php'
 
 # WooCommerce integration
 woocommerce:
   - changed-files:
     - any-glob-to-any-file: '**/wc-*.php'
     - any-glob-to-any-file: '**/woocommerce*.php'
+
+# Database related changes
+database:
+  - changed-files:
+    - any-glob-to-any-file: '**/database*.php'
+    - any-glob-to-any-file: '**/db*.php'
+    - any-glob-to-any-file: '**/sql*.php'
 
 # WordPress integration
 wordpress:

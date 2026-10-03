@@ -14,7 +14,7 @@
 	--fgcbg-color-btn: #2271b1;
 	--fgcbg-color-btn-active: #0a4b78;
 	--fgcbg-color-btn-hover: #135e96;
-	--fgcbg-color-caution: #dba617;
+	--fgcbg-color-caution: #8a6100;
 	--fgcbg-color-error: #d63638;
 	--fgcbg-color-heading: #1d2327;
 	--fgcbg-color-link: #0073aa;
@@ -96,8 +96,7 @@
 	padding: 15px 10px;
 }
 
-.fgcbg-form .regular-text,
-.fgcbg-form select.regular-text {
+.fgcbg-form .regular-text {
 	width: 300px;
 }
 
@@ -193,7 +192,6 @@
 	border-color: var(--fgcbg-color-btn-active);
 }
 
-.fgcbg-form .button-primary.disabled,
 .fgcbg-form .button-primary:disabled {
 	cursor: not-allowed;
 	opacity: 0.5;
@@ -232,14 +230,13 @@
  * Form Validation
  */
 .fgcbg-form input.error,
-.fgcbg-form select.error {
-	border-color: var(--fgcbg-color-error) !important;
+.fgcbg-form .select2-container.fgcbg-invalid .select2-selection {
+	border-color: var(--fgcbg-color-error);
 	box-shadow: 0 0 2px rgb(214 54 56 / 80%);
 }
 
-.fgcbg-form input.error:focus,
-.fgcbg-form select.error:focus {
-	border-color: var(--fgcbg-color-error) !important;
+.fgcbg-form input.error:focus {
+	border-color: var(--fgcbg-color-error);
 	box-shadow: 0 0 3px rgb(214 54 56 / 80%);
 }
 
@@ -251,11 +248,14 @@
 	animation: fgcbg-fade-in 0.3s ease-in;
 	margin: 15px 0;
 	scroll-margin-top: 50px;
-	transition: opacity 0.4s ease;
 }
 
-.fgcbg-error-message.is-dismissing {
-	opacity: 0;
+.fgcbg-config-error {
+	margin: 15px 0;
+}
+
+.fgcbg-config-error[hidden] {
+	display: none;
 }
 
 
@@ -319,11 +319,9 @@
 	white-space: pre-line;
 }
 
-.notice-success {
-	animation: fgcbg-fade-in 0.3s ease-in;
-}
-
 .fgcbg-success-message {
+	animation: fgcbg-fade-in 0.3s ease-in;
+	margin: 15px 0;
 	scroll-margin-top: 50px;
 }
 
@@ -346,7 +344,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.fgcbg-form.loading .button-primary::after,
 	.fgcbg-error-message,
-	.notice-success {
+	.fgcbg-success-message {
 		animation: none;
 	}
 }
@@ -371,7 +369,6 @@
  */
 @media (width <= 600px) {
 	.fgcbg-form .regular-text,
-	.fgcbg-form select.regular-text,
 	.fgcbg-product-search {
 		max-width: 300px;
 		width: 100%;

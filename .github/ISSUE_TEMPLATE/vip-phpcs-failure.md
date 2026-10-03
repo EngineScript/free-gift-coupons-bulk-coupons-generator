@@ -1,18 +1,22 @@
 ---
-title: WordPress VIP Coding Standards Failure - PHP ${{ env.PHP_VERSION }}
-labels: ['vip-standards', 'coding-standards', 'needs-review', 'php-${{ env.PHP_VERSION }}']
+title: WordPress VIP Coding Standards Failure - PHP {{ env.PHP_VERSION }}
+labels: ['vip-standards', 'coding-standards', 'needs-review', 'php-{{ env.PHP_VERSION }}']
 assignees: []
 ---
 
 ## WordPress VIP Coding Standards Failure
 
-**PHP Version:** ${{ env.PHP_VERSION }}
-**Run ID:** ${{ env.RUN_ID }}
-**Workflow:** [View Failed Run](${{ env.WORKFLOW_URL }})
+The VIP coding-standards job failed. Inspect the failure stage and original check output.
+
+**Failure stage:** `{{ env.FAILURE_STAGE }}`
+
+**PHP Version:** {{ env.PHP_VERSION }}
+**Run ID:** {{ env.RUN_ID }}
+**Workflow:** [View Failed Run]({{ env.WORKFLOW_URL }})
 
 ### Issue Description
 
-The WordPress VIP coding standards check has failed during the automated workflow. This scan specifically checks for enterprise-level WordPress development standards required for WordPress VIP platform compatibility.
+If the VIP scan ran, its output concerns enterprise-level WordPress VIP requirements. Otherwise, resolve the failed prerequisite first.
 
 ### VIP Standards Focus Areas
 
@@ -68,8 +72,8 @@ The WordPress VIP Go coding standards check for:
 
 ### Workflow Information
 
-**Failed Workflow Run:** [View Details](${{ env.WORKFLOW_URL }})
-**PHP Version Tested:** ${{ env.PHP_VERSION }}
+**Failed Workflow Run:** [View Details]({{ env.WORKFLOW_URL }})
+**PHP Version Tested:** {{ env.PHP_VERSION }}
 **Standards Used:** WordPress-VIP-Go ruleset
 
 This issue was automatically created when the WordPress VIP coding standards check failed. Please review the specific violations in the workflow logs and address them according to your project's deployment requirements.

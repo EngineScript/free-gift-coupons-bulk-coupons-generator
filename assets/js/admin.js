@@ -1,8 +1,10 @@
 /**
  * Free Gift Coupons Bulk Generator - Admin JavaScript.
  *
- * Modern browser code for the WordPress 6.8+ admin. Request-specific data is
- * injected before this file as `fgcbgAdminConfig`.
+ * Modern browser code for the WordPress 7.0+ admin. Request-specific data is
+ * injected before this file as `fgcbgAdminConfig`. Every limit and every
+ * message comes from that object; without it the script shows the notice the
+ * page already contains and does nothing else.
  */
 
 ( () => {
@@ -10,6 +12,7 @@
 
 	const selectors = Object.freeze( {
 		codeLength: '#coupon_code_length',
+		configError: '#fgcbg-config-error',
 		couponCount: '#number_of_coupons',
 		downloadButton: '#fgcbg-download-codes',
 		form: '.fgcbg-form',
@@ -24,20 +27,18 @@
 		warning: '#coupon-count-warning',
 	} );
 
-	const AJAX_ENDPOINT = message( 'ajax_url', globalThis.ajaxurl ?? 'admin-ajax.php' );
+	/** Coupon totals above this ask for confirmation before generating. */
+	const CONFIRM_ABOVE = 25;
 
-	function toPositiveInteger( value, fallback ) {
-		const parsed = Number.parseInt( value ?? fallback, 10 );
+	/** Coupon totals above this show a caution beside the field. */
+	const CAUTION_ABOVE = 50;
 
-		return Number.isNaN( parsed ) || parsed < 1 ? fallback : parsed;
+	function message( key ) {
+		return String( config[ key ] ?? '' );
 	}
 
-	function message( key, fallback = '' ) {
-		return String( config[ key ] ?? fallback );
-	}
-
-	function formatMessage( key, fallback, replacements ) {
-		let template = message( key, fallback );
+	function formatMessage( key, replacements ) {
+		let template = message( key );
 
 		for ( const [ placeholder, value ] of replacements ) {
 			template = template.replace( placeholder, String( value ) );
@@ -46,9 +47,39 @@
 		return template;
 	}
 
-	const BATCH_SIZE = toPositiveInteger( config.batch_size, 10 );
-	const MAX_COUPON_COUNT = toPositiveInteger( config.max_coupon_count_value, 100 );
-	const MAX_PREFIX_LENGTH = toPositiveInteger( config.max_prefix_length, 8 );
+	function limit( key ) {
+		return Number.parseInt( config[ key ], 10 );
+	}
+
+	const BATCH_SIZE = limit( 'batch_size' );
+	const MAX_COUPON_COUNT = limit( 'max_coupon_count_value' );
+	const MAX_PREFIX_LENGTH = limit( 'max_prefix_length' );
+	const MIN_CODE_LENGTH = limit( 'min_code_length' );
+	const MAX_CODE_LENGTH = limit( 'max_code_length' );
+
+	/**
+	 * Check that the server supplied everything the script needs.
+	 *
+	 * @returns {boolean} True when the configuration is usable.
+	 */
+	function isConfigured() {
+		const limits = [ BATCH_SIZE, MAX_COUPON_COUNT, MAX_PREFIX_LENGTH, MIN_CODE_LENGTH, MAX_CODE_LENGTH ];
+
+		return message( 'ajax_url' ) !== '' &&
+			message( 'nonce' ) !== '' &&
+			limits.every( ( value ) => Number.isInteger( value ) && value > 0 );
+	}
+
+	/**
+	 * Announce a message to assistive technology when WordPress provides the helper.
+	 *
+	 * @param {string} text - Message text.
+	 * @param {string} politeness - 'polite' or 'assertive'.
+	 * @returns {void}
+	 */
+	function speak( text, politeness ) {
+		globalThis.wp?.a11y?.speak?.( text, politeness );
+	}
 
 	/**
 	 * Create an element safely from a static tag name.
@@ -108,6 +139,7 @@
 
 			this.elements = Object.freeze( {
 				codeLength: document.querySelector( selectors.codeLength ),
+				configError: document.querySelector( selectors.configError ),
 				couponCount: document.querySelector( selectors.couponCount ),
 				downloadButton: document.querySelector( selectors.downloadButton ),
 				form,
@@ -120,6 +152,9 @@
 				results: document.querySelector( selectors.results ),
 				submitButton: form?.querySelector( selectors.submitButton ) ?? null,
 			} );
+
+			// Kept as a property so the same function can be added and removed.
+			this.onBeforeUnload = ( event ) => this.warnBeforeUnload( event );
 		}
 
 		/** Bootstrap all event bindings. */
@@ -128,19 +163,37 @@
 				return;
 			}
 
+			if ( ! isConfigured() ) {
+				this.showConfigurationError();
+				return;
+			}
+
 			this.bindEvents();
 			this.initFormValidation();
-			this.resetLoadingState();
+		}
+
+		/**
+		 * Reveal the notice the page ships for missing settings and disable the form.
+		 *
+		 * @returns {void}
+		 */
+		showConfigurationError() {
+			if ( this.elements.configError ) {
+				this.elements.configError.hidden = false;
+			}
+
+			this.setSubmitButtonDisabled( true );
+			this.elements.form.addEventListener( 'submit', ( event ) => event.preventDefault() );
 		}
 
 		/** Attach DOM event handlers. */
 		bindEvents() {
 			this.elements.form.addEventListener( 'submit', ( event ) => this.handleFormSubmission( event ) );
 			this.elements.prefix?.addEventListener( 'input', () => this.formatPrefix() );
-			this.elements.couponCount?.addEventListener( 'input', () => this.validateNumberInput() );
-			this.elements.codeLength?.addEventListener( 'input', () => this.validateCodeLengthInput() );
+			this.elements.couponCount?.addEventListener( 'input', () => this.updateCountWarning() );
+			this.elements.couponCount?.addEventListener( 'change', () => this.normalizeCouponCount() );
+			this.elements.codeLength?.addEventListener( 'change', () => this.normalizeCodeLength() );
 			this.elements.downloadButton?.addEventListener( 'click', () => this.downloadGeneratedCodes() );
-			globalThis.addEventListener( 'beforeunload', ( event ) => this.warnBeforeUnload( event ) );
 		}
 
 		/**
@@ -151,6 +204,7 @@
 		 */
 		handleFormSubmission( event ) {
 			event.preventDefault();
+			this.clearNotices();
 
 			if ( ! this.validateForm() ) {
 				return;
@@ -158,8 +212,8 @@
 
 			const total = Number.parseInt( this.elements.couponCount.value, 10 );
 
-			if ( total > 25 ) {
-				const confirmation = formatMessage( 'confirm_large_batch', '', [
+			if ( total > CONFIRM_ABOVE ) {
+				const confirmation = formatMessage( 'confirm_large_batch', [
 					[ '%d', total ],
 				] );
 
@@ -191,7 +245,8 @@
 			try {
 				await this.generateCouponBatches( state );
 			} catch {
-				this.showErrorMessage( message( 'generation_failed', 'Failed to generate coupons. Please try again.' ) );
+				// The request may have reached the server, so coupons may exist that this page never saw.
+				this.showErrorMessage( message( 'response_unreadable' ) );
 			} finally {
 				this.finishBatchGeneration( state );
 			}
@@ -200,6 +255,7 @@
 		/** Prepare the form controls before batch generation begins. */
 		prepareBatchGeneration() {
 			this.elements.form.classList.add( 'loading' );
+			globalThis.addEventListener( 'beforeunload', this.onBeforeUnload );
 			this.setSubmitButtonDisabled( true );
 			this.setProgressVisible( true );
 			this.setResultsVisible( false );
@@ -279,7 +335,7 @@
 			this.updateProgress( Math.min( 100, Math.round( ( state.generated / state.total ) * 100 ) ) );
 
 			if ( this.elements.progressText ) {
-				this.elements.progressText.textContent = formatMessage( 'generating_progress', '', [
+				this.elements.progressText.textContent = formatMessage( 'generating_progress', [
 					[ '%1$d', state.generated ],
 					[ '%2$d', state.total ],
 				] );
@@ -293,9 +349,7 @@
 		 * @returns {void}
 		 */
 		showBatchFailure( response ) {
-			this.showErrorMessage(
-				response?.data?.message ?? message( 'generation_failed', 'Failed to generate coupons. Please try again.' )
-			);
+			this.showErrorMessage( response?.data?.message ?? message( 'generation_failed' ) );
 		}
 
 		/**
@@ -306,6 +360,7 @@
 		 */
 		finishBatchGeneration( state ) {
 			this.elements.form.classList.remove( 'loading' );
+			globalThis.removeEventListener( 'beforeunload', this.onBeforeUnload );
 			this.setSubmitButtonDisabled( false );
 
 			if ( state.generated > 0 ) {
@@ -330,7 +385,7 @@
 			this.setResultsVisible( true );
 
 			if ( state.remaining === 0 ) {
-				this.showSuccessMessage( formatMessage( 'generation_complete', '', [
+				this.showSuccessMessage( formatMessage( 'generation_complete', [
 					[ '%d', state.generated ],
 				] ) );
 			}
@@ -408,7 +463,7 @@
 				body.append( 'product_ids[]', productId );
 			}
 
-			const response = await fetch( AJAX_ENDPOINT, {
+			const response = await fetch( message( 'ajax_url' ), {
 				body,
 				credentials: 'same-origin',
 				headers: {
@@ -439,32 +494,32 @@
 				.slice( 0, MAX_PREFIX_LENGTH );
 		}
 
-		/** Validate and clamp the coupon-count input field. */
-		validateNumberInput() {
+		/**
+		 * Show or clear the coupon-count warning without changing what was typed.
+		 *
+		 * @returns {void}
+		 */
+		updateCountWarning() {
 			const { couponCount } = this.elements;
 
 			if ( ! couponCount ) {
 				return;
 			}
 
-			const raw = String( couponCount.value ).replace( /\D/g, '' );
-			let num = Number.parseInt( raw, 10 );
-
 			document.querySelector( selectors.warning )?.remove();
 
-			if ( Number.isNaN( num ) || num < 1 ) {
-				couponCount.value = '1';
+			const count = Number.parseInt( couponCount.value, 10 );
+
+			if ( Number.isNaN( count ) ) {
 				return;
 			}
 
-			if ( num > MAX_COUPON_COUNT ) {
-				num = MAX_COUPON_COUNT;
-				couponCount.value = String( num );
+			if ( count > MAX_COUPON_COUNT ) {
 				couponCount.insertAdjacentElement(
 					'afterend',
 					buildWarningSpan(
 						'error',
-						formatMessage( 'max_coupons_warning', '', [
+						formatMessage( 'max_coupons_warning', [
 							[ '%d', MAX_COUPON_COUNT ],
 						] )
 					)
@@ -472,14 +527,57 @@
 				return;
 			}
 
-			couponCount.value = String( num );
-
-			if ( num > 50 ) {
+			if ( count > CAUTION_ABOVE ) {
 				couponCount.insertAdjacentElement(
 					'afterend',
 					buildWarningSpan( 'caution', message( 'many_coupons_warning' ) )
 				);
 			}
+		}
+
+		/**
+		 * Bring the coupon count into range once the user has finished editing it.
+		 *
+		 * @returns {void}
+		 */
+		normalizeCouponCount() {
+			const { couponCount } = this.elements;
+
+			if ( ! couponCount ) {
+				return;
+			}
+
+			const count = Number.parseInt( String( couponCount.value ).replace( /\D/g, '' ), 10 );
+
+			if ( Number.isNaN( count ) || count < 1 ) {
+				couponCount.value = '1';
+			} else {
+				couponCount.value = String( Math.min( count, MAX_COUPON_COUNT ) );
+			}
+
+			this.updateCountWarning();
+		}
+
+		/**
+		 * Bring the random code length into range once the user has finished editing it.
+		 *
+		 * @returns {void}
+		 */
+		normalizeCodeLength() {
+			const { codeLength } = this.elements;
+
+			if ( ! codeLength ) {
+				return;
+			}
+
+			const length = Number.parseInt( String( codeLength.value ).replace( /\D/g, '' ), 10 );
+
+			if ( Number.isNaN( length ) || length < MIN_CODE_LENGTH ) {
+				codeLength.value = String( MIN_CODE_LENGTH );
+				return;
+			}
+
+			codeLength.value = String( Math.min( length, MAX_CODE_LENGTH ) );
 		}
 
 		/**
@@ -493,19 +591,20 @@
 			const validations = [
 				[ () => this.validateProductSelection( errors ), this.elements.products ],
 				[ () => this.validateCouponCount( errors ), this.elements.couponCount ],
-				[ () => this.validateCouponPrefix( errors ), this.elements.prefix ],
 				[ () => this.validateCodeLength( errors ), this.elements.codeLength ],
 			];
 
 			for ( const [ validate, field ] of validations ) {
-				if ( ! validate() && firstInvalid === null ) {
-					firstInvalid = field;
+				this.clearInvalid( field );
+
+				if ( ! validate() ) {
+					this.markInvalid( field );
+					firstInvalid ??= field;
 				}
 			}
 
 			if ( errors.length > 0 ) {
 				this.showErrorMessage( errors.join( '\n' ) );
-				firstInvalid?.classList.add( 'error' );
 				firstInvalid?.focus();
 			}
 
@@ -520,7 +619,7 @@
 		 */
 		validateProductSelection( errors ) {
 			if ( this.getSelectedProductIds().length === 0 ) {
-				errors.push( message( 'select_product', 'Please select at least one product.' ) );
+				errors.push( message( 'select_product' ) );
 				return false;
 			}
 
@@ -538,12 +637,12 @@
 			const count = Number.parseInt( raw, 10 );
 
 			if ( ! raw || Number.isNaN( count ) || count < 1 ) {
-				errors.push( message( 'invalid_coupon_count', 'Please enter a valid number of coupons (minimum 1).' ) );
+				errors.push( message( 'invalid_coupon_count' ) );
 				return false;
 			}
 
 			if ( count > MAX_COUPON_COUNT ) {
-				errors.push( formatMessage( 'max_coupon_count', 'Maximum number of coupons is %d.', [
+				errors.push( formatMessage( 'max_coupon_count', [
 					[ '%d', MAX_COUPON_COUNT ],
 				] ) );
 				return false;
@@ -553,65 +652,19 @@
 		}
 
 		/**
-		 * Validate coupon prefix field.
-		 *
-		 * @param {string[]} errors - Collector array.
-		 * @returns {boolean} True when valid.
-		 */
-		validateCouponPrefix( errors ) {
-			const prefix = this.elements.prefix?.value ?? '';
-
-			if ( prefix.length > MAX_PREFIX_LENGTH ) {
-				errors.push( formatMessage( 'prefix_too_long', 'Coupon prefix must be %d characters or less.', [
-					[ '%d', MAX_PREFIX_LENGTH ],
-				] ) );
-				return false;
-			}
-
-			return true;
-		}
-
-		/** Validate and clamp the random coupon-code length field. */
-		validateCodeLengthInput() {
-			const { codeLength } = this.elements;
-
-			if ( ! codeLength ) {
-				return;
-			}
-
-			const min = toPositiveInteger( config.min_code_length, 8 );
-			const max = toPositiveInteger( config.max_code_length, 32 );
-			const raw = String( codeLength.value ).replace( /\D/g, '' );
-			let num = Number.parseInt( raw, 10 );
-
-			if ( Number.isNaN( num ) || num < min ) {
-				codeLength.value = String( min );
-				return;
-			}
-
-			if ( num > max ) {
-				num = max;
-			}
-
-			codeLength.value = String( num );
-		}
-
-		/**
 		 * Validate random coupon-code length field.
 		 *
 		 * @param {string[]} errors - Collector array.
 		 * @returns {boolean} True when valid.
 		 */
 		validateCodeLength( errors ) {
-			const min = toPositiveInteger( config.min_code_length, 8 );
-			const max = toPositiveInteger( config.max_code_length, 32 );
 			const raw = this.elements.codeLength?.value.trim() ?? '';
-			const count = Number.parseInt( raw, 10 );
+			const length = Number.parseInt( raw, 10 );
 
-			if ( ! raw || Number.isNaN( count ) || count < min || count > max ) {
-				errors.push( formatMessage( 'code_length_invalid', 'Please enter a random code length between %1$d and %2$d characters.', [
-					[ '%1$d', min ],
-					[ '%2$d', max ],
+			if ( ! raw || Number.isNaN( length ) || length < MIN_CODE_LENGTH || length > MAX_CODE_LENGTH ) {
+				errors.push( formatMessage( 'code_length_invalid', [
+					[ '%1$d', MIN_CODE_LENGTH ],
+					[ '%2$d', MAX_CODE_LENGTH ],
 				] ) );
 				return false;
 			}
@@ -641,52 +694,108 @@
 			globalThis.setTimeout( () => URL.revokeObjectURL( url ), 1000 );
 		}
 
-		/** Wire up real-time error-class removal on focus/input. */
+		/**
+		 * Clear a field's invalid state when the user edits it.
+		 *
+		 * The state is deliberately not cleared on focus: validation moves focus
+		 * to the first invalid field, and the mark has to survive that.
+		 *
+		 * @returns {void}
+		 */
 		initFormValidation() {
 			const fields = [
-				this.elements.products,
 				this.elements.couponCount,
-				this.elements.prefix,
 				this.elements.codeLength,
 			].filter( Boolean );
 
 			for ( const field of fields ) {
-				for ( const eventName of [ 'focus', 'input', 'change' ] ) {
-					field.addEventListener( eventName, () => field.classList.remove( 'error' ) );
+				for ( const eventName of [ 'input', 'change' ] ) {
+					field.addEventListener( eventName, () => this.clearInvalid( field ) );
 				}
+			}
+
+			// The product field is a WooCommerce enhanced select, which reports changes through jQuery events only.
+			if ( this.elements.products ) {
+				globalThis.jQuery?.( this.elements.products ).on( 'change', () => this.clearInvalid( this.elements.products ) );
 			}
 		}
 
 		/**
-		 * Display an error notice above the form.
+		 * The element that visibly represents a field.
+		 *
+		 * For the product field that is the select2 container WooCommerce inserts
+		 * after the original, visually hidden select.
+		 *
+		 * @param {HTMLElement} field - Form field.
+		 * @returns {Element|null} The visible container, or null when the field is shown itself.
+		 */
+		getEnhancedContainer( field ) {
+			const next = field.nextElementSibling;
+
+			return next?.classList.contains( 'select2-container' ) ? next : null;
+		}
+
+		/**
+		 * Mark a field as invalid for sighted and assistive-technology users.
+		 *
+		 * @param {HTMLElement|null} field - Form field.
+		 * @returns {void}
+		 */
+		markInvalid( field ) {
+			if ( ! field ) {
+				return;
+			}
+
+			field.classList.add( 'error' );
+			field.setAttribute( 'aria-invalid', 'true' );
+			this.getEnhancedContainer( field )?.classList.add( 'fgcbg-invalid' );
+		}
+
+		/**
+		 * Remove a field's invalid state.
+		 *
+		 * @param {HTMLElement|null} field - Form field.
+		 * @returns {void}
+		 */
+		clearInvalid( field ) {
+			if ( ! field ) {
+				return;
+			}
+
+			field.classList.remove( 'error' );
+			field.removeAttribute( 'aria-invalid' );
+			this.getEnhancedContainer( field )?.classList.remove( 'fgcbg-invalid' );
+		}
+
+		/** Remove every notice this script has shown. */
+		clearNotices() {
+			document.querySelectorAll( '.fgcbg-error-message, .fgcbg-success-message' ).forEach( ( notice ) => {
+				notice.remove();
+			} );
+		}
+
+		/**
+		 * Display an error notice above the form. It stays until the next attempt.
 		 *
 		 * @param {string} text - Error text.
 		 * @returns {void}
 		 */
 		showErrorMessage( text ) {
-			document.querySelectorAll( '.fgcbg-error-message' ).forEach( ( notice ) => {
-				notice.remove();
-			} );
-
-			const notice = buildNotice( 'notice notice-error fgcbg-error-message', text );
-			this.insertNoticeBeforeForm( notice );
-
-			globalThis.setTimeout( () => {
-				notice.classList.add( 'is-dismissing' );
-				notice.addEventListener( 'transitionend', () => notice.remove(), { once: true } );
-				globalThis.setTimeout( () => notice.remove(), 500 );
-			}, 5000 );
+			this.clearNotices();
+			this.insertNoticeBeforeForm( buildNotice( 'notice notice-error fgcbg-error-message', text ) );
+			speak( text, 'assertive' );
 		}
 
 		/**
-		 * Display a success notice above the form.
+		 * Display a success notice above the form, replacing any earlier notice.
 		 *
 		 * @param {string} text - Success text.
 		 * @returns {void}
 		 */
 		showSuccessMessage( text ) {
-			const notice = buildNotice( 'notice notice-success is-dismissible fgcbg-success-message', text );
-			this.insertNoticeBeforeForm( notice );
+			this.clearNotices();
+			this.insertNoticeBeforeForm( buildNotice( 'notice notice-success fgcbg-success-message', text ) );
+			speak( text, 'polite' );
 		}
 
 		/**
@@ -735,27 +844,18 @@
 		/**
 		 * Warn before navigating away during generation.
 		 *
+		 * Bound only while a run is in progress.
+		 *
 		 * @param {BeforeUnloadEvent} event - Before unload event.
-		 * @returns {string|undefined} Warning message for legacy browsers.
+		 * @returns {string} Warning message for legacy browsers.
 		 */
 		warnBeforeUnload( event ) {
-			if ( ! this.elements.form.classList.contains( 'loading' ) ) {
-				return undefined;
-			}
-
 			const warning = message( 'generation_in_progress' );
+
 			event.preventDefault();
 			event.returnValue = warning;
 
 			return warning;
-		}
-
-		/** Reset loading state on fresh page load (back-button / refresh edge case). */
-		resetLoadingState() {
-			this.elements.form.classList.remove( 'loading' );
-			if ( this.elements.submitButton ) {
-				this.elements.submitButton.disabled = false;
-			}
 		}
 	}
 
