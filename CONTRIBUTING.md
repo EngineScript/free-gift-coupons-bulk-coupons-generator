@@ -79,7 +79,7 @@ free-gift-bulk-coupon-generator/
 |-- assets/                             # Admin CSS and JavaScript
 |-- languages/                          # Translation template
 |   `-- free-gift-bulk-coupon-generator.pot
-|-- tests/                              # PHPUnit tests
+|-- tests/                              # PHPUnit unit tests (tests/unit) and admin script tests (tests/js)
 |-- stubs/                              # Static-analysis stubs
 |-- README.md                           # Project documentation
 |-- readme.txt                          # WordPress.org readme
@@ -87,6 +87,7 @@ free-gift-bulk-coupon-generator/
 |-- CONTRIBUTING.md                     # This file
 |-- LICENSE                             # GPL license
 |-- composer.json                       # PHP dependencies
+|-- package.json                        # Admin script test dependencies (jsdom)
 |-- phpcs.xml                           # PHPCS configuration
 |-- phpstan.neon                        # PHPStan configuration
 |-- phpmd.xml                           # PHPMD configuration
@@ -143,10 +144,12 @@ function fgcbg_example_function( string $input ): string {
 
 2. **Automated testing**:
 
-   - Run PHPCS for coding standards.
-   - Run PHPStan and Psalm for static analysis.
-   - Run PHPMD for code quality checks.
-   - Run PHPUnit tests.
+   - Run PHPCS for coding standards (`composer phpcs`).
+   - Run PHPStan and Psalm for static analysis (`composer phpstan`, `composer psalm`).
+   - Run PHPMD for code quality checks (`composer phpmd`).
+   - Run the PHPUnit unit tests (`composer test`).
+   - Run the admin script tests (`npm ci`, then `npm test`; Node.js 22.22.2 or later and PHP on the path).
+   - The WordPress integration tests are generated and run by the compatibility workflow on GitHub Actions, across WordPress 7.0, the latest release, and nightly, and PHP 8.2 to 8.5.
 
 ## Submitting Changes
 
