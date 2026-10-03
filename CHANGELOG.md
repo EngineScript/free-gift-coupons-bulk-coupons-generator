@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Screen Detection**: The admin script and styles are loaded by comparing with the hook suffix WordPress returns for the generator screen instead of a hardcoded name.
 - **Missing Script or Settings**: The page now says so when JavaScript is disabled or the script settings could not be loaded, and disables the form in the second case.
 - **Unreadable Responses**: When a response cannot be read, the message now says that coupons may have been created and to check WooCommerce > Coupons before generating again.
+- **Expired Sessions**: When WordPress refuses a request because the session has ended or the page's security token has expired, the screen now asks you to reload the page instead of telling you to try again.
+- **Prefix Field**: The coupon prefix field now shows the prefix in lower case, the way coupon codes are stored, instead of upper-casing it.
 - **Interface Text**: The large-run confirmation, the "many coupons" caution, and the note under the coupon count no longer warn about PHP timeouts, which applied to single-request generation. The note now says that coupons are generated in small batches and to keep the page open.
 - **Expiry Text**: The sidebar now says that coupons expire after 1 year "by default", because the period can be changed with the `fgcbg_coupon_expiry_days` filter.
 - **Prefix Placeholder**: The prefix field's placeholder text is now translatable.
@@ -60,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Invalid Field Highlight**: The highlight on an invalid field is no longer removed the moment the field receives focus. Invalid fields are also marked with `aria-invalid`, and the product search shows the highlight on its visible control.
 - **Success Notices**: Success notices no longer accumulate across runs.
 - **Accessible Names**: The generated-codes text area and the progress bar now have accessible names, and the decorative warning icon is hidden from screen readers.
+- **Out-of-Range Filter Values**: A `fgcbg_max_coupons_per_batch`, `fgcbg_coupon_expiry_days`, or `fgcbg_coupon_code_length` filter that returns a number too large for an integer no longer causes a PHP 8.5 warning, which could break the response; the value is clamped instead.
 - **Caution Text Contrast**: The "many coupons" caution text now meets the WCAG AA contrast ratio.
 - **Notice Animation Scope**: The entrance animation no longer applies to success notices from WordPress or other plugins.
 

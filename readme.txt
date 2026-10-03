@@ -145,6 +145,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * The admin script and styles are loaded by the hook suffix WordPress returns for the generator screen instead of a hardcoded name.
 * The page now says so when JavaScript is disabled or the script settings could not be loaded.
 * When a response cannot be read, the message now says that coupons may have been created.
+* When the session or the page's security token has expired, the screen now asks you to reload the page.
+* The coupon prefix field now shows the prefix in lower case, the way coupon codes are stored.
 * Interface text no longer warns about PHP timeouts, which applied to single-request generation. The note under the coupon count now says that coupons are generated in small batches and to keep the page open.
 * The sidebar now says that coupons expire after 1 year "by default", because the period can be changed with a filter.
 * The prefix field's placeholder text is now translatable.
@@ -166,6 +168,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * Success notices no longer accumulate across runs.
 * The generated-codes text area and the progress bar now have accessible names.
 * The "many coupons" caution text now meets the WCAG AA contrast ratio.
+* A filter that returns a number too large for an integer no longer causes a PHP 8.5 warning.
 * The entrance animation no longer applies to success notices from WordPress or other plugins.
 
 = 1.6.0 =

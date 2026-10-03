@@ -1,21 +1,26 @@
 <?php
 /**
- * Test helpers for WordPress and WooCommerce stub state.
+ * Base test case with helpers for the WordPress and WooCommerce stub state.
  *
  * @package FreeGiftCouponsBulkGenerator
  */
 
+use PHPUnit\Framework\TestCase;
+
 /**
  * Encapsulates test access to bootstrap stub globals.
+ *
+ * An abstract class rather than a trait: Lizard, which Codacy runs, reads a
+ * PHP trait as one long function.
  */
-trait FGCBG_Test_Stub_State {
+abstract class FGCBG_Test_Case extends TestCase {
 
 	/**
 	 * Reset request globals used by AJAX tests.
 	 *
 	 * @return void
 	 */
-	private function reset_test_request(): void {
+	protected function reset_test_request(): void {
 		$_POST = array();
 	}
 
@@ -25,7 +30,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<string, mixed> $post_data POST data.
 	 * @return void
 	 */
-	private function set_test_post_data( array $post_data ): void {
+	protected function set_test_post_data( array $post_data ): void {
 		$_POST = $post_data;
 	}
 
@@ -35,7 +40,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<int, FGCBG_Test_Product> $products Product doubles keyed by ID.
 	 * @return void
 	 */
-	private function set_test_products( array $products ): void {
+	protected function set_test_products( array $products ): void {
 		$GLOBALS['fgcbg_test_products'] = $products;
 	}
 
@@ -44,7 +49,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return void
 	 */
-	private function clear_test_coupons(): void {
+	protected function clear_test_coupons(): void {
 		$GLOBALS['fgcbg_test_coupons'] = array();
 	}
 
@@ -53,7 +58,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<int, WC_Coupon>
 	 */
-	private function get_test_coupons(): array {
+	protected function get_test_coupons(): array {
 		return $GLOBALS['fgcbg_test_coupons'] ?? array();
 	}
 
@@ -63,7 +68,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param int $index Coupon index.
 	 * @return WC_Coupon
 	 */
-	private function get_test_coupon( int $index = 0 ): WC_Coupon {
+	protected function get_test_coupon( int $index = 0 ): WC_Coupon {
 		$coupons = $this->get_test_coupons();
 
 		$this->assertArrayHasKey( $index, $coupons, sprintf( 'Expected test coupon at index %d.', $index ) );
@@ -81,7 +86,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<int, string> $codes Random parts, in the order they will be generated.
 	 * @return void
 	 */
-	private function queue_test_coupon_codes( array $codes ): void {
+	protected function queue_test_coupon_codes( array $codes ): void {
 		$alphabet = (string) ( new ReflectionClassConstant( FGCBG_Coupon_Generator::class, 'CODE_ALPHABET' ) )->getValue();
 		$values   = array();
 
@@ -104,7 +109,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param string $mode Save mode.
 	 * @return void
 	 */
-	private function set_test_coupon_save_mode( string $mode ): void {
+	protected function set_test_coupon_save_mode( string $mode ): void {
 		$GLOBALS['fgcbg_test_coupon_save_mode'] = $mode;
 	}
 
@@ -113,7 +118,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<int, string>
 	 */
-	private function get_test_log_messages(): array {
+	protected function get_test_log_messages(): array {
 		return array_column( $GLOBALS['fgcbg_test_log'] ?? array(), 'message' );
 	}
 
@@ -123,7 +128,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<string, string>|null $types Coupon types keyed by slug.
 	 * @return void
 	 */
-	private function set_test_coupon_types( ?array $types ): void {
+	protected function set_test_coupon_types( ?array $types ): void {
 		if ( null === $types ) {
 			unset( $GLOBALS['fgcbg_test_coupon_types'] );
 			return;
@@ -138,7 +143,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param string|null $screen_id Screen ID.
 	 * @return void
 	 */
-	private function set_test_current_screen( ?string $screen_id ): void {
+	protected function set_test_current_screen( ?string $screen_id ): void {
 		if ( null === $screen_id ) {
 			unset( $GLOBALS['fgcbg_test_current_screen'] );
 			return;
@@ -156,7 +161,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<int, string> $hooks Hook names.
 	 * @return void
 	 */
-	private function remove_test_hooks( array $hooks ): void {
+	protected function remove_test_hooks( array $hooks ): void {
 		foreach ( $hooks as $hook ) {
 			unset( $GLOBALS['fgcbg_test_hooks'][ $hook ] );
 		}
@@ -167,7 +172,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return void
 	 */
-	private function reset_test_generation_state(): void {
+	protected function reset_test_generation_state(): void {
 		$this->clear_test_coupons();
 		$this->set_test_coupon_save_mode( 'ok' );
 		$this->set_test_coupon_types( null );
@@ -182,7 +187,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param string $current_time Current time in MySQL datetime format.
 	 * @return void
 	 */
-	private function set_test_current_time( string $current_time ): void {
+	protected function set_test_current_time( string $current_time ): void {
 		$GLOBALS['fgcbg_test_current_time'] = $current_time;
 	}
 
@@ -191,7 +196,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return void
 	 */
-	private function reset_test_current_time(): void {
+	protected function reset_test_current_time(): void {
 		unset( $GLOBALS['fgcbg_test_current_time'] );
 	}
 
@@ -200,7 +205,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return string
 	 */
-	private function get_test_current_time(): string {
+	protected function get_test_current_time(): string {
 		return current_time( 'mysql' );
 	}
 
@@ -210,7 +215,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param bool $can Whether the user has unspecified capabilities.
 	 * @return void
 	 */
-	private function set_test_current_user_can( bool $can ): void {
+	protected function set_test_current_user_can( bool $can ): void {
 		$GLOBALS['fgcbg_test_current_user_can'] = $can;
 	}
 
@@ -220,7 +225,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param array<string, mixed> $capabilities Capability map.
 	 * @return void
 	 */
-	private function set_test_current_user_capabilities( array $capabilities ): void {
+	protected function set_test_current_user_capabilities( array $capabilities ): void {
 		$GLOBALS['fgcbg_test_current_user_capabilities'] = $capabilities;
 	}
 
@@ -229,7 +234,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return void
 	 */
-	private function reset_test_asset_state(): void {
+	protected function reset_test_asset_state(): void {
 		unset(
 			$GLOBALS['fgcbg_test_enqueued'],
 			$GLOBALS['fgcbg_test_inline_scripts'],
@@ -254,7 +259,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	private function get_recorded_scripts(): array {
+	protected function get_recorded_scripts(): array {
 		return $GLOBALS['fgcbg_test_enqueued']['scripts'] ?? array();
 	}
 
@@ -263,7 +268,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	private function get_recorded_styles(): array {
+	protected function get_recorded_styles(): array {
 		return $GLOBALS['fgcbg_test_enqueued']['styles'] ?? array();
 	}
 
@@ -272,7 +277,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<string, array<int, array<string, mixed>>>
 	 */
-	private function get_recorded_inline_scripts(): array {
+	protected function get_recorded_inline_scripts(): array {
 		return $GLOBALS['fgcbg_test_inline_scripts'] ?? array();
 	}
 
@@ -283,7 +288,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param int    $index  Zero-based localization entry index.
 	 * @return array{data: array<string,mixed>, object_name: string}
 	 */
-	private function get_recorded_localized_script( string $handle, int $index = 0 ): array {
+	protected function get_recorded_localized_script( string $handle, int $index = 0 ): array {
 		$localized_scripts = $GLOBALS['fgcbg_test_localized_scripts'] ?? array();
 
 		$this->assertArrayHasKey(
@@ -311,7 +316,7 @@ trait FGCBG_Test_Stub_State {
 	 *
 	 * @return array<int, mixed>
 	 */
-	private function get_last_recorded_submenu_page(): array {
+	protected function get_last_recorded_submenu_page(): array {
 		$submenu_pages = $GLOBALS['fgcbg_test_submenu_pages'] ?? array();
 
 		$this->assertNotEmpty( $submenu_pages );
@@ -329,7 +334,7 @@ trait FGCBG_Test_Stub_State {
 	 * @param string|false $result Forced encoding result.
 	 * @return void
 	 */
-	private function set_test_json_encode_result( string|false $result ): void {
+	protected function set_test_json_encode_result( string|false $result ): void {
 		$GLOBALS['fgcbg_test_wp_json_encode_result'] = $result;
 	}
 }

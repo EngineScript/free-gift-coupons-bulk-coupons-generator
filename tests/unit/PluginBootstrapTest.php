@@ -7,7 +7,6 @@
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
-use PHPUnit\Framework\TestCase;
 use z4kn4fein\SemVer\SemverException;
 use z4kn4fein\SemVer\Version;
 
@@ -16,8 +15,7 @@ use z4kn4fein\SemVer\Version;
  *
  * This suite targets PHP 8.2+, matching the plugin minimum.
  */
-final class PluginBootstrapTest extends TestCase {
-	use FGCBG_Test_Stub_State;
+final class PluginBootstrapTest extends FGCBG_Test_Case {
 
 	/**
 	 * Hook suffix WordPress returns for the WooCommerce coupon generator submenu page.

@@ -288,6 +288,11 @@
 			const batchSize = Math.min( BATCH_SIZE, state.remaining );
 			const response = await this.sendBatchRequest( batchSize );
 
+			if ( response === 0 || response === -1 ) {
+				this.showErrorMessage( message( 'session_expired' ) );
+				return false;
+			}
+
 			if ( ! response?.success ) {
 				this.showBatchFailure( response );
 				return false;
@@ -483,6 +488,11 @@
 			} );
 			const payload = await response.json().catch( () => null );
 
+			// WordPress answers 0 (logged out or unknown action) or -1 (nonce refused); nothing was created.
+			if ( payload === 0 || payload === -1 ) {
+				return payload;
+			}
+
 			if ( ! payload ) {
 				throw new Error( `Unexpected AJAX response: ${ response.status }` );
 			}
@@ -490,7 +500,7 @@
 			return payload;
 		}
 
-		/** Sanitize the coupon prefix input on keystroke. */
+		/** Reduce the coupon prefix to lower-case letters and digits as it is typed, as codes are stored. */
 		formatPrefix() {
 			const { prefix } = this.elements;
 
@@ -500,7 +510,7 @@
 
 			prefix.value = String( prefix.value )
 				.replace( /[^a-zA-Z0-9]/g, '' )
-				.toUpperCase()
+				.toLowerCase()
 				.slice( 0, MAX_PREFIX_LENGTH );
 		}
 

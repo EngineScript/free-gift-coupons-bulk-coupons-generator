@@ -44,7 +44,7 @@ test( 'every setting the script reads is provided by PHP, and every provided set
 test( 'every selector the script uses exists in the rendered page', async () => {
 	view = await loadPage();
 	const block = source.match( /const selectors = Object\.freeze\( \{([\s\S]*?)\} \);/ )[ 1 ];
-	const selectors = Array.from( block.matchAll( /'([.#][^']+)'/g ), ( match ) => match[ 1 ] );
+	const selectors = Array.from( block.matchAll( /\x27([.#][^\x27]+)\x27/g ), ( match ) => match[ 1 ] );
 
 	assert.ok( selectors.length >= 13 );
 
@@ -112,7 +112,9 @@ test( 'leaving the code length field brings it into range', async () => {
 
 test( 'the coupon count shows warnings without changing the value, and is clamped when left', async () => {
 	view = await loadPage();
-	const warning = () => view.document.querySelector( '#coupon-count-warning' );
+	function warning() {
+		return view.document.querySelector( '#coupon-count-warning' );
+	}
 
 	setField( view, view.count, '' );
 	assert.equal( view.count.value, '' );
@@ -136,9 +138,9 @@ test( 'the coupon count shows warnings without changing the value, and is clampe
 test( 'the prefix is reduced to letters and digits as it is typed', async () => {
 	view = await loadPage();
 
-	setField( view, view.prefix, 'gi-ft 2026!' );
+	setField( view, view.prefix, 'Gi-FT 2026!' );
 
-	assert.equal( view.prefix.value, 'GIFT2026' );
+	assert.equal( view.prefix.value, 'gift2026' );
 } );
 
 test( 'a missing product is reported, marked, focused, announced, and kept on screen', async () => {
@@ -174,9 +176,11 @@ test( 'a second attempt replaces the first error and moves the mark', async () =
 
 test( 'a run of 25 is sent as requests of 10, 10, and 5 and reports success once', async () => {
 	let releaseFirst;
-	const firstResponse = () => new Promise( ( resolve ) => {
-		releaseFirst = () => resolve( okResponse( 10, 0 ) );
-	} );
+	function firstResponse() {
+		return new Promise( ( resolve ) => {
+			releaseFirst = () => resolve( okResponse( 10, 0 ) );
+		} );
+	}
 
 	view = await loadPage( { responses: [ firstResponse, okResponse( 10, 10 ), okResponse( 5, 20 ) ] } );
 	selectProducts( view, [ '123', '456' ] );
@@ -202,7 +206,7 @@ test( 'a run of 25 is sent as requests of 10, 10, and 5 and reports success once
 	assert.equal( first.method, 'POST' );
 	assert.equal( first.body.action, 'fgcbg_generate_batch' );
 	assert.equal( first.body.nonce, config.nonce );
-	assert.equal( first.body.coupon_prefix, 'GIFT' );
+	assert.equal( first.body.coupon_prefix, 'gift' );
 	assert.equal( first.body.coupon_code_length, '12' );
 	assert.deepEqual( first.products, [ '123', '456' ] );
 
@@ -222,11 +226,11 @@ test( 'a run of 25 is sent as requests of 10, 10, and 5 and reports success once
 
 test( 'a warning from the server is shown once, after the success notice, and cleared by the next attempt', async () => {
 	const warning = 'These gift products are not purchasable and cannot be gifted until they are published, in stock, and have a price: Unreleased Mug.';
-	const withWarning = ( count, first ) => {
+	function withWarning( count, first ) {
 		const response = okResponse( count, first );
 		response.data.warning = warning;
 		return response;
-	};
+	}
 
 	view = await loadPage( { responses: [ withWarning( 10, 0 ), withWarning( 5, 10 ) ] } );
 	selectProducts( view, [ '123', '600' ] );
@@ -271,13 +275,17 @@ test( 'a server message is shown as text, never as markup', async () => {
 	assert.equal( view.document.querySelector( '#fgcbg-progress' ).hidden, true );
 } );
 
-test( 'a refused nonce (-1) shows the generic failure message', async () => {
-	view = await loadPage( { responses: [ '-1' ] } );
-	selectProducts( view, [ '123' ] );
-	submitForm( view );
-	await waitForRun( view );
+test( 'a refused nonce (-1) or an ended session (0) asks for a reload', async () => {
+	for ( const body of [ '-1', '0' ] ) {
+		view?.close();
+		view = await loadPage( { responses: [ body, okResponse( 10 ) ] } );
+		selectProducts( view, [ '123' ] );
+		submitForm( view );
+		await waitForRun( view );
 
-	assert.deepEqual( notices( view, 'error' ), [ config.generation_failed ] );
+		assert.deepEqual( notices( view, 'error' ), [ config.session_expired ], `body ${ body }` );
+		assert.equal( view.requests.length, 1, 'No further request is sent.' );
+	}
 } );
 
 test( 'an unreadable response says coupons may exist, keeps earlier codes, and stops', async () => {

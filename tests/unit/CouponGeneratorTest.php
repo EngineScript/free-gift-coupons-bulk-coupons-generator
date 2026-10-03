@@ -5,13 +5,10 @@
  * @package FreeGiftCouponsBulkGenerator
  */
 
-use PHPUnit\Framework\TestCase;
-
 /**
  * Tests for WooCommerce coupon creation behavior.
  */
-final class CouponGeneratorTest extends TestCase {
-	use FGCBG_Test_Stub_State;
+final class CouponGeneratorTest extends FGCBG_Test_Case {
 
 	/**
 	 * Characters the generator may use for the random part of a code.
@@ -291,6 +288,38 @@ final class CouponGeneratorTest extends TestCase {
 
 		$this->assertSame( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, strlen( $too_long['codes'][0] ) );
 		$this->assertSame( FGCBG_Coupon_Generator::MIN_CODE_LENGTH, strlen( $too_short['codes'][0] ) );
+	}
+
+	/**
+	 * Filter values outside the integer range are clamped without a PHP warning.
+	 */
+	public function test_out_of_range_filter_values_are_clamped_without_warnings(): void {
+		foreach ( array( 'fgcbg_max_coupons_per_batch', 'fgcbg_coupon_expiry_days', 'fgcbg_coupon_code_length' ) as $hook ) {
+			add_filter(
+				$hook,
+				static function () {
+					return 1e30;
+				}
+			);
+		}
+
+		// Turn the PHP 8.5 out-of-range cast warning into a test failure.
+		set_error_handler(
+			static function ( int $severity, string $text ): bool {
+				throw new ErrorException( $text, 0, $severity );
+			},
+			E_WARNING
+		);
+
+		try {
+			$result = ( new FGCBG_Coupon_Generator() )->generate_coupon_batch( array( 123 ), 2 );
+		} finally {
+			restore_error_handler();
+			$this->remove_test_hooks( array( 'fgcbg_max_coupons_per_batch', 'fgcbg_coupon_expiry_days', 'fgcbg_coupon_code_length' ) );
+		}
+
+		$this->assertSame( 2, $result['generated'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, strlen( $result['codes'][0] ) );
 	}
 
 	/**

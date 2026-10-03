@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import shutil
 import stat
-import subprocess
+
+# subprocess runs git with a fixed argument list and no shell.
+import subprocess  # nosec B404
 from pathlib import Path
 from zipfile import ZipFile
-
 
 SLUG = "free-gift-bulk-coupon-generator"
 RELEASE_FILES = {
@@ -18,10 +20,19 @@ RELEASE_FILES = {
 RELEASE_DIRS = {"includes", "assets", "languages"}
 
 
+def git_executable() -> str:
+    """Return the absolute path of git, so no partial executable path is run."""
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("git is required to list tracked files.")
+    return git
+
+
 def expected_contents(root: Path) -> dict[str, bytes]:
     """Read only tracked regular production/public files, never vendor output."""
-    tracked = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True
+    # Fixed arguments, an absolute git path, and no shell.
+    tracked = subprocess.run(  # nosec B603
+        [git_executable(), "ls-files", "-z"], cwd=root, check=True, capture_output=True
     ).stdout.decode("utf-8").split("\0")
     names = {
         name for name in tracked

@@ -8,6 +8,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
 
 const renderScript = fileURLToPath( new URL( './render-admin-page.php', import.meta.url ) );
@@ -62,7 +63,8 @@ export function formatted( key, replacements ) {
  * @returns {Promise<Object>} The window, its document, and the recorders.
  */
 export async function loadPage( { config = page.config, responses = [], confirmResult = true } = {} ) {
-	const dom = new JSDOM( `<!DOCTYPE html><html lang="en"><head><title>Generator</title></head><body>${ page.html }</body></html>`, {
+	// jsdom wraps the rendered markup in html, head, and body elements.
+	const dom = new JSDOM( page.html, {
 		runScripts: 'outside-only',
 		url: 'https://example.test/wp-admin/admin.php?page=free-gift-bulk-coupon-generator',
 	} );
@@ -122,7 +124,7 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 		}
 	} );
 
-	window.eval( source );
+	new vm.Script( source, { filename: 'assets/js/admin.js' } ).runInContext( dom.getInternalVMContext() );
 
 	const document = window.document;
 

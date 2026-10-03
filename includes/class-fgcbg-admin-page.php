@@ -179,9 +179,9 @@ final class FGCBG_Admin_Page {
 			</th>
 			<td>
 				<input type="text" name="coupon_prefix" id="coupon_prefix"
-						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="<?php esc_attr_e( 'e.g. GIFT', 'free-gift-bulk-coupon-generator' ); ?>" aria-describedby="coupon-prefix-description">
+						class="regular-text" maxlength="<?php echo esc_attr( (string) FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH ); ?>" placeholder="<?php esc_attr_e( 'e.g. gift', 'free-gift-bulk-coupon-generator' ); ?>" aria-describedby="coupon-prefix-description">
 				<p class="description" id="coupon-prefix-description">
-					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. GIFT).', 'free-gift-bulk-coupon-generator' ); ?>
+					<?php esc_html_e( 'Optional prefix for coupon codes (e.g. gift). Coupon codes are stored in lower case.', 'free-gift-bulk-coupon-generator' ); ?>
 				</p>
 			</td>
 		</tr>

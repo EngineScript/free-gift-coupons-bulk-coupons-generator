@@ -124,10 +124,10 @@ class AutomationTests(unittest.TestCase):
     def test_release_requires_exact_commit_and_every_quality_job(self):
         script = workflow_step("release.yml", "Require successful quality checks for this commit")
         run_filter = re.search(
-            r"RUN_ID=\$\(jq\b.*?'\n(.*?)\n\s*' \"\$RUNNER_TEMP/quality-runs.json\"\)", script, re.S
+            r"RUN_ID=\$\(jq\b.*?'\n(.*?)\n\s*' \"\$RUNNER_TEMP/quality-runs.json\"\)", script, re.DOTALL
         ).group(1)
         jobs_filter = re.search(
-            r"jq -e '\n(.*?)\n\s*' \"\$RUNNER_TEMP/quality-jobs.json\"", script, re.S
+            r"jq -e '\n(.*?)\n\s*' \"\$RUNNER_TEMP/quality-jobs.json\"", script, re.DOTALL
         ).group(1)
         run = {"id": 1, "head_sha": "abc", "head_branch": "main",
                "head_repository": {"full_name": "fixture/repo"},
@@ -137,7 +137,7 @@ class AutomationTests(unittest.TestCase):
             result = subprocess.run(
                 ["jq", "-er", "--arg", "sha", "abc", "--arg", "repo", "fixture/repo",
                  "--arg", "branch", "main", run_filter],
-                input=json.dumps({"workflow_runs": runs}), text=True, capture_output=True
+                input=json.dumps({"workflow_runs": runs}), text=True, capture_output=True, check=False
             )
             return result.returncode == 0
 
@@ -149,7 +149,7 @@ class AutomationTests(unittest.TestCase):
             self.assertFalse(accepts_run([dict(run, **changes)]))
         self.assertFalse(accepts_run([run, dict(run, id=2, conclusion="failure")]))
         workflow = (WORKFLOWS / "wp-compatibility-test.yml").read_text()
-        names = [name for name in re.findall(r"^    name: (.+)$", workflow, re.M) if "${{" not in name]
+        names = [name for name in re.findall(r"^    name: (.+)$", workflow, re.MULTILINE) if "${{" not in name]
         names += [f"Test WordPress {wp} with PHP {php} (highest deps)"
                   for php in ("8.2", "8.3", "8.4", "8.5") for wp in ("7.0", "latest", "nightly")]
         names.append("Test WordPress latest with PHP 8.2 (lowest deps)")
@@ -158,7 +158,7 @@ class AutomationTests(unittest.TestCase):
         def accepts_jobs(records):
             return subprocess.run(
                 ["jq", "-e", jobs_filter], input=json.dumps([{"jobs": records}]),
-                text=True, capture_output=True
+                text=True, capture_output=True, check=False
             ).returncode == 0
 
         self.assertEqual(21, len(jobs))
@@ -186,7 +186,7 @@ class AutomationTests(unittest.TestCase):
                            GITHUB_API_URL="https://api.invalid", GITHUB_REPOSITORY="fixture/repo",
                            FIXTURE_HTTP_STATUS=status, FIXTURE_CURL_EXIT=code)
                 result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
-                                        env=env, capture_output=True, text=True)
+                                        env=env, capture_output=True, text=True, check=False)
                 if expected is None:
                     self.assertNotEqual(0, result.returncode)
                     self.assertEqual("", output.read_text())
@@ -207,7 +207,7 @@ class AutomationTests(unittest.TestCase):
                 self.write("README.md", "# Fixture\n\n" + badge.format(readme_version))
                 before = (self.root / "README.md").read_bytes()
                 result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
-                                        env=env, capture_output=True, text=True)
+                                        env=env, capture_output=True, text=True, check=False)
                 self.assertEqual(accepted, result.returncode == 0, result.stdout + result.stderr)
                 self.assertEqual(before, (self.root / "README.md").read_bytes())
 

@@ -186,6 +186,7 @@ final class FGCBG_Admin_Assets {
 			/* translators: %d: Number of coupons generated. */
 			'generation_complete'    => __( 'Successfully generated %d coupons.', 'free-gift-bulk-coupon-generator' ),
 			'generation_failed'      => __( 'Failed to generate coupons. Please try again.', 'free-gift-bulk-coupon-generator' ),
+			'session_expired'        => __( 'Your session has expired or this page is out of date. Reload the page, then try again.', 'free-gift-bulk-coupon-generator' ),
 			'response_unreadable'    => __( 'The server response could not be read, so some coupons may have been created without being listed here. Check WooCommerce > Coupons before generating again.', 'free-gift-bulk-coupon-generator' ),
 		);
 	}

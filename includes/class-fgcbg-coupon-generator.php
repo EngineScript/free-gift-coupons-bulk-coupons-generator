@@ -270,7 +270,7 @@ final class FGCBG_Coupon_Generator {
 		 *
 		 * @param int $max_count Maximum coupons per request. Default 100.
 		 */
-		$max_count = max( 1, (int) apply_filters( 'fgcbg_max_coupons_per_batch', self::MAX_COUPONS_PER_BATCH ) );
+		$max_count = max( 1, $this->to_int( apply_filters( 'fgcbg_max_coupons_per_batch', self::MAX_COUPONS_PER_BATCH ) ) );
 		$count     = min( $requested_count, $max_count );
 
 		/**
@@ -280,7 +280,7 @@ final class FGCBG_Coupon_Generator {
 		 *
 		 * @param int $expiry_days Days until expiry. Default 365.
 		 */
-		$expiry_days = max( 1, (int) apply_filters( 'fgcbg_coupon_expiry_days', self::DEFAULT_EXPIRY_DAYS ) );
+		$expiry_days = max( 1, $this->to_int( apply_filters( 'fgcbg_coupon_expiry_days', self::DEFAULT_EXPIRY_DAYS ) ) );
 		$code_length = $this->normalize_code_length( $code_length );
 
 		return array(
@@ -562,6 +562,42 @@ final class FGCBG_Coupon_Generator {
 	}
 
 	/**
+	 * Convert a filtered value to an integer without a PHP warning.
+	 *
+	 * A float, or a numeric string, outside the integer range is clamped to
+	 * the nearest integer limit; casting it directly makes PHP 8.5 warn, and
+	 * a displayed warning would break the JSON response. NaN becomes 0. Other
+	 * values are cast as before.
+	 *
+	 * @since 1.7.0
+	 * @param mixed $value Filtered value.
+	 * @return int
+	 */
+	private function to_int( mixed $value ): int {
+		if ( is_string( $value ) && is_numeric( $value ) ) {
+			$value = (float) $value;
+		}
+
+		if ( ! is_float( $value ) ) {
+			return (int) $value;
+		}
+
+		if ( is_nan( $value ) ) {
+			return 0;
+		}
+
+		if ( $value >= (float) PHP_INT_MAX ) {
+			return PHP_INT_MAX;
+		}
+
+		if ( $value <= (float) PHP_INT_MIN ) {
+			return PHP_INT_MIN;
+		}
+
+		return (int) $value;
+	}
+
+	/**
 	 * Normalize generated coupon code length.
 	 *
 	 * @since 1.6.0
@@ -579,7 +615,7 @@ final class FGCBG_Coupon_Generator {
 		 * @param int      $requested_length Requested length, or the default of 12 when none was given.
 		 * @param int|null $code_length      Length as passed by the caller; null when none was given.
 		 */
-		$filtered_length = (int) apply_filters( 'fgcbg_coupon_code_length', $requested_length, $code_length );
+		$filtered_length = $this->to_int( apply_filters( 'fgcbg_coupon_code_length', $requested_length, $code_length ) );
 
 		return max( self::MIN_CODE_LENGTH, min( self::MAX_CODE_LENGTH, $filtered_length ) );
 	}

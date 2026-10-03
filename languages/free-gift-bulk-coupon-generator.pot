@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-03T02:08:45+00:00\n"
+"POT-Creation-Date: 2026-10-03T03:18:02+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: free-gift-bulk-coupon-generator\n"
@@ -97,6 +97,10 @@ msgid "Failed to generate coupons. Please try again."
 msgstr ""
 
 #: includes/class-fgcbg-admin-assets.php:189
+msgid "Your session has expired or this page is out of date. Reload the page, then try again."
+msgstr ""
+
+#: includes/class-fgcbg-admin-assets.php:190
 msgid "The server response could not be read, so some coupons may have been created without being listed here. Check WooCommerce > Coupons before generating again."
 msgstr ""
 
@@ -163,11 +167,11 @@ msgid "Coupon Prefix"
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:182
-msgid "e.g. GIFT"
+msgid "e.g. gift"
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:184
-msgid "Optional prefix for coupon codes (e.g. GIFT)."
+msgid "Optional prefix for coupon codes (e.g. gift). Coupon codes are stored in lower case."
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:201

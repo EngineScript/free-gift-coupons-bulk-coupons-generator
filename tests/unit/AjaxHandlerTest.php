@@ -5,13 +5,10 @@
  * @package FreeGiftCouponsBulkGenerator
  */
 
-use PHPUnit\Framework\TestCase;
-
 /**
  * Tests for admin AJAX coupon generation.
  */
-final class AjaxHandlerTest extends TestCase {
-	use FGCBG_Test_Stub_State;
+final class AjaxHandlerTest extends FGCBG_Test_Case {
 
 	/**
 	 * Reset request globals and WooCommerce test doubles.

@@ -7,9 +7,6 @@ parameters:
         - free-gift-bulk-coupon-generator.php
         - includes/
 
-    excludePaths:
-        - .github
-
     bootstrapFiles:
         - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
         - stubs/woocommerce.php
