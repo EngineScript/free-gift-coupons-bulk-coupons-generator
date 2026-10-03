@@ -237,10 +237,11 @@ class AutomationTests(unittest.TestCase):
         self.assertTrue((self.root / filename).is_file())
 
     def test_package_rejects_missing_extra_changed_and_linked_members(self):
-        for name in ("CHANGELOG.md", "LICENSE", "includes/fixture.php", "assets/css/admin.css",
-                     "languages/free-gift-bulk-coupon-generator.pot"):
+        for name in ("uninstall.php", "CHANGELOG.md", "LICENSE", "includes/fixture.php",
+                     "assets/css/admin.css", "languages/free-gift-bulk-coupon-generator.pot"):
             self.write(name, "fixture\n")
-        subprocess.run(["git", "add", "--", "CHANGELOG.md", "LICENSE", "includes", "assets", "languages"], check=True)
+        subprocess.run(["git", "add", "--", "uninstall.php", "CHANGELOG.md", "LICENSE", "includes", "assets",
+                        "languages"], check=True)
         build = self.root / "build" / package.SLUG
         for name, content in package.expected_contents(self.root).items():
             destination = build / name

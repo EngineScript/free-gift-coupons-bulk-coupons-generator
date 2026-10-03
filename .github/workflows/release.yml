@@ -132,6 +132,7 @@ jobs:
           rm -rf "$PLUGIN_SLUG"
           mkdir -p "$PLUGIN_SLUG"
           cp "$PLUGIN_FILE" "$PLUGIN_SLUG/"
+          cp uninstall.php "$PLUGIN_SLUG/"
           cp -r includes "$PLUGIN_SLUG/"
           cp -r assets "$PLUGIN_SLUG/"
           cp readme.txt "$PLUGIN_SLUG/"

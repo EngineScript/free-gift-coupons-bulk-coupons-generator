@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Uninstall File Packaging**: The release ZIP now includes `uninstall.php`, so WordPress runs the plugin's own uninstall routine when the plugin is deleted. It still removes nothing; generated coupons are kept.
+
 ## [1.7.0] - 2026-10-03
 
 ### Security

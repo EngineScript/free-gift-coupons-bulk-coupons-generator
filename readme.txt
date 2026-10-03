@@ -111,6 +111,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 == Changelog ==
 
+= Unreleased =
+
+**Fixed:**
+
+* The release ZIP now includes `uninstall.php`. It still removes nothing; generated coupons are kept.
+
 = 1.7.0 =
 
 **Security:**

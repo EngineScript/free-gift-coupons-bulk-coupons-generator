@@ -15,7 +15,7 @@ from zipfile import ZipFile
 
 SLUG = "free-gift-bulk-coupon-generator"
 RELEASE_FILES = {
-    f"{SLUG}.php", "readme.txt", "README.md", "CHANGELOG.md", "LICENSE"
+    f"{SLUG}.php", "uninstall.php", "readme.txt", "README.md", "CHANGELOG.md", "LICENSE"
 }
 RELEASE_DIRS = {"includes", "assets", "languages"}
 

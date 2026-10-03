@@ -87,6 +87,7 @@ jobs:
           mkdir -p "$BUILD_DIR"
 
           cp free-gift-bulk-coupon-generator.php "$BUILD_DIR/"
+          cp uninstall.php "$BUILD_DIR/"
           cp readme.txt "$BUILD_DIR/"
           cp README.md "$BUILD_DIR/"
           cp CHANGELOG.md "$BUILD_DIR/"
