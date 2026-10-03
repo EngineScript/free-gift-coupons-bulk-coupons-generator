@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unsaved Coupons**: A coupon that WooCommerce did not save is no longer reported as generated.
 - **Error Logging**: Coupon generation errors are now written to the WooCommerce log on every site, not only when `WP_DEBUG` is enabled.
 - **Prefix Type Check**: The coupon prefix is confirmed to be a string before it is sanitized.
-- **Product Search Styles**: The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen.
+- **Product Search Styles**: The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen, before the plugin's own stylesheet.
 - **Code Length Field**: Typing a two-digit length such as 12 no longer ends up as 24.
 - **Invalid Field Highlight**: The highlight on an invalid field is no longer removed the moment the field receives focus. Invalid fields are also marked with `aria-invalid`, and the product search shows the highlight on its visible control.
 - **Success Notices**: Success notices no longer accumulate across runs.

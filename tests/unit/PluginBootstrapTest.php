@@ -87,7 +87,7 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 
 		$this->assertSame( $generator, $ajax_generator, 'Expected AJAX handler to use the plugin coupon generator instance.' );
 		$this->assertSame( 10, has_action( 'admin_menu', array( $plugin, 'add_admin_menu' ) ) );
-		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( $assets, 'enqueue' ) ) );
+		$this->assertSame( 20, has_action( 'admin_enqueue_scripts', array( $assets, 'enqueue' ) ), 'After WooCommerce registers its admin styles.' );
 		$this->assertSame( 10, has_action( 'wp_ajax_fgcbg_generate_batch', array( $ajax, 'generate_batch' ) ) );
 	}
 
@@ -170,6 +170,7 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 			$scripts['fgcbg-admin']['args']
 		);
 		$this->assertSame( array( 'woocommerce_admin_styles', 'fgcbg-admin' ), array_keys( $styles ), 'The WooCommerce admin styles are queued ahead of the plugin styles.' );
+		$this->assertSame( array(), $styles['fgcbg-admin']['dependencies'], 'No dependency while WooCommerce has not registered its styles.' );
 
 		$localized_script = $this->get_recorded_localized_script( 'fgcbg-admin' );
 		$inline_scripts   = $this->get_recorded_inline_scripts();
@@ -184,6 +185,23 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 		$this->assertSame( FGCBG_Coupon_Generator::MIN_CODE_LENGTH, $localized_script['data']['min_code_length'] );
 		$this->assertSame( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, $localized_script['data']['max_code_length'] );
 		$this->assertArrayHasKey( 'response_unreadable', $localized_script['data'] );
+	}
+
+	/**
+	 * With WooCommerce's admin styles registered, the plugin stylesheet depends on them and prints after them.
+	 */
+	public function test_plugin_styles_depend_on_registered_woocommerce_admin_styles(): void {
+		$GLOBALS['fgcbg_test_registered_styles'] = array( 'woocommerce_admin_styles' );
+
+		try {
+			$assets = new FGCBG_Admin_Assets();
+			$assets->set_page_hook( self::GENERATOR_PAGE_HOOK );
+			$assets->enqueue( self::GENERATOR_PAGE_HOOK );
+		} finally {
+			unset( $GLOBALS['fgcbg_test_registered_styles'] );
+		}
+
+		$this->assertSame( array( 'woocommerce_admin_styles' ), $this->get_recorded_styles()['fgcbg-admin']['dependencies'] );
 	}
 
 	/**

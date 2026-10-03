@@ -66,11 +66,15 @@ final class FGCBG_Admin_Assets {
 	/**
 	 * Register asset hooks.
 	 *
+	 * Priority 20 runs after WooCommerce registers its admin styles (priority
+	 * 10), so the plugin stylesheet can be printed after them.
+	 *
 	 * @since 1.6.0
+	 * @since 1.7.0 Priority 20.
 	 * @return void
 	 */
 	public function register_hooks(): void {
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ), 20 );
 	}
 
 	/**
@@ -101,16 +105,18 @@ final class FGCBG_Admin_Assets {
 		/*
 		 * The product search is a WooCommerce enhanced select. Its styles ship in
 		 * the WooCommerce admin stylesheet, which WooCommerce enqueues only on its
-		 * own screens. Queue it here, ahead of the plugin stylesheet. It is not
-		 * declared as a dependency, so the plugin styles still load if the handle
-		 * is ever missing.
+		 * own screens. Queue it here and make the plugin stylesheet depend on it,
+		 * so it prints first. The dependency is declared only when the handle is
+		 * registered, because an unregistered dependency would keep the plugin
+		 * stylesheet from printing at all.
 		 */
 		wp_enqueue_style( 'woocommerce_admin_styles' );
+		$style_dependencies = wp_style_is( 'woocommerce_admin_styles', 'registered' ) ? array( 'woocommerce_admin_styles' ) : array();
 
 		wp_enqueue_style(
 			self::STYLE_HANDLE,
 			FGCBG_PLUGIN_URL . 'assets/css/admin.css',
-			array(),
+			$style_dependencies,
 			FGCBG_PLUGIN_VERSION
 		);
 

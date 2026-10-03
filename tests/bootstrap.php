@@ -537,6 +537,21 @@ if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_style_is' ) ) {
+	/**
+	 * Report whether a style handle is registered. Tests register handles through a global list.
+	 *
+	 * @param string $handle Style handle.
+	 * @param string $status Status to check.
+	 * @return bool
+	 */
+	function wp_style_is( $handle, $status = 'enqueued' ) {
+		unset( $status );
+
+		return in_array( $handle, $GLOBALS['fgcbg_test_registered_styles'] ?? array(), true );
+	}
+}
+
 if ( ! function_exists( 'wp_add_inline_script' ) ) {
 	/**
 	 * Record inline script data.

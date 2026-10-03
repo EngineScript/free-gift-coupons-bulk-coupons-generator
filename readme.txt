@@ -162,7 +162,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 * A coupon that WooCommerce did not save is no longer reported as generated.
 * Coupon generation errors are now written to the WooCommerce log on every site, not only when `WP_DEBUG` is enabled.
 * The coupon prefix is confirmed to be a string before it is sanitized.
-* The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen.
+* The WooCommerce admin stylesheet, which carries the product search styles, is now loaded on the generator screen, before the plugin's own stylesheet.
 * Typing a two-digit code length such as 12 no longer ends up as 24.
 * The highlight on an invalid field is no longer removed when the field receives focus; invalid fields are marked with `aria-invalid`.
 * Success notices no longer accumulate across runs.
