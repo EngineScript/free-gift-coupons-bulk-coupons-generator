@@ -3,7 +3,8 @@
  *
  * The page markup and the script settings come from the real PHP classes
  * (render-admin-page.php), and the real assets/js/admin.js runs inside jsdom.
- * Network requests, confirm(), and wp.a11y.speak() are replaced by recorders.
+ * Network requests, confirm(), wp.a11y.speak(), scrolling, and jQuery's event
+ * binding are replaced by recorders.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -60,9 +61,10 @@ export function formatted( key, replacements ) {
  * @param {Object|null} options.config - Script settings; null leaves them out.
  * @param {Array} options.responses - Queued responses: a payload object, a string body, an Error to throw, or a function returning a promise.
  * @param {boolean} options.confirmResult - What confirm() answers.
+ * @param {boolean} options.reducedMotion - Whether the user asks for reduced motion.
  * @returns {Promise<Object>} The window, its document, and the recorders.
  */
-export async function loadPage( { config = page.config, responses = [], confirmResult = true } = {} ) {
+export async function loadPage( { config = page.config, responses = [], confirmResult = true, reducedMotion = false } = {} ) {
 	// jsdom wraps the rendered markup in html, head, and body elements.
 	const dom = new JSDOM( page.html, {
 		runScripts: 'outside-only',
@@ -73,8 +75,19 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 	const spoken = [];
 	const confirmations = [];
 	const downloads = [];
+	const scrolls = [];
+	const jqueryHandlers = [];
 
-	window.Element.prototype.scrollIntoView = () => {};
+	window.Element.prototype.scrollIntoView = function ( options ) {
+		scrolls.push( { className: this.className, ...options } );
+	};
+	window.matchMedia = ( query ) => ( { matches: reducedMotion && query.includes( 'prefers-reduced-motion: reduce' ) } );
+	// WooCommerce's enhanced select reports changes through jQuery events only.
+	window.jQuery = ( element ) => ( {
+		on( name, handler ) {
+			jqueryHandlers.push( { element, name, handler } );
+		},
+	} );
 	window.HTMLAnchorElement.prototype.click = function () {
 		downloads.push( { download: this.getAttribute( 'download' ), href: this.getAttribute( 'href' ) } );
 	};
@@ -92,6 +105,8 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 		requests.push( {
 			url,
 			method: init.method,
+			credentials: init.credentials,
+			accept: init.headers?.Accept,
 			body: Object.fromEntries( init.body.entries() ),
 			products: init.body.getAll( 'product_ids[]' ),
 		} );
@@ -135,6 +150,8 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 		spoken,
 		confirmations,
 		downloads,
+		scrolls,
+		jqueryHandlers,
 		form: document.querySelector( '.fgcbg-form' ),
 		submit: document.querySelector( '.fgcbg-form .button-primary' ),
 		products: document.querySelector( '#fgcbg_product_ids' ),
@@ -156,6 +173,42 @@ export function selectProducts( view, ids ) {
 	for ( const id of ids ) {
 		view.products.append( new view.window.Option( `Product ${ id }`, id, true, true ) );
 	}
+}
+
+/**
+ * Insert the container WooCommerce's enhanced select puts after the product field.
+ *
+ * The container is created in the browser by WooCommerce's script, so PHP does
+ * not print it. The admin script only relies on its position and class name.
+ *
+ * @param {Object} view - Value returned by loadPage().
+ * @returns {HTMLElement} The container.
+ */
+export function enhanceProducts( view ) {
+	const container = view.document.createElement( 'span' );
+
+	container.className = 'select2 select2-container';
+	view.products.after( container );
+
+	return container;
+}
+
+/**
+ * Fire a jQuery event the script bound on an element.
+ *
+ * @param {Object} view - Value returned by loadPage().
+ * @param {HTMLElement} element - Element the handler was bound on.
+ * @param {string} name - Event name.
+ * @returns {number} How many handlers ran.
+ */
+export function triggerJQuery( view, element, name ) {
+	const handlers = view.jqueryHandlers.filter( ( entry ) => entry.element === element && entry.name === name );
+
+	for ( const entry of handlers ) {
+		entry.handler();
+	}
+
+	return handlers.length;
 }
 
 /**
@@ -222,7 +275,7 @@ export function waitForRun( view ) {
  * Texts of the notices the script has shown.
  *
  * @param {Object} view - Value returned by loadPage().
- * @param {string} type - 'error' or 'success'.
+ * @param {string} type - 'error', 'success', or 'warning'.
  * @returns {Array<string>} Notice texts.
  */
 export function notices( view, type ) {

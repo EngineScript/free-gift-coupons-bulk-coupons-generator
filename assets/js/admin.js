@@ -155,6 +155,7 @@
 
 			// Kept as a property so the same function can be added and removed.
 			this.onBeforeUnload = ( event ) => this.warnBeforeUnload( event );
+			this.submitButtonHadFocus = false;
 		}
 
 		/** Bootstrap all event bindings. */
@@ -257,6 +258,8 @@
 		prepareBatchGeneration() {
 			this.elements.form.classList.add( 'loading' );
 			globalThis.addEventListener( 'beforeunload', this.onBeforeUnload );
+			// A disabled button loses keyboard focus; remember it so the run can give it back.
+			this.submitButtonHadFocus = document.activeElement === this.elements.submitButton;
 			this.setSubmitButtonDisabled( true );
 			this.setProgressVisible( true );
 			this.setResultsVisible( false );
@@ -373,6 +376,7 @@
 			this.elements.form.classList.remove( 'loading' );
 			globalThis.removeEventListener( 'beforeunload', this.onBeforeUnload );
 			this.setSubmitButtonDisabled( false );
+			this.restoreSubmitButtonFocus();
 
 			if ( state.generated > 0 ) {
 				this.showBatchResults( state );
@@ -404,6 +408,26 @@
 			if ( state.warning !== '' ) {
 				this.showWarningMessage( state.warning );
 			}
+		}
+
+		/**
+		 * Return keyboard focus to the submit button after a run.
+		 *
+		 * Only when the button had focus as the run began and nothing else has
+		 * taken focus since, so focus is never pulled away from where the user
+		 * has moved it.
+		 *
+		 * @returns {void}
+		 */
+		restoreSubmitButtonFocus() {
+			const { activeElement } = document;
+			const focusWasLost = ! activeElement || activeElement === document.body || activeElement === this.elements.submitButton;
+
+			if ( this.submitButtonHadFocus && focusWasLost ) {
+				this.elements.submitButton?.focus();
+			}
+
+			this.submitButtonHadFocus = false;
 		}
 
 		/**

@@ -89,8 +89,6 @@ jobs:
           cp free-gift-bulk-coupon-generator.php "$BUILD_DIR/"
           cp uninstall.php "$BUILD_DIR/"
           cp readme.txt "$BUILD_DIR/"
-          cp README.md "$BUILD_DIR/"
-          cp CHANGELOG.md "$BUILD_DIR/"
           cp LICENSE "$BUILD_DIR/"
           cp -r includes "$BUILD_DIR/"
           cp -r assets "$BUILD_DIR/"
@@ -109,7 +107,7 @@ jobs:
           # skips the action's optional comment, not checks or annotations.
           repo-token: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && github.token || '' }}
           # Production-style plugin directory. Excludes repo-only files such as
-          # .github, GEMINI.md, and other development artifacts.
+          # .github, Markdown documents, and other development artifacts.
           build-dir: './plugin-check-build/free-gift-bulk-coupon-generator'
 
           # Configure which categories to check
@@ -1852,6 +1850,187 @@ jobs:
 
                   $this->assertFalse($response['success']);
                   $this->assertSame([], $GLOBALS['fgcbg_test_coupons']);
+              }
+          }
+          EOF
+          cat > tests/integration/FgcbgAdminScreenTest.php << 'EOF'
+          <?php
+          /**
+           * Class FgcbgAdminScreenTest
+           *
+           * The generator screen on real WordPress: where its menu item goes, what
+           * loads on the screen, and how translated text is printed. WordPress's own
+           * menu, script, nonce, and escaping functions do the work here; the unit
+           * suite only checks which of them the plugin calls.
+           *
+           * @package FreeGiftCouponsBulkGenerator
+           */
+
+          class FgcbgAdminScreenTest extends WP_UnitTestCase {
+              private const SLUG         = 'free-gift-bulk-coupon-generator';
+              private const COUPONS_MENU = 'edit.php?post_type=shop_coupon';
+              private const MENU_GLOBALS = ['menu', 'submenu', 'admin_page_hooks', '_registered_pages', '_parent_pages', '_wp_submenu_nopriv'];
+
+              private $saved_globals = [];
+
+              public function set_up() {
+                  parent::set_up();
+                  require_once ABSPATH . 'wp-admin/includes/plugin.php';
+
+                  foreach (self::MENU_GLOBALS as $name) {
+                      $this->saved_globals[$name] = $GLOBALS[$name] ?? null;
+                  }
+                  $GLOBALS['menu']    = [];
+                  $GLOBALS['submenu'] = [];
+              }
+
+              public function tear_down() {
+                  foreach ($this->saved_globals as $name => $value) {
+                      if (null === $value) {
+                          unset($GLOBALS[$name]);
+                      } else {
+                          $GLOBALS[$name] = $value;
+                      }
+                  }
+                  wp_dequeue_script('fgcbg-admin');
+                  wp_deregister_script('fgcbg-admin');
+                  wp_dequeue_style('fgcbg-admin');
+                  wp_deregister_style('fgcbg-admin');
+                  wp_dequeue_style('woocommerce_admin_styles');
+                  unset($GLOBALS['fgcbg_test_coupon_types']);
+                  wp_set_current_user(0);
+                  parent::tear_down();
+              }
+
+              private function log_in(array $capabilities): void {
+                  $user = self::factory()->user->create_and_get(['role' => 'subscriber']);
+                  foreach ($capabilities as $capability) {
+                      $user->add_cap($capability);
+                  }
+                  wp_set_current_user($user->ID);
+              }
+
+              /**
+               * Register the screen as the admin_menu action would, after the
+               * top-level menu that WooCommerce registers with this slug and capability.
+               */
+              private function register_screen(): string {
+                  add_menu_page('WooCommerce', 'WooCommerce', 'edit_others_shop_orders', 'woocommerce', null, '', '55.5');
+
+                  $plugin = FGCBG_Plugin::get_instance();
+                  $plugin->add_admin_menu();
+
+                  return (string) (new ReflectionProperty(FGCBG_Plugin::class, 'page_hook'))->getValue($plugin);
+              }
+
+              private function assets(): FGCBG_Admin_Assets {
+                  return (new ReflectionProperty(FGCBG_Plugin::class, 'admin_assets'))->getValue(FGCBG_Plugin::get_instance());
+              }
+
+              private function submenu_slugs(string $parent): array {
+                  return array_column($GLOBALS['submenu'][$parent] ?? [], 2);
+              }
+
+              public function test_screen_sits_under_woocommerce_for_a_user_with_its_menu() {
+                  $this->log_in(['publish_shop_coupons', 'edit_others_shop_orders']);
+                  $hook = $this->register_screen();
+
+                  $this->assertSame('woocommerce_page_' . self::SLUG, $hook);
+                  $this->assertContains(self::SLUG, $this->submenu_slugs('woocommerce'));
+                  $this->assertNotContains(self::SLUG, $this->submenu_slugs(self::COUPONS_MENU));
+                  $this->assertNotFalse(has_action($hook), 'WordPress holds the callback that prints the page.');
+              }
+
+              public function test_screen_sits_under_coupons_for_a_user_without_the_woocommerce_menu() {
+                  $this->log_in(['publish_shop_coupons']);
+                  $hook = $this->register_screen();
+
+                  $this->assertNotSame('', $hook, 'WordPress registered the screen for this user.');
+                  $this->assertContains(self::SLUG, $this->submenu_slugs(self::COUPONS_MENU));
+                  $this->assertNotContains(self::SLUG, $this->submenu_slugs('woocommerce'));
+                  $this->assertNotFalse(has_action($hook), 'WordPress holds the callback that prints the page.');
+              }
+
+              public function test_user_without_the_coupon_capability_gets_no_screen_and_no_assets() {
+                  $this->log_in(['edit_others_shop_orders']);
+                  $hook = $this->register_screen();
+
+                  $this->assertSame('', $hook);
+                  $this->assertNotContains(self::SLUG, $this->submenu_slugs('woocommerce'));
+                  $this->assertNotContains(self::SLUG, $this->submenu_slugs(self::COUPONS_MENU));
+
+                  // No hook suffix loads the assets while the screen is not registered, not even an empty one.
+                  foreach (['woocommerce_page_' . self::SLUG, ''] as $any_hook) {
+                      $this->assets()->enqueue($any_hook);
+                      $this->assertFalse(wp_script_is('fgcbg-admin', 'enqueued'));
+                      $this->assertFalse(wp_style_is('fgcbg-admin', 'enqueued'));
+                  }
+              }
+
+              public function test_assets_and_settings_load_on_the_screen_only() {
+                  $this->log_in(['publish_shop_coupons', 'edit_others_shop_orders']);
+                  $hook = $this->register_screen();
+
+                  $this->assets()->enqueue('index.php');
+                  $this->assertFalse(wp_script_is('fgcbg-admin', 'enqueued'), 'Nothing loads on another screen.');
+
+                  $this->assets()->enqueue($hook);
+                  $this->assertTrue(wp_script_is('fgcbg-admin', 'enqueued'));
+                  $this->assertTrue(wp_style_is('fgcbg-admin', 'enqueued'));
+
+                  $script = wp_scripts()->registered['fgcbg-admin'];
+                  $this->assertSame(['wc-enhanced-select', 'wp-a11y'], $script->deps);
+                  $this->assertSame(FGCBG_PLUGIN_VERSION, $script->ver);
+                  $this->assertStringEndsWith('assets/js/admin.js', $script->src);
+                  $this->assertStringEndsWith('assets/css/admin.css', wp_styles()->registered['fgcbg-admin']->src);
+                  $this->assertSame('defer', wp_scripts()->get_data('fgcbg-admin', 'strategy'));
+                  $this->assertTrue(wp_script_is('wp-a11y', 'registered'), 'WordPress ships the announcement script the plugin depends on.');
+
+                  // The settings object as WordPress prints it: every value arrives as a string.
+                  $data  = (string) wp_scripts()->get_data('fgcbg-admin', 'data');
+                  $start = strpos($data, '{');
+                  $end   = strrpos($data, '}');
+                  $this->assertStringContainsString('fgcbgAdminConfig', $data);
+                  $this->assertNotFalse($start);
+                  $this->assertNotFalse($end);
+
+                  $config = json_decode(substr($data, (int) $start, (int) $end - (int) $start + 1), true);
+                  $this->assertIsArray($config);
+                  $this->assertSame(admin_url('admin-ajax.php'), $config['ajax_url']);
+                  $this->assertSame(1, wp_verify_nonce($config['nonce'], 'fgcbg_ajax_nonce'), 'The nonce is valid for the action the handler checks.');
+                  $this->assertSame((string) FGCBG_Ajax_Handler::DEFAULT_BATCH_SIZE, $config['batch_size']);
+                  $this->assertSame((string) FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH, $config['max_coupon_count_value']);
+                  $this->assertGreaterThanOrEqual(15, count($config));
+                  foreach ($config as $key => $value) {
+                      $this->assertIsString($value, $key);
+                      $this->assertNotSame('', $value, $key);
+                  }
+              }
+
+              public function test_translated_text_is_escaped_on_the_page_in_the_notice_and_in_the_menu() {
+                  add_filter('gettext', static function ($translation, $text, $domain) {
+                      return 'free-gift-bulk-coupon-generator' === $domain ? $translation . '"><b data-test="hostile">' : $translation;
+                  }, 10, 3);
+                  $this->log_in(['publish_shop_coupons', 'edit_others_shop_orders', 'activate_plugins']);
+                  $this->register_screen();
+
+                  ob_start();
+                  (new FGCBG_Admin_Page())->render();
+                  $page = (string) ob_get_clean();
+
+                  $GLOBALS['fgcbg_test_coupon_types'] = ['percent' => 'Percentage discount'];
+                  ob_start();
+                  FGCBG_Plugin::get_instance()->free_gift_coupons_missing_notice();
+                  $notice = (string) ob_get_clean();
+
+                  $menu_titles = array_column($GLOBALS['submenu']['woocommerce'], 0, 2);
+                  $outputs     = ['page' => $page, 'notice' => $notice, 'menu title' => (string) $menu_titles[self::SLUG]];
+
+                  foreach ($outputs as $where => $output) {
+                      $this->assertStringContainsString('hostile', $output, $where . ': the translation was not used.');
+                      $this->assertStringNotContainsString('<b data-test', $output, $where . ': translated markup became an element.');
+                      $this->assertStringNotContainsString('"><b', $output, $where . ': translated text closed an attribute.');
+                  }
               }
           }
           EOF

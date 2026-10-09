@@ -49,3 +49,26 @@ updates:
     allow:
       - dependency-type: "direct"
       - dependency-type: "indirect"
+
+  # Updates for npm dependencies (jsdom, which the admin script tests run in)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      day: "monday"
+      time: "09:00"
+    # Set custom labels on pull requests
+    labels:
+      - "dependencies"
+      - "automated"
+      - "maintenance"
+    # Limit the number of open PRs
+    open-pull-requests-limit: 10
+    # Group all dev dependencies together
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+    # Allow updates to all dependency types
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"

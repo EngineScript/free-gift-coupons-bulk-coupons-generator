@@ -20,7 +20,10 @@ if ( ! defined( 'DAY_IN_SECONDS' ) ) {
 	define( 'DAY_IN_SECONDS', 86400 );
 }
 
-require_once __DIR__ . '/FgcbgTestCase.php';
+// The admin script tests load this file without PHPUnit, to render the page.
+if ( class_exists( \PHPUnit\Framework\TestCase::class ) ) {
+	require_once __DIR__ . '/FgcbgTestCase.php';
+}
 
 /**
  * Define a minimal WooCommerce presence marker for plugin initialization tests.
@@ -36,6 +39,21 @@ function fgcbg_test_define_woocommerce_marker() {
 	 * Minimal WooCommerce presence marker.
 	 */
 	class WooCommerce {}
+}
+
+/**
+ * Translate a string the way a test asked for, or return it unchanged.
+ *
+ * WordPress passes every string through the translation of the site. A test
+ * can install a callable to stand for a translation file that holds markup.
+ *
+ * @param string $text Source text.
+ * @return string
+ */
+function fgcbg_test_translate( $text ) {
+	$translation = $GLOBALS['fgcbg_test_translation'] ?? null;
+
+	return is_callable( $translation ) ? (string) $translation( (string) $text ) : (string) $text;
 }
 
 $GLOBALS['fgcbg_test_hooks']            = array();
@@ -334,6 +352,8 @@ if ( ! function_exists( 'wp_rand' ) ) {
 	 * @return int
 	 */
 	function wp_rand( $min = null, $max = null ) {
+		$GLOBALS['fgcbg_test_rand_calls'][] = array( $min, $max );
+
 		if ( ! empty( $GLOBALS['fgcbg_test_rand_values'] ) ) {
 			return (int) array_shift( $GLOBALS['fgcbg_test_rand_values'] );
 		}
@@ -629,7 +649,7 @@ if ( ! function_exists( '__' ) ) {
 	 * @return string
 	 */
 	function __( $text ) {
-		return $text;
+		return fgcbg_test_translate( $text );
 	}
 }
 
@@ -641,7 +661,7 @@ if ( ! function_exists( '_e' ) ) {
 	 * @return void
 	 */
 	function _e( $text ) {
-		echo $text;
+		echo fgcbg_test_translate( $text );
 	}
 }
 
@@ -689,7 +709,7 @@ if ( ! function_exists( 'esc_html__' ) ) {
 	 * @return string
 	 */
 	function esc_html__( $text ) {
-		return esc_html( $text );
+		return esc_html( fgcbg_test_translate( $text ) );
 	}
 }
 
@@ -701,7 +721,7 @@ if ( ! function_exists( 'esc_html_e' ) ) {
 	 * @return void
 	 */
 	function esc_html_e( $text ) {
-		echo esc_html( $text );
+		echo esc_html( fgcbg_test_translate( $text ) );
 	}
 }
 
@@ -713,7 +733,7 @@ if ( ! function_exists( 'esc_attr_e' ) ) {
 	 * @return void
 	 */
 	function esc_attr_e( $text ) {
-		echo esc_attr( $text );
+		echo esc_attr( fgcbg_test_translate( $text ) );
 	}
 }
 

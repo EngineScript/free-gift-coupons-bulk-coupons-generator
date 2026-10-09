@@ -47,7 +47,7 @@ This plugin is built with security as the top priority, implementing multiple la
 2. Download the plugin zip file from the latest release at https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/releases/latest and upload it under Plugins -> Add New Plugin -> Upload Plugin. Install from the release zip file, not from a copy of the repository, which also holds development files.
 3. Activate the plugin through the 'Plugins' screen in WordPress.
 4. Ensure WooCommerce is installed and activated.
-5. Navigate to WooCommerce -> Coupon Generator in your WordPress admin.
+5. Navigate to WooCommerce -> Coupon Generator in your WordPress admin. A user who can publish coupons but cannot open the WooCommerce menu finds it at Coupons -> Coupon Generator.
 6. Select products, set the number of coupons, optionally add a custom prefix, and click "Generate Free Gift Coupons".
 
 == Frequently Asked Questions ==
@@ -113,8 +113,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 = Unreleased =
 
+**Changed:**
+
+* The release ZIP no longer contains `README.md`, `CHANGELOG.md`, or any other Markdown file; `readme.txt` carries the description and the changelog. The package check applies the file rules of the WordPress.org plugin directory.
+* Added a `.distignore` and `git archive` export rules; the release workflow, `.distignore`, and `git archive` produce the same files.
+* PHPStan now runs at level `max` and Psalm at error level 2. A filter that returns an object for a coupon limit no longer raises a PHP warning; results are unchanged.
+* A batch size or code length that is sent as a list now counts as absent, so the defaults apply. The screen never sends a list.
+* The admin script and stylesheet URLs are built from the new `FGCBG_PLUGIN_FILE` constant; `FGCBG_PLUGIN_URL` is still defined.
+* `fgcbg_coupon_expiry_days` has no maximum in days, as WooCommerce has none; an expiry after the year 9999, the latest year WooCommerce's coupon screen accepts, is lowered to that year.
+* A user who can publish coupons but cannot open the WooCommerce menu now finds the generator at Coupons -> Coupon Generator.
+
 **Fixed:**
 
+* Keyboard focus returns to the generate button when a run ends.
+* A hand-made request whose batch size or code length was the lowest possible integer ended in a PHP error; the value is now bounded.
 * The release ZIP now includes `uninstall.php`. It still removes nothing; generated coupons are kept.
 
 = 1.7.0 =

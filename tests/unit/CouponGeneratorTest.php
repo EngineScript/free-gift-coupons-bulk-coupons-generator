@@ -291,6 +291,48 @@ final class CouponGeneratorTest extends FGCBG_Test_Case {
 	}
 
 	/**
+	 * The expiry has no limit in days, but never lies after the year 9999.
+	 */
+	public function test_expiry_days_are_bounded_by_the_year_9999(): void {
+		$latest   = gmmktime( 0, 0, 0, 12, 31, 9999 );
+		$now      = DAY_IN_SECONDS;
+		$expected = array(
+			36500       => $now + ( 36500 * DAY_IN_SECONDS ),
+			9999999     => null,
+			PHP_INT_MAX => null,
+		);
+		$this->set_test_current_time( gmdate( 'Y-m-d H:i:s', $now ) );
+
+		foreach ( $expected as $days => $expires ) {
+			$this->clear_test_coupons();
+			add_filter(
+				'fgcbg_coupon_expiry_days',
+				static function () use ( $days ) {
+					return $days;
+				}
+			);
+
+			try {
+				( new FGCBG_Coupon_Generator() )->generate_coupon_batch( array( 123 ), 1 );
+			} finally {
+				$this->remove_test_hooks( array( 'fgcbg_coupon_expiry_days' ) );
+			}
+
+			$stored = $this->get_test_coupon()->get_prop( 'date_expires' );
+			$this->assertIsInt( $stored, sprintf( 'Expiry for %s days.', $days ) );
+
+			if ( null !== $expires ) {
+				$this->assertSame( $expires, $stored, 'One hundred years pass through unchanged.' );
+				continue;
+			}
+
+			$this->assertLessThanOrEqual( $latest, $stored, sprintf( 'Expiry for %s days.', $days ) );
+			$this->assertGreaterThan( $latest - DAY_IN_SECONDS, $stored, sprintf( 'Expiry for %s days.', $days ) );
+			$this->assertSame( '9999', gmdate( 'Y', $stored ) );
+		}
+	}
+
+	/**
 	 * Filter values outside the integer range are clamped without a PHP warning.
 	 */
 	public function test_out_of_range_filter_values_are_clamped_without_warnings(): void {

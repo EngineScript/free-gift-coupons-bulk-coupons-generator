@@ -19,6 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class FGCBG_Plugin {
 
 	/**
+	 * Capability WooCommerce requires for its own admin menu.
+	 *
+	 * @since 1.8.0
+	 * @var string
+	 */
+	private const WOOCOMMERCE_MENU_CAPABILITY = 'edit_others_shop_orders';
+
+	/**
 	 * Plugin instance.
 	 *
 	 * @since 1.0.0
@@ -186,12 +194,19 @@ final class FGCBG_Plugin {
 	/**
 	 * Add admin menu.
 	 *
+	 * The screen sits under the WooCommerce menu. A user who may not see
+	 * that menu gets it under Coupons instead, the top-level menu WooCommerce
+	 * gives such a user for the coupon list. WordPress refuses a screen whose
+	 * parent menu the user may not open, so without this the capability to
+	 * publish coupons would not be enough to reach the screen.
+	 *
 	 * @since 1.0.0
+	 * @since 1.8.0 Registered under Coupons for users without the WooCommerce menu.
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
 		$page_hook = add_submenu_page(
-			'woocommerce',
+			current_user_can( self::WOOCOMMERCE_MENU_CAPABILITY ) ? 'woocommerce' : 'edit.php?post_type=shop_coupon',
 			__( 'Free Gift Bulk Coupons', 'free-gift-bulk-coupon-generator' ),
 			esc_html__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
 			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY,

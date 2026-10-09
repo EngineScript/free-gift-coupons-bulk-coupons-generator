@@ -93,7 +93,7 @@ final class FGCBG_Admin_Assets {
 
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
-			FGCBG_PLUGIN_URL . 'assets/js/admin.js',
+			plugin_dir_url( FGCBG_PLUGIN_FILE ) . 'assets/js/admin.js',
 			array( 'wc-enhanced-select', 'wp-a11y' ),
 			FGCBG_PLUGIN_VERSION,
 			array(
@@ -115,7 +115,7 @@ final class FGCBG_Admin_Assets {
 
 		wp_enqueue_style(
 			self::STYLE_HANDLE,
-			FGCBG_PLUGIN_URL . 'assets/css/admin.css',
+			plugin_dir_url( FGCBG_PLUGIN_FILE ) . 'assets/css/admin.css',
 			$style_dependencies,
 			FGCBG_PLUGIN_VERSION
 		);
@@ -174,7 +174,7 @@ final class FGCBG_Admin_Assets {
 			'max_prefix_length'      => FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH,
 			'min_code_length'        => FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
 			'max_code_length'        => FGCBG_Coupon_Generator::MAX_CODE_LENGTH,
-			'nonce'                  => wp_create_nonce( 'fgcbg_ajax_nonce' ),
+			'nonce'                  => (string) wp_create_nonce( 'fgcbg_ajax_nonce' ),
 			/* translators: %d: Number of coupons to generate. */
 			'confirm_large_batch'    => __( 'You are about to generate %d coupons. Do you want to continue?', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d: Maximum number of coupons per run. */

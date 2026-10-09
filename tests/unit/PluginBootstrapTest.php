@@ -48,6 +48,7 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 	 * The main plugin file defines the expected constants and helper.
 	 */
 	public function test_main_plugin_defines_constants_and_helper(): void {
+		$this->assertSame( realpath( dirname( __DIR__, 2 ) . '/free-gift-bulk-coupon-generator.php' ), realpath( FGCBG_PLUGIN_FILE ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_URL' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_PATH' ) );
 		$this->assertTrue( defined( 'FGCBG_PLUGIN_VERSION' ) );
@@ -111,6 +112,26 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 	}
 
 	/**
+	 * A user who may not open the WooCommerce menu gets the screen under Coupons.
+	 */
+	public function test_admin_menu_sits_under_coupons_without_the_woocommerce_menu(): void {
+		fgcbg_test_define_woocommerce_marker();
+		fgcbg_init();
+		$this->set_test_current_user_capabilities( array( 'edit_others_shop_orders' => false ) );
+
+		try {
+			FGCBG_Plugin::get_instance()->add_admin_menu();
+			$submenu_page = $this->get_last_recorded_submenu_page();
+		} finally {
+			$this->set_test_current_user_capabilities( array() );
+		}
+
+		$this->assertSame( 'edit.php?post_type=shop_coupon', $submenu_page[0] );
+		$this->assertSame( 'publish_shop_coupons', $submenu_page[3] );
+		$this->assertSame( 'free-gift-bulk-coupon-generator', $submenu_page[4] );
+	}
+
+	/**
 	 * The plugin header declares its requirements and no foreign update source.
 	 */
 	public function test_plugin_header_declares_requirements(): void {
@@ -154,7 +175,7 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 		$assets->enqueue( self::GENERATOR_PAGE_HOOK );
 
 		$admin_script_path = FGCBG_PLUGIN_PATH . 'assets/js/admin.js';
-		$admin_script_url  = FGCBG_PLUGIN_URL . 'assets/js/admin.js';
+		$admin_script_url  = plugin_dir_url( FGCBG_PLUGIN_FILE ) . 'assets/js/admin.js';
 		$scripts           = $this->get_recorded_scripts();
 		$styles            = $this->get_recorded_styles();
 

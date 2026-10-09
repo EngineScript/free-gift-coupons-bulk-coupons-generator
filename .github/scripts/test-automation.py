@@ -236,12 +236,65 @@ class AutomationTests(unittest.TestCase):
         check("true")
         self.assertTrue((self.root / filename).is_file())
 
-    def test_package_rejects_missing_extra_changed_and_linked_members(self):
-        for name in ("uninstall.php", "CHANGELOG.md", "LICENSE", "includes/fixture.php",
-                     "assets/css/admin.css", "languages/free-gift-bulk-coupon-generator.pot"):
+    def add_release_sources(self):
+        """Track one file of every kind the package ships, and the real .distignore."""
+        for name in ("uninstall.php", "CHANGELOG.md", "LICENSE", "includes/fixture.php", "assets/css/admin.css",
+                     "assets/js/admin.js", "languages/free-gift-bulk-coupon-generator.pot"):
             self.write(name, "fixture\n")
-        subprocess.run(["git", "add", "--", "uninstall.php", "CHANGELOG.md", "LICENSE", "includes", "assets",
-                        "languages"], check=True)
+        self.write(".distignore", (WORKFLOWS.parents[1] / ".distignore").read_text(encoding="utf-8"))
+        subprocess.run(["git", "add", "--", ".distignore", "uninstall.php", "CHANGELOG.md", "LICENSE", "includes",
+                        "assets", "languages"], check=True)
+
+    def test_distignore_must_keep_exactly_the_release_allowlist(self):
+        self.add_release_sources()
+        # README.md and CHANGELOG.md are tracked in this fixture and do not ship.
+        shipped = ["LICENSE", "assets/css/admin.css", "assets/js/admin.js", "free-gift-bulk-coupon-generator.php",
+                   "includes/fixture.php", "languages/free-gift-bulk-coupon-generator.pot", "readme.txt",
+                   "uninstall.php"]
+        self.assertEqual(shipped, sorted(package.expected_contents(self.root)))
+        rules = (self.root / ".distignore").read_text(encoding="utf-8")
+        # A tracked file that neither list names would ship through .distignore alone.
+        self.write("new-tool.json", "{}\n")
+        subprocess.run(["git", "add", "--", "new-tool.json"], check=True)
+        with self.assertRaisesRegex(ValueError, "new-tool.json"):
+            package.expected_contents(self.root)
+        self.write(".distignore", rules + "/new-tool.json\n")
+        self.assertEqual(shipped, sorted(package.expected_contents(self.root)))
+        # Inside a shipped directory, a file that the WordPress.org plugin directory
+        # does not accept is refused by name, and so is a Markdown file.
+        refused = {
+            "includes/notes.md": "file type", "includes/tool.sh": "file type", "assets/js/library.zip": "file type",
+            "includes/archive.phar": "file type", "includes/.hidden.php": "hidden",
+            "assets/css/.cache/x.css": "hidden", "includes/two words.php": "space",
+            "includes/odd(name).php": "special character",
+            # The message names the second of the two entries in sorted order.
+            "includes/Fixture.php": "includes/fixture.php (differs from includes/Fixture.php only by case",
+            "assets/JS/other.js": "assets/js (differs from assets/JS only by case",
+        }
+        for name, reason in refused.items():
+            expected = reason if "only by case" in reason else f"{name} ({reason}"
+            with self.subTest(name=name):
+                # The index is written directly, so the two case-only names stay
+                # distinct on a file system that would fold them into one.
+                blob = subprocess.run(["git", "hash-object", "-w", "--stdin"], input="fixture\n", text=True,
+                                      check=True, capture_output=True).stdout.strip()
+                subprocess.run(["git", "update-index", "--add", "--cacheinfo", f"100644,{blob},{name}"], check=True)
+                try:
+                    with self.assertRaisesRegex(ValueError, re.escape(expected)):
+                        package.expected_contents(self.root)
+                finally:
+                    subprocess.run(["git", "update-index", "--force-remove", "--", name], check=True)
+                self.assertEqual(shipped, sorted(package.expected_contents(self.root)))
+        # A rule that drops a shipped file, and a missing file, are refused too.
+        self.write(".distignore", rules + "/new-tool.json\n/languages\n")
+        with self.assertRaisesRegex(ValueError, "languages/free-gift-bulk-coupon-generator.pot"):
+            package.expected_contents(self.root)
+        (self.root / ".distignore").unlink()
+        with self.assertRaisesRegex(ValueError, "missing"):
+            package.expected_contents(self.root)
+
+    def test_package_rejects_missing_extra_changed_and_linked_members(self):
+        self.add_release_sources()
         build = self.root / "build" / package.SLUG
         for name, content in package.expected_contents(self.root).items():
             destination = build / name

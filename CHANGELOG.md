@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Release Package**: The release ZIP no longer contains `README.md` or `CHANGELOG.md`, or any other Markdown file. `readme.txt` carries the description and the changelog. The package check now applies the file rules of the WordPress.org plugin directory: it refuses a hidden file or directory, a compressed archive, a `.phar`, an executable or script, a name with a space or special character, two names that differ only by case, and a Markdown file.
+- **Package Lists**: Added a `.distignore`, and `export-ignore` rules in `.gitattributes`. The release workflow, `.distignore`, and `git archive` now produce the same 13 files, and the package check fails when `.distignore` and the release file list disagree.
+- **Stricter Analysis**: PHPStan now runs at level `max` and Psalm at error level 2, and both report nothing. Request and filter values are narrowed to their expected type before use. A filter that returns an object for a coupon limit no longer raises a PHP warning; the value still counts as invalid and the limit falls back to its minimum.
+- **Malformed Numbers in a Request**: A batch size or code length that is sent as a list now counts as absent, so the defaults apply (10 coupons, 12 characters). Before, a list counted as 1. The screen never sends a list.
+- **Coupon Expiry Limit**: `fgcbg_coupon_expiry_days` still has no maximum in days, as WooCommerce has none. A value that would put the expiry after the year 9999 is now lowered to that year, which is the latest year WooCommerce's coupon screen accepts. Before, a very large value gave a coupon that WooCommerce saved with no expiry date at all, or with a date its coupon screen refuses.
+- **Screen Location for Custom Roles**: A user who can publish coupons but cannot open the WooCommerce menu now finds the generator at **Coupons > Coupon Generator**, the top-level menu WooCommerce gives such a user. Before, WordPress refused the screen, because it sat only under the WooCommerce menu. Administrators and Shop Managers still find it at **WooCommerce > Coupon Generator**.
+- **Asset URLs**: The admin script and stylesheet URLs are now built from the new `FGCBG_PLUGIN_FILE` constant with `plugin_dir_url()`. `FGCBG_PLUGIN_URL` is still defined and holds the same value.
+- **Repository Tooling**: Added a yamllint configuration and corrected the indentation it reported in three YAML files. `.github/copilot-instructions.md` is now a local, untracked file, and `GEMINI.md` was removed. Every entry of `package-lock.json` now carries its integrity hash.
+
 ### Fixed
 
+- **Keyboard Focus After a Run**: Keyboard focus returns to the generate button when a run ends. The button is disabled during a run, so the browser dropped focus and keyboard and screen-reader users had to start again from the top of the page. Focus is left alone when the user has moved it elsewhere.
+- **Request With the Lowest Integer**: A hand-made request whose batch size or code length was `-9223372036854775808` ended in a PHP error and an HTTP 500 response. The value is now bounded like any other value that is too large. No coupon was created by such a request.
 - **Uninstall File Packaging**: The release ZIP now includes `uninstall.php`, so WordPress runs the plugin's own uninstall routine when the plugin is deleted. It still removes nothing; generated coupons are kept.
 
 ## [1.7.0] - 2026-10-03

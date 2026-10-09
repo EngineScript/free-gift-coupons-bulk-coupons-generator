@@ -7,6 +7,10 @@
 
 namespace {
 
+if ( ! defined( 'FGCBG_PLUGIN_FILE' ) ) {
+	define( 'FGCBG_PLUGIN_FILE', dirname( __DIR__ ) . DIRECTORY_SEPARATOR . 'free-gift-bulk-coupon-generator.php' );
+}
+
 if ( ! defined( 'FGCBG_PLUGIN_URL' ) ) {
 	define( 'FGCBG_PLUGIN_URL', '' );
 }

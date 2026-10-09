@@ -1,6 +1,7 @@
 # Local private files
 AGENTS.md
 CLAUDE.md
+.github/copilot-instructions.md
 .private/
 .vscode/
 

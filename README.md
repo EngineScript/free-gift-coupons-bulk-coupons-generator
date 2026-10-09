@@ -48,7 +48,7 @@ Install from the release zip file, not from a copy of the repository. The reposi
 
 ## Usage
 
-1. Go to **WooCommerce > Coupon Generator** in your WordPress admin
+1. Go to **WooCommerce > Coupon Generator** in your WordPress admin. A user who can publish coupons but cannot open the WooCommerce menu finds it at **Coupons > Coupon Generator**
 2. Search and select one or more products (up to 20) you want to give as free gifts
 3. Enter the number of coupons to generate (1-100)
 4. Optionally add a custom prefix and change the random code length (8-24 characters, 12 by default)
@@ -113,7 +113,7 @@ The admin screen sends one run as several requests of 10 coupons, so the first t
 #### Filters
 
 - `fgcbg_coupon_code_length` - Filter the random portion length of generated coupon codes (default: 12, bounds: 8-24). Arguments: the requested length (`int`) and the length as passed by the caller (`int|null`)
-- `fgcbg_coupon_expiry_days` - Filter the number of days until coupon expiry (default: 365, minimum: 1)
+- `fgcbg_coupon_expiry_days` - Filter the number of days until coupon expiry (default: 365, minimum: 1). There is no maximum in days, as WooCommerce has none; a value that would put the expiry after the year 9999, the latest year WooCommerce's coupon screen accepts, is lowered to that year
 - `fgcbg_max_coupons_per_batch` - Filter the maximum number of coupons one request can create (default: 100). Requests from the admin screen are also limited to 100 by the request handler, so a higher value only affects code that calls the generator class directly
 
 ### Code Example

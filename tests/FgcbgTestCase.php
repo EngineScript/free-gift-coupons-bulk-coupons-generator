@@ -123,6 +123,69 @@ abstract class FGCBG_Test_Case extends TestCase {
 	}
 
 	/**
+	 * Get the context arrays the plugin passed to the WooCommerce logger stub.
+	 *
+	 * @return array<int, mixed>
+	 */
+	protected function get_test_log_contexts(): array {
+		return array_column( $GLOBALS['fgcbg_test_log'] ?? array(), 'context' );
+	}
+
+	/**
+	 * Get the bounds of every wp_rand() call since the last reset.
+	 *
+	 * @return array<int, array{0:mixed, 1:mixed}>
+	 */
+	protected function get_test_rand_calls(): array {
+		return $GLOBALS['fgcbg_test_rand_calls'] ?? array();
+	}
+
+	/**
+	 * Install a stand-in for the site's translation, or null to remove it.
+	 *
+	 * @param callable|null $translation Receives the source text and returns the translated text.
+	 * @return void
+	 */
+	protected function set_test_translation( ?callable $translation ): void {
+		if ( null === $translation ) {
+			unset( $GLOBALS['fgcbg_test_translation'] );
+			return;
+		}
+
+		$GLOBALS['fgcbg_test_translation'] = $translation;
+	}
+
+	/**
+	 * Say whether the request is an admin request.
+	 *
+	 * @param bool $is_admin What is_admin() answers.
+	 * @return void
+	 */
+	protected function set_test_is_admin( bool $is_admin ): void {
+		$GLOBALS['fgcbg_test_is_admin'] = $is_admin;
+	}
+
+	/**
+	 * Force wp_localize_script() to report a result; reset_test_asset_state() removes it.
+	 *
+	 * @param bool $result Forced result.
+	 * @return void
+	 */
+	protected function set_test_localize_script_result( bool $result ): void {
+		$GLOBALS['fgcbg_test_wp_localize_script_result'] = $result;
+	}
+
+	/**
+	 * Count the callbacks registered on a hook.
+	 *
+	 * @param string $hook Hook name.
+	 * @return int
+	 */
+	protected function count_test_hook_callbacks( string $hook ): int {
+		return array_sum( array_map( 'count', $GLOBALS['fgcbg_test_hooks'][ $hook ] ?? array() ) );
+	}
+
+	/**
 	 * Set the coupon types WooCommerce reports, or null for the default list.
 	 *
 	 * @param array<string, string>|null $types Coupon types keyed by slug.
@@ -178,6 +241,7 @@ abstract class FGCBG_Test_Case extends TestCase {
 		$this->set_test_coupon_types( null );
 
 		$GLOBALS['fgcbg_test_rand_values'] = array();
+		$GLOBALS['fgcbg_test_rand_calls']  = array();
 		$GLOBALS['fgcbg_test_log']         = array();
 	}
 

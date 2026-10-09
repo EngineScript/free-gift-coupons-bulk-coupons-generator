@@ -24,6 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants. The checks avoid a redefinition warning when a constant already exists.
+if ( ! defined( 'FGCBG_PLUGIN_FILE' ) ) {
+	define( 'FGCBG_PLUGIN_FILE', __FILE__ );
+}
 if ( ! defined( 'FGCBG_PLUGIN_URL' ) ) {
 	define( 'FGCBG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }

@@ -386,6 +386,56 @@ final class AjaxHandlerTest extends FGCBG_Test_Case {
 	}
 
 	/**
+	 * A batch size or code length sent as a list counts as absent, so the defaults apply.
+	 */
+	public function test_generate_batch_ignores_numbers_sent_as_lists(): void {
+		$list_size = $this->send_request(
+			array(
+				'product_ids' => array( '123' ),
+				'batch_size'  => array( '5' ),
+			)
+		);
+		$this->assertTrue( $list_size['success'] );
+		$this->assertSame( FGCBG_Ajax_Handler::DEFAULT_BATCH_SIZE, $list_size['data']['generated'] );
+
+		$list_length = $this->send_request(
+			array(
+				'product_ids'        => array( '123' ),
+				'batch_size'         => '1',
+				'coupon_code_length' => array( '16' ),
+			)
+		);
+		$this->assertTrue( $list_length['success'] );
+		$this->assertSame( FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH, strlen( $list_length['data']['codes'][0] ) );
+	}
+
+	/**
+	 * The lowest integer, whose absolute value is a float, is bounded like any other large value.
+	 */
+	public function test_generate_batch_bounds_the_lowest_integer(): void {
+		$lowest = (string) PHP_INT_MIN;
+
+		$size = $this->send_request(
+			array(
+				'product_ids' => array( '123' ),
+				'batch_size'  => $lowest,
+			)
+		);
+		$this->assertTrue( $size['success'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH, $size['data']['generated'] );
+
+		$length = $this->send_request(
+			array(
+				'product_ids'        => array( '123' ),
+				'batch_size'         => '1',
+				'coupon_code_length' => $lowest,
+			)
+		);
+		$this->assertTrue( $length['success'] );
+		$this->assertSame( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, strlen( $length['data']['codes'][0] ) );
+	}
+
+	/**
 	 * A prefix that is not a string is ignored; a string prefix is reduced to letters and digits.
 	 */
 	public function test_generate_batch_sanitizes_the_prefix(): void {

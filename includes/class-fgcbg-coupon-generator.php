@@ -97,6 +97,20 @@ final class FGCBG_Coupon_Generator {
 	private const DEFAULT_EXPIRY_DAYS = 365;
 
 	/**
+	 * Latest expiry time, as a UTC timestamp: 9999-12-31 00:00:00.
+	 *
+	 * WooCommerce sets no limit in days. Its coupon screen takes the expiry
+	 * date with a four-digit year, so the year 9999 is the latest it can show
+	 * and save, and it drops a date it cannot build, which leaves a coupon
+	 * with no expiry at all. Midnight UTC keeps the date inside that year in
+	 * every site time zone.
+	 *
+	 * @since 1.8.0
+	 * @var int
+	 */
+	private const LATEST_EXPIRY_TIMESTAMP = 253402214400;
+
+	/**
 	 * Generate coupons.
 	 *
 	 * This trusted service method does not read request data or perform
@@ -276,11 +290,17 @@ final class FGCBG_Coupon_Generator {
 		/**
 		 * Filters the number of days until a generated coupon expires.
 		 *
-		 * Values below 1 are raised to 1.
+		 * Values below 1 are raised to 1. There is no limit in days, as
+		 * WooCommerce has none; a value that would put the expiry after the
+		 * year 9999, the latest year its coupon screen accepts, is lowered to
+		 * that year.
 		 *
 		 * @param int $expiry_days Days until expiry. Default 365.
 		 */
-		$expiry_days = max( 1, $this->to_int( apply_filters( 'fgcbg_coupon_expiry_days', self::DEFAULT_EXPIRY_DAYS ) ) );
+		$expiry_days = min(
+			max( 1, $this->to_int( apply_filters( 'fgcbg_coupon_expiry_days', self::DEFAULT_EXPIRY_DAYS ) ) ),
+			$this->get_latest_expiry_days()
+		);
 		$code_length = $this->normalize_code_length( $code_length );
 
 		return array(
@@ -562,12 +582,24 @@ final class FGCBG_Coupon_Generator {
 	}
 
 	/**
+	 * Get the largest number of days from now that a coupon expiry can lie.
+	 *
+	 * @since 1.8.0
+	 * @return int Days until LATEST_EXPIRY_TIMESTAMP, at least 1.
+	 */
+	private function get_latest_expiry_days(): int {
+		return max( 1, intdiv( self::LATEST_EXPIRY_TIMESTAMP - current_datetime()->getTimestamp(), DAY_IN_SECONDS ) );
+	}
+
+	/**
 	 * Convert a filtered value to an integer without a PHP warning.
 	 *
 	 * A float, or a numeric string, outside the integer range is clamped to
 	 * the nearest integer limit; casting it directly makes PHP 8.5 warn, and
 	 * a displayed warning would break the JSON response. NaN becomes 0. Other
-	 * values are cast as before.
+	 * scalar values are cast as PHP casts them. A value with no integer form
+	 * (null, an array, or an object) becomes 0; every caller then raises it to
+	 * its own minimum.
 	 *
 	 * @since 1.7.0
 	 * @param mixed $value Filtered value.
@@ -579,7 +611,7 @@ final class FGCBG_Coupon_Generator {
 		}
 
 		if ( ! is_float( $value ) ) {
-			return (int) $value;
+			return is_scalar( $value ) ? (int) $value : 0;
 		}
 
 		if ( is_nan( $value ) ) {
