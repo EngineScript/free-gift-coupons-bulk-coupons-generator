@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import shutil
 import stat
 
 # subprocess runs git with a fixed argument list and no shell.
@@ -31,19 +30,10 @@ FORBIDDEN_EXTENSIONS.add("md")
 FORBIDDEN_NAME_CHARACTERS = set("!@#$%^&*()+=[]{};:\"'<>,?\\|`~")
 
 
-def git_executable() -> str:
-    """Return the absolute path of git, so no partial executable path is run."""
-    git = shutil.which("git")
-    if git is None:
-        raise RuntimeError("git is required to list tracked files.")
-    return git
-
-
 def tracked_files(root: Path, *options: str) -> set[str]:
     """List tracked files, optionally narrowed by more `git ls-files` options."""
-    # Fixed arguments, an absolute git path, and no shell.
-    listing = subprocess.run(  # nosec B603
-        [git_executable(), "ls-files", "-z", *options], cwd=root, check=True, capture_output=True
+    listing = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "-z", *options], cwd=root, check=True, capture_output=True
     ).stdout.decode("utf-8").split("\0")
     return {name for name in listing if name}
 

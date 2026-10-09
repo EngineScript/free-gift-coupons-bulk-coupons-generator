@@ -7,7 +7,6 @@ import argparse
 import json
 import os
 import re
-import shutil
 
 # subprocess runs git with a fixed argument list and no shell.
 import subprocess  # nosec B404
@@ -177,18 +176,9 @@ def find_tested_up_to_entries(
     return findings
 
 
-def git_executable() -> str:
-    """Return the absolute path of git, so no partial executable path is run."""
-    git = shutil.which("git")
-    if git is None:
-        raise RuntimeError("git is required to list tracked files.")
-    return git
-
-
 def get_scanned_files(excluded_dirs: set[str]) -> list[Path]:
-    # Fixed arguments, an absolute git path, and no shell.
-    tracked = subprocess.run(  # nosec B603
-        [git_executable(), "ls-files", "-z"], check=True, capture_output=True
+    tracked = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "-z"], check=True, capture_output=True
     ).stdout.decode("utf-8").split("\0")
     if not all(path.as_posix() in tracked for path in METADATA_PATHS):
         raise ValueError("Authoritative metadata files must both be tracked.")

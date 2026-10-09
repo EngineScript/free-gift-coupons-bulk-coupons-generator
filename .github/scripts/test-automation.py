@@ -14,7 +14,7 @@ import json
 import os
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import textwrap
 import unittest
@@ -22,6 +22,7 @@ from pathlib import Path
 from unittest.mock import patch
 from zipfile import ZipFile
 
+# Bandit: every subprocess call in this file runs a fixed argument list without a shell.
 
 def load_helper(filename: str):
     spec = importlib.util.spec_from_file_location(filename, Path(__file__).with_name(filename))
@@ -50,12 +51,12 @@ class AutomationTests(unittest.TestCase):
         previous = Path.cwd()
         os.chdir(self.root)
         self.addCleanup(os.chdir, previous)
-        subprocess.run(["git", "init", "--quiet"], check=True)
+        subprocess.run(["git", "init", "--quiet"], check=True)  # nosec B603 B607
         self.write("free-gift-bulk-coupon-generator.php", "<?php\n/**\n * Tested up to: 6.8\n */\n")
         self.write("readme.txt", "=== Fixture ===\nTested up to: 6.8\n\nTested up to: historical prose\n")
         self.write("README.md", "Tested up to: historical prose\n")
         self.write(".private/review.md", "Tested up to: historical prose\n")
-        subprocess.run(["git", "add", "--", "free-gift-bulk-coupon-generator.php", "readme.txt", "README.md"], check=True)
+        subprocess.run(["git", "add", "--", "free-gift-bulk-coupon-generator.php", "readme.txt", "README.md"], check=True)  # nosec B603 B607
 
     def write(self, name, content):
         path = self.root / name
@@ -92,10 +93,10 @@ class AutomationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.findings()
         self.write("readme.txt", "Tested up to: 6.8\n\n")
-        subprocess.run(["git", "rm", "--cached", "--force", "--quiet", "readme.txt"], check=True)
+        subprocess.run(["git", "rm", "--cached", "--force", "--quiet", "readme.txt"], check=True)  # nosec B603 B607
         with self.assertRaises(ValueError):
             self.findings()
-        subprocess.run(["git", "add", "readme.txt"], check=True)
+        subprocess.run(["git", "add", "readme.txt"], check=True)  # nosec B603 B607
         (self.root / "readme.txt").unlink()
         (self.root / "readme.txt").symlink_to("README.md")
         with self.assertRaises(ValueError):
@@ -134,7 +135,7 @@ class AutomationTests(unittest.TestCase):
                "event": "push", "status": "completed", "conclusion": "success"}
 
         def accepts_run(runs):
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 B607
                 ["jq", "-er", "--arg", "sha", "abc", "--arg", "repo", "fixture/repo",
                  "--arg", "branch", "main", run_filter],
                 input=json.dumps({"workflow_runs": runs}), text=True, capture_output=True, check=False
@@ -156,7 +157,7 @@ class AutomationTests(unittest.TestCase):
         jobs = [{"name": name, "status": "completed", "conclusion": "success"} for name in names]
 
         def accepts_jobs(records):
-            return subprocess.run(
+            return subprocess.run(  # nosec B603 B607
                 ["jq", "-e", jobs_filter], input=json.dumps([{"jobs": records}]),
                 text=True, capture_output=True, check=False
             ).returncode == 0
@@ -182,10 +183,10 @@ class AutomationTests(unittest.TestCase):
             with self.subTest(status=status):
                 output.write_text("")
                 env = dict(os.environ, PATH=f"{self.root / 'bin'}:{os.environ['PATH']}",
-                           GH_TOKEN="fixture-only", GITHUB_OUTPUT=str(output), VERSION="1.2.3",
+                           GH_TOKEN="fixture-only", GITHUB_OUTPUT=str(output), VERSION="1.2.3",  # nosec B106
                            GITHUB_API_URL="https://api.invalid", GITHUB_REPOSITORY="fixture/repo",
                            FIXTURE_HTTP_STATUS=status, FIXTURE_CURL_EXIT=code)
-                result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
+                result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],  # nosec B603 B607
                                         env=env, capture_output=True, text=True, check=False)
                 if expected is None:
                     self.assertNotEqual(0, result.returncode)
@@ -206,7 +207,7 @@ class AutomationTests(unittest.TestCase):
             with self.subTest(readme_version=readme_version):
                 self.write("README.md", "# Fixture\n\n" + badge.format(readme_version))
                 before = (self.root / "README.md").read_bytes()
-                result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
+                result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],  # nosec B603 B607
                                         env=env, capture_output=True, text=True, check=False)
                 self.assertEqual(accepted, result.returncode == 0, result.stdout + result.stderr)
                 self.assertEqual(before, (self.root / "README.md").read_bytes())
@@ -216,13 +217,13 @@ class AutomationTests(unittest.TestCase):
         filename = "languages/free-gift-bulk-coupon-generator.pot"
         baseline = 'msgid ""\nmsgstr ""\n"POT-Creation-Date: old\\n"\n\n'
         self.write(filename, baseline)
-        subprocess.run(["git", "add", "--", filename], check=True)
+        subprocess.run(["git", "add", "--", filename], check=True)  # nosec B603 B607
         output = self.root / "step-output"
         env = dict(os.environ, PLUGIN_SLUG=package.SLUG, GITHUB_OUTPUT=str(output))
 
         def check(expected):
             output.write_text("")
-            subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
+            subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,  # nosec B603 B607
                            check=True, capture_output=True, text=True)
             self.assertEqual(f"has_changes={expected}\n", output.read_text())
 
@@ -232,7 +233,7 @@ class AutomationTests(unittest.TestCase):
         self.assertEqual(baseline, (self.root / filename).read_text())
         self.write(filename, baseline + "".join(f'msgid "message {i}"\nmsgstr ""\n\n' for i in range(3000)))
         check("true")
-        subprocess.run(["git", "rm", "--cached", "--force", "--quiet", "--", filename], check=True)
+        subprocess.run(["git", "rm", "--cached", "--force", "--quiet", "--", filename], check=True)  # nosec B603 B607
         check("true")
         self.assertTrue((self.root / filename).is_file())
 
@@ -242,7 +243,7 @@ class AutomationTests(unittest.TestCase):
                      "assets/js/admin.js", "languages/free-gift-bulk-coupon-generator.pot"):
             self.write(name, "fixture\n")
         self.write(".distignore", (WORKFLOWS.parents[1] / ".distignore").read_text(encoding="utf-8"))
-        subprocess.run(["git", "add", "--", ".distignore", "uninstall.php", "CHANGELOG.md", "LICENSE", "includes",
+        subprocess.run(["git", "add", "--", ".distignore", "uninstall.php", "CHANGELOG.md", "LICENSE", "includes",  # nosec B603 B607
                         "assets", "languages"], check=True)
 
     def test_distignore_must_keep_exactly_the_release_allowlist(self):
@@ -255,7 +256,7 @@ class AutomationTests(unittest.TestCase):
         rules = (self.root / ".distignore").read_text(encoding="utf-8")
         # A tracked file that neither list names would ship through .distignore alone.
         self.write("new-tool.json", "{}\n")
-        subprocess.run(["git", "add", "--", "new-tool.json"], check=True)
+        subprocess.run(["git", "add", "--", "new-tool.json"], check=True)  # nosec B603 B607
         with self.assertRaisesRegex(ValueError, "new-tool.json"):
             package.expected_contents(self.root)
         self.write(".distignore", rules + "/new-tool.json\n")
@@ -276,14 +277,14 @@ class AutomationTests(unittest.TestCase):
             with self.subTest(name=name):
                 # The index is written directly, so the two case-only names stay
                 # distinct on a file system that would fold them into one.
-                blob = subprocess.run(["git", "hash-object", "-w", "--stdin"], input="fixture\n", text=True,
+                blob = subprocess.run(["git", "hash-object", "-w", "--stdin"], input="fixture\n", text=True,  # nosec B603 B607
                                       check=True, capture_output=True).stdout.strip()
-                subprocess.run(["git", "update-index", "--add", "--cacheinfo", f"100644,{blob},{name}"], check=True)
+                subprocess.run(["git", "update-index", "--add", "--cacheinfo", f"100644,{blob},{name}"], check=True)  # nosec B603 B607
                 try:
                     with self.assertRaisesRegex(ValueError, re.escape(expected)):
                         package.expected_contents(self.root)
                 finally:
-                    subprocess.run(["git", "update-index", "--force-remove", "--", name], check=True)
+                    subprocess.run(["git", "update-index", "--force-remove", "--", name], check=True)  # nosec B603 B607
                 self.assertEqual(shipped, sorted(package.expected_contents(self.root)))
         # A rule that drops a shipped file, and a missing file, are refused too.
         self.write(".distignore", rules + "/new-tool.json\n/languages\n")
