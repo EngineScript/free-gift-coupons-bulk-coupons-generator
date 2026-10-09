@@ -20,7 +20,7 @@ if ( ! defined( 'FGCBG_PLUGIN_PATH' ) ) {
 }
 
 if ( ! defined( 'FGCBG_PLUGIN_VERSION' ) ) {
-	define( 'FGCBG_PLUGIN_VERSION', '1.7.0' );
+	define( 'FGCBG_PLUGIN_VERSION', '1.8.0' );
 }
 
 if ( ! defined( 'DAY_IN_SECONDS' ) ) {
