@@ -80,6 +80,7 @@ final class FGCBG_Plugin {
 	 *
 	 * @since 1.0.0
 	 * @return FGCBG_Plugin
+	 * @psalm-api
 	 */
 	public static function get_instance(): self {
 		self::$instance ??= new self();
@@ -206,10 +207,11 @@ final class FGCBG_Plugin {
 	 */
 	public function add_admin_menu(): void {
 		$page_hook = add_submenu_page(
+			// phpcs:ignore WordPress.WP.Capabilities.Undetermined -- The constant holds the WooCommerce capability 'edit_others_shop_orders'.
 			current_user_can( self::WOOCOMMERCE_MENU_CAPABILITY ) ? 'woocommerce' : 'edit.php?post_type=shop_coupon',
 			__( 'Free Gift Bulk Coupons', 'free-gift-bulk-coupon-generator' ),
 			esc_html__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
-			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY,
+			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY, // phpcs:ignore WordPress.WP.Capabilities.Undetermined -- The constant holds the WooCommerce capability 'publish_shop_coupons'.
 			'free-gift-bulk-coupon-generator',
 			array( $this->admin_page, 'render' )
 		);

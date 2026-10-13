@@ -57,6 +57,7 @@
 # Development tooling and its configuration
 /composer.json
 /composer.lock
+/eslint.config.mjs
 /package.json
 /package-lock.json
 /phpcs.xml

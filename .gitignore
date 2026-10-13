@@ -43,8 +43,9 @@ temp/
 tmp/
 
 # Dependencies, tests, and build artifacts
-# Dev-tool lock resolved on the maintainer's PHP; CI resolves dependencies itself.
+# Dev-tool locks resolved on the maintainer's machine; CI resolves dependencies itself.
 composer.lock
+package-lock.json
 build/
 coverage/
 dist/

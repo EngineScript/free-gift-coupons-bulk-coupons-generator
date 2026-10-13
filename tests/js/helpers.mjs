@@ -25,7 +25,7 @@ export const source = readFileSync( new URL( '../../assets/js/admin.js', import.
  *
  * @param {number} count - Coupons in the batch.
  * @param {number} first - Number of the first code.
- * @returns {Object} Response payload.
+ * @return {Object} Response payload.
  */
 export function okResponse( count, first = 0 ) {
 	return {
@@ -40,9 +40,9 @@ export function okResponse( count, first = 0 ) {
 /**
  * Replace the placeholders of a configured message the way the script does.
  *
- * @param {string} key - Configuration key.
+ * @param {string}       key          - Configuration key.
  * @param {Array<Array>} replacements - Placeholder and value pairs.
- * @returns {string} Formatted message.
+ * @return {string} Formatted message.
  */
 export function formatted( key, replacements ) {
 	let text = page.config[ key ];
@@ -57,12 +57,12 @@ export function formatted( key, replacements ) {
 /**
  * Load the generator screen and run the admin script in it.
  *
- * @param {Object} options - Options.
- * @param {Object|null} options.config - Script settings; null leaves them out.
- * @param {Array} options.responses - Queued responses: a payload object, a string body, an Error to throw, or a function returning a promise.
- * @param {boolean} options.confirmResult - What confirm() answers.
- * @param {boolean} options.reducedMotion - Whether the user asks for reduced motion.
- * @returns {Promise<Object>} The window, its document, and the recorders.
+ * @param {Object}      options               - Options.
+ * @param {Object|null} options.config        - Script settings; null leaves them out.
+ * @param {Array}       options.responses     - Queued responses: a payload object, a string body, an Error to throw, or a function returning a promise.
+ * @param {boolean}     options.confirmResult - What confirm() answers.
+ * @param {boolean}     options.reducedMotion - Whether the user asks for reduced motion.
+ * @return {Promise<Object>} The window, its document, and the recorders.
  */
 export async function loadPage( { config = page.config, responses = [], confirmResult = true, reducedMotion = false } = {} ) {
 	// jsdom wraps the rendered markup in html, head, and body elements.
@@ -78,7 +78,7 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 	const scrolls = [];
 	const jqueryHandlers = [];
 
-	window.Element.prototype.scrollIntoView = function ( options ) {
+	window.Element.prototype.scrollIntoView = function( options ) {
 		scrolls.push( { className: this.className, ...options } );
 	};
 	window.matchMedia = ( query ) => ( { matches: reducedMotion && query.includes( 'prefers-reduced-motion: reduce' ) } );
@@ -88,7 +88,7 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 			jqueryHandlers.push( { element, name, handler } );
 		},
 	} );
-	window.HTMLAnchorElement.prototype.click = function () {
+	window.HTMLAnchorElement.prototype.click = function() {
 		downloads.push( { download: this.getAttribute( 'download' ), href: this.getAttribute( 'href' ) } );
 	};
 	window.URL.createObjectURL = ( blob ) => {
@@ -165,9 +165,9 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 /**
  * Select products in the product field.
  *
- * @param {Object} view - Value returned by loadPage().
- * @param {Array<string>} ids - Product IDs.
- * @returns {void}
+ * @param {Object}        view - Value returned by loadPage().
+ * @param {Array<string>} ids  - Product IDs.
+ * @return {void}
  */
 export function selectProducts( view, ids ) {
 	for ( const id of ids ) {
@@ -182,7 +182,7 @@ export function selectProducts( view, ids ) {
  * not print it. The admin script only relies on its position and class name.
  *
  * @param {Object} view - Value returned by loadPage().
- * @returns {HTMLElement} The container.
+ * @return {HTMLElement} The container.
  */
 export function enhanceProducts( view ) {
 	const container = view.document.createElement( 'span' );
@@ -196,10 +196,10 @@ export function enhanceProducts( view ) {
 /**
  * Fire a jQuery event the script bound on an element.
  *
- * @param {Object} view - Value returned by loadPage().
+ * @param {Object}      view    - Value returned by loadPage().
  * @param {HTMLElement} element - Element the handler was bound on.
- * @param {string} name - Event name.
- * @returns {number} How many handlers ran.
+ * @param {string}      name    - Event name.
+ * @return {number} How many handlers ran.
  */
 export function triggerJQuery( view, element, name ) {
 	const handlers = view.jqueryHandlers.filter( ( entry ) => entry.element === element && entry.name === name );
@@ -214,11 +214,11 @@ export function triggerJQuery( view, element, name ) {
 /**
  * Set a field's value and fire the given events, as typing or leaving the field would.
  *
- * @param {Object} view - Value returned by loadPage().
- * @param {HTMLElement} field - Field.
- * @param {string} value - New value.
+ * @param {Object}        view   - Value returned by loadPage().
+ * @param {HTMLElement}   field  - Field.
+ * @param {string}        value  - New value.
  * @param {Array<string>} events - Event names.
- * @returns {void}
+ * @return {void}
  */
 export function setField( view, field, value, events = [ 'input' ] ) {
 	field.value = value;
@@ -232,7 +232,7 @@ export function setField( view, field, value, events = [ 'input' ] ) {
  * Submit the form the way a click on the submit button would.
  *
  * @param {Object} view - Value returned by loadPage().
- * @returns {Event} The submit event.
+ * @return {Event} The submit event.
  */
 export function submitForm( view ) {
 	const event = new view.window.Event( 'submit', { bubbles: true, cancelable: true } );
@@ -245,9 +245,9 @@ export function submitForm( view ) {
 /**
  * Wait until a condition holds, or fail after a time limit.
  *
- * @param {Function} condition - Returns true when done.
- * @param {number} timeout - Milliseconds.
- * @returns {Promise<void>}
+ * @param {() => boolean} condition - Returns true when done.
+ * @param {number}        timeout   - Milliseconds.
+ * @return {Promise<void>}
  */
 export async function waitFor( condition, timeout = 2000 ) {
 	const started = Date.now();
@@ -265,7 +265,7 @@ export async function waitFor( condition, timeout = 2000 ) {
  * Wait until a generation run has finished.
  *
  * @param {Object} view - Value returned by loadPage().
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 export function waitForRun( view ) {
 	return waitFor( () => ! view.form.classList.contains( 'loading' ) && ! view.submit.disabled );
@@ -276,7 +276,7 @@ export function waitForRun( view ) {
  *
  * @param {Object} view - Value returned by loadPage().
  * @param {string} type - 'error', 'success', or 'warning'.
- * @returns {Array<string>} Notice texts.
+ * @return {Array<string>} Notice texts.
  */
 export function notices( view, type ) {
 	return Array.from( view.document.querySelectorAll( `.fgcbg-${ type }-message` ), ( notice ) => notice.textContent );

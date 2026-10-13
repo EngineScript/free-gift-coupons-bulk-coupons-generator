@@ -22,8 +22,15 @@
     <rule ref="rulesets/cleancode.xml">
         <!-- WordPress code uses core classes without namespace imports. -->
         <exclude name="MissingImport"/>
-        <!-- WordPress plugins call static helpers: the coordinator's get_instance(), the dependency checks, and WooCommerce's FeaturesUtil. -->
+        <!-- Added again below, with the classes that are reached statically. -->
         <exclude name="StaticAccess"/>
+    </rule>
+
+    <rule ref="rulesets/cleancode.xml/StaticAccess">
+        <properties>
+            <!-- The coordinator's get_instance(), the dependency checks, and WooCommerce's FeaturesUtil are static by design. -->
+            <property name="exceptions" value="FGCBG_Plugin,FGCBG_Dependencies,\Automattic\WooCommerce\Utilities\FeaturesUtil"/>
+        </properties>
     </rule>
 
     <!-- Code Size Rules (default thresholds) -->
@@ -37,53 +44,13 @@
         <exclude name="CamelCaseVariableName"/>
         <exclude name="CamelCaseParameterName"/>
         <exclude name="CamelCasePropertyName"/>
-        <!--
-            Request values are read from $_POST in one place only: the AJAX handler,
-            directly after its nonce and capability checks. The WordPress coding
-            standards check that pattern; this rule would flag any use at all.
-        -->
-        <exclude name="Superglobals"/>
     </rule>
 
-    <!-- Design Rules (with WordPress exceptions) -->
-    <rule ref="rulesets/design.xml">
-        <!-- Each plugin file stops direct requests with exit when ABSPATH is undefined. -->
-        <exclude name="ExitExpression"/>
-    </rule>
+    <!-- Design Rules -->
+    <rule ref="rulesets/design.xml"/>
 
-    <!-- WordPress-specific naming rules. -->
-    <!-- WordPress uses snake_case naming, which conflicts with standard camelCase rules. -->
-    <!-- Import only WordPress-compatible naming rules. -->
-
-    <rule ref="rulesets/naming.xml/ShortVariable">
-        <properties>
-            <!-- WordPress allows short variables like $id, $wp, but avoid single letters -->
-            <property name="minimum" value="2"/>
-        </properties>
-    </rule>
-
-    <rule ref="rulesets/naming.xml/LongVariable">
-        <properties>
-            <!-- WordPress descriptive variable names can be longer. -->
-            <property name="maximum" value="40"/>
-        </properties>
-    </rule>
-
-    <rule ref="rulesets/naming.xml/ShortMethodName">
-        <properties>
-            <!-- WordPress allows short method names like get(), set(), but avoid very short -->
-            <property name="minimum" value="2"/>
-        </properties>
-    </rule>
-
-    <!-- Allow WordPress constructor patterns. -->
-    <rule ref="rulesets/naming.xml/ConstructorWithNameAsEnclosingClass"/>
-
-    <!-- WordPress constant naming (UPPER_CASE_WITH_UNDERSCORES). -->
-    <rule ref="rulesets/naming.xml/ConstantNamingConventions"/>
-
-    <!-- WordPress boolean method naming (is_*, has_*, can_*). -->
-    <rule ref="rulesets/naming.xml/BooleanGetMethodName"/>
+    <!-- Naming Rules (stock limits). The camelCase rules are in the controversial ruleset. -->
+    <rule ref="rulesets/naming.xml"/>
 
     <!-- Unused Code Rules (always enforce) -->
     <rule ref="rulesets/unusedcode.xml"/>

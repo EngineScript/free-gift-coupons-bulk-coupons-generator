@@ -11,8 +11,13 @@
 /.gitattributes export-ignore
 /.gitignore export-ignore
 /.markdownlint.json export-ignore
+/.markdownlint-cli2.jsonc export-ignore
+/.mypy.ini export-ignore
+/.ruff.toml export-ignore
+/.stylelintrc.json export-ignore
 /.yamllint.yml export-ignore
 /composer.json export-ignore
+/eslint.config.mjs export-ignore
 /package.json export-ignore
 /package-lock.json export-ignore
 /phpcs.xml export-ignore

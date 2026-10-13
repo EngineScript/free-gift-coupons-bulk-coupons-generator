@@ -60,7 +60,7 @@
 	/**
 	 * Check that the server supplied everything the script needs.
 	 *
-	 * @returns {boolean} True when the configuration is usable.
+	 * @return {boolean} True when the configuration is usable.
 	 */
 	function isConfigured() {
 		const limits = [ BATCH_SIZE, MAX_COUPON_COUNT, MAX_PREFIX_LENGTH, MIN_CODE_LENGTH, MAX_CODE_LENGTH ];
@@ -73,9 +73,9 @@
 	/**
 	 * Announce a message to assistive technology when WordPress provides the helper.
 	 *
-	 * @param {string} text - Message text.
+	 * @param {string} text       - Message text.
 	 * @param {string} politeness - 'polite' or 'assertive'.
-	 * @returns {void}
+	 * @return {void}
 	 */
 	function speak( text, politeness ) {
 		globalThis.wp?.a11y?.speak?.( text, politeness );
@@ -84,9 +84,9 @@
 	/**
 	 * Create an element safely from a static tag name.
 	 *
-	 * @param {string} tag - Tag name.
+	 * @param {string} tag   - Tag name.
 	 * @param {Object} attrs - Attribute key/value pairs.
-	 * @returns {HTMLElement} The new element.
+	 * @return {HTMLElement} The new element.
 	 */
 	function createElement( tag, attrs = {} ) {
 		const element = document.createElement( tag );
@@ -102,8 +102,8 @@
 	 * Build a coupon-count warning span using safe DOM construction.
 	 *
 	 * @param {string} modifier - CSS BEM modifier.
-	 * @param {string} text - Warning message text.
-	 * @returns {HTMLElement} The warning span element.
+	 * @param {string} text     - Warning message text.
+	 * @return {HTMLElement} The warning span element.
 	 */
 	function buildWarningSpan( modifier, text ) {
 		const warning = createElement( 'span', {
@@ -120,8 +120,8 @@
 	 * Build a WordPress admin notice with safe text content.
 	 *
 	 * @param {string} className - Notice CSS classes.
-	 * @param {string} text - Notice message text.
-	 * @returns {HTMLElement} The notice element.
+	 * @param {string} text      - Notice message text.
+	 * @return {HTMLElement} The notice element.
 	 */
 	function buildNotice( className, text ) {
 		const notice = createElement( 'div', { class: className } );
@@ -176,7 +176,7 @@
 		/**
 		 * Reveal the notice the page ships for missing settings and disable the form.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showConfigurationError() {
 			if ( this.elements.configError ) {
@@ -201,7 +201,7 @@
 		 * Handle form submission: validate, confirm large batches, run AJAX generation.
 		 *
 		 * @param {SubmitEvent} event - Submit event.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		handleFormSubmission( event ) {
 			event.preventDefault();
@@ -231,7 +231,7 @@
 		 * Run AJAX batch coupon generation with progress feedback.
 		 *
 		 * @param {number} total - Total coupons to generate.
-		 * @returns {Promise<void>}
+		 * @return {Promise<void>}
 		 */
 		async runBatchGeneration( total ) {
 			const state = {
@@ -259,7 +259,8 @@
 			this.elements.form.classList.add( 'loading' );
 			globalThis.addEventListener( 'beforeunload', this.onBeforeUnload );
 			// A disabled button loses keyboard focus; remember it so the run can give it back.
-			this.submitButtonHadFocus = document.activeElement === this.elements.submitButton;
+			const { submitButton } = this.elements;
+			this.submitButtonHadFocus = submitButton.ownerDocument.activeElement === submitButton;
 			this.setSubmitButtonDisabled( true );
 			this.setProgressVisible( true );
 			this.setResultsVisible( false );
@@ -271,7 +272,7 @@
 		 * Generate all coupon batches.
 		 *
 		 * @param {Object} state - Mutable batch state.
-		 * @returns {Promise<void>}
+		 * @return {Promise<void>}
 		 */
 		async generateCouponBatches( state ) {
 			while ( state.remaining > 0 ) {
@@ -285,7 +286,7 @@
 		 * Generate a single coupon batch and update progress state.
 		 *
 		 * @param {Object} state - Mutable batch state.
-		 * @returns {Promise<boolean>} True when generation can continue.
+		 * @return {Promise<boolean>} True when generation can continue.
 		 */
 		async generateCouponBatch( state ) {
 			const batchSize = Math.min( BATCH_SIZE, state.remaining );
@@ -316,9 +317,9 @@
 		/**
 		 * Add a successful AJAX response to the current batch state.
 		 *
-		 * @param {Object} state - Mutable batch state.
+		 * @param {Object} state    - Mutable batch state.
 		 * @param {Object} response - AJAX response payload.
-		 * @returns {number} Number of coupons generated in the batch.
+		 * @return {number} Number of coupons generated in the batch.
 		 */
 		addBatchResult( state, response ) {
 			const parsedGenerated = Number.parseInt( response.data?.generated ?? 0, 10 );
@@ -343,7 +344,7 @@
 		 * Refresh progress UI after a successful batch.
 		 *
 		 * @param {Object} state - Mutable batch state.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		updateBatchProgress( state ) {
 			this.updateProgress( Math.min( 100, Math.round( ( state.generated / state.total ) * 100 ) ) );
@@ -360,7 +361,7 @@
 		 * Display the AJAX failure response.
 		 *
 		 * @param {Object|null|undefined} response - AJAX response payload.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showBatchFailure( response ) {
 			this.showErrorMessage( response?.data?.message ?? message( 'generation_failed' ) );
@@ -370,7 +371,7 @@
 		 * Restore controls and reveal generated coupon results.
 		 *
 		 * @param {Object} state - Mutable batch state.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		finishBatchGeneration( state ) {
 			this.elements.form.classList.remove( 'loading' );
@@ -389,7 +390,7 @@
 		 * Display completed batch generation results.
 		 *
 		 * @param {Object} state - Mutable batch state.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showBatchResults( state ) {
 			if ( state.remaining === 0 ) {
@@ -417,7 +418,7 @@
 		 * taken focus since, so focus is never pulled away from where the user
 		 * has moved it.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		restoreSubmitButtonFocus() {
 			const { activeElement } = document;
@@ -434,7 +435,7 @@
 		 * Toggle the submit button disabled state when the button exists.
 		 *
 		 * @param {boolean} disabled - Whether the submit button is disabled.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		setSubmitButtonDisabled( disabled ) {
 			if ( this.elements.submitButton ) {
@@ -446,7 +447,7 @@
 		 * Toggle progress visibility when the progress element exists.
 		 *
 		 * @param {boolean} visible - Whether progress should be visible.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		setProgressVisible( visible ) {
 			if ( this.elements.progress ) {
@@ -458,7 +459,7 @@
 		 * Toggle results visibility when the results element exists.
 		 *
 		 * @param {boolean} visible - Whether results should be visible.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		setResultsVisible( visible ) {
 			if ( this.elements.results ) {
@@ -475,7 +476,7 @@
 		 * Replace the generated coupon code textarea contents.
 		 *
 		 * @param {string[]} codes - Coupon codes.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		setGeneratedCodes( codes ) {
 			if ( this.elements.generatedCodes ) {
@@ -487,7 +488,7 @@
 		 * Send a single batch AJAX request.
 		 *
 		 * @param {number} batchSize - Number of coupons for this batch.
-		 * @returns {Promise<Object>} Parsed JSON response.
+		 * @return {Promise<Object>} Parsed JSON response.
 		 */
 		async sendBatchRequest( batchSize ) {
 			const body = new URLSearchParams( {
@@ -541,7 +542,7 @@
 		/**
 		 * Show or clear the coupon-count warning without changing what was typed.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		updateCountWarning() {
 			const { couponCount } = this.elements;
@@ -565,8 +566,8 @@
 						'error',
 						formatMessage( 'max_coupons_warning', [
 							[ '%d', MAX_COUPON_COUNT ],
-						] )
-					)
+						] ),
+					),
 				);
 				return;
 			}
@@ -574,7 +575,7 @@
 			if ( count > CAUTION_ABOVE ) {
 				couponCount.insertAdjacentElement(
 					'afterend',
-					buildWarningSpan( 'caution', message( 'many_coupons_warning' ) )
+					buildWarningSpan( 'caution', message( 'many_coupons_warning' ) ),
 				);
 			}
 		}
@@ -582,7 +583,7 @@
 		/**
 		 * Bring the coupon count into range once the user has finished editing it.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		normalizeCouponCount() {
 			const { couponCount } = this.elements;
@@ -605,7 +606,7 @@
 		/**
 		 * Bring the random code length into range once the user has finished editing it.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		normalizeCodeLength() {
 			const { codeLength } = this.elements;
@@ -627,7 +628,7 @@
 		/**
 		 * Run all field validations.
 		 *
-		 * @returns {boolean} True when valid.
+		 * @return {boolean} True when valid.
 		 */
 		validateForm() {
 			const errors = [];
@@ -659,7 +660,7 @@
 		 * Validate product selection.
 		 *
 		 * @param {string[]} errors - Collector array.
-		 * @returns {boolean} True when valid.
+		 * @return {boolean} True when valid.
 		 */
 		validateProductSelection( errors ) {
 			if ( this.getSelectedProductIds().length === 0 ) {
@@ -674,7 +675,7 @@
 		 * Validate coupon count field.
 		 *
 		 * @param {string[]} errors - Collector array.
-		 * @returns {boolean} True when valid.
+		 * @return {boolean} True when valid.
 		 */
 		validateCouponCount( errors ) {
 			const raw = this.elements.couponCount?.value.trim() ?? '';
@@ -699,7 +700,7 @@
 		 * Validate random coupon-code length field.
 		 *
 		 * @param {string[]} errors - Collector array.
-		 * @returns {boolean} True when valid.
+		 * @return {boolean} True when valid.
 		 */
 		validateCodeLength( errors ) {
 			const raw = this.elements.codeLength?.value.trim() ?? '';
@@ -744,7 +745,7 @@
 		 * The state is deliberately not cleared on focus: validation moves focus
 		 * to the first invalid field, and the mark has to survive that.
 		 *
-		 * @returns {void}
+		 * @return {void}
 		 */
 		initFormValidation() {
 			const fields = [
@@ -771,7 +772,7 @@
 		 * after the original, visually hidden select.
 		 *
 		 * @param {HTMLElement} field - Form field.
-		 * @returns {Element|null} The visible container, or null when the field is shown itself.
+		 * @return {Element|null} The visible container, or null when the field is shown itself.
 		 */
 		getEnhancedContainer( field ) {
 			const next = field.nextElementSibling;
@@ -783,7 +784,7 @@
 		 * Mark a field as invalid for sighted and assistive-technology users.
 		 *
 		 * @param {HTMLElement|null} field - Form field.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		markInvalid( field ) {
 			if ( ! field ) {
@@ -799,7 +800,7 @@
 		 * Remove a field's invalid state.
 		 *
 		 * @param {HTMLElement|null} field - Form field.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		clearInvalid( field ) {
 			if ( ! field ) {
@@ -822,7 +823,7 @@
 		 * Display an error notice above the form. It stays until the next attempt.
 		 *
 		 * @param {string} text - Error text.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showErrorMessage( text ) {
 			this.clearNotices();
@@ -834,7 +835,7 @@
 		 * Display a success notice above the form, replacing any earlier notice.
 		 *
 		 * @param {string} text - Success text.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showSuccessMessage( text ) {
 			this.clearNotices();
@@ -846,7 +847,7 @@
 		 * Display a warning notice below any other notice, without removing it.
 		 *
 		 * @param {string} text - Warning text.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		showWarningMessage( text ) {
 			this.insertNoticeBeforeForm( buildNotice( 'notice notice-warning fgcbg-warning-message', text ) );
@@ -857,7 +858,7 @@
 		 * Insert a notice element before the form and scroll it into view.
 		 *
 		 * @param {HTMLElement} notice - The notice element to insert.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		insertNoticeBeforeForm( notice ) {
 			this.elements.form.before( notice );
@@ -873,7 +874,7 @@
 		 * Update the visual progress bar.
 		 *
 		 * @param {number} percent - Progress percentage.
-		 * @returns {void}
+		 * @return {void}
 		 */
 		updateProgress( percent ) {
 			if ( ! this.elements.progressBar ) {
@@ -887,12 +888,12 @@
 		/**
 		 * Get selected product IDs from the WooCommerce enhanced select.
 		 *
-		 * @returns {string[]} Selected product IDs.
+		 * @return {string[]} Selected product IDs.
 		 */
 		getSelectedProductIds() {
 			return Array.from(
 				this.elements.products?.selectedOptions ?? [],
-				( option ) => option.value
+				( option ) => option.value,
 			).filter( Boolean );
 		}
 
@@ -902,7 +903,7 @@
 		 * Bound only while a run is in progress.
 		 *
 		 * @param {BeforeUnloadEvent} event - Before unload event.
-		 * @returns {string} Warning message for legacy browsers.
+		 * @return {string} Warning message for legacy browsers.
 		 */
 		warnBeforeUnload( event ) {
 			const warning = message( 'generation_in_progress' );

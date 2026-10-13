@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <psalm
-    errorLevel="2"
+    errorLevel="1"
     resolveFromConfigFile="true"
     phpVersion="8.2"
     allFunctionsGlobal="true"
     allConstantsGlobal="true"
-    findUnusedCode="false"
+    findUnusedCode="true"
 >
     <projectFiles>
         <file name="free-gift-bulk-coupon-generator.php" />
         <directory name="includes" />
+        <file name="uninstall.php" />
     </projectFiles>
 
     <stubs>

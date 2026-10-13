@@ -35,7 +35,7 @@ afterEach( () => {
 
 test( 'every setting the script reads is provided by PHP, and every provided setting is read', () => {
 	const read = new Set(
-		Array.from( source.matchAll( /\b(?:message|formatMessage|limit)\(\s*'([a-z_]+)'/g ), ( match ) => match[ 1 ] )
+		Array.from( source.matchAll( /\b(?:message|formatMessage|limit)\(\s*'([a-z_]+)'/g ), ( match ) => match[ 1 ] ),
 	);
 
 	assert.ok( read.size > 10, 'The pattern found the settings the script reads.' );
@@ -685,7 +685,7 @@ test( 'progress follows the share of coupons created, in the bar and in words', 
 	assert.equal( bar.style.width, '40%' );
 	assert.equal(
 		view.document.querySelector( '#fgcbg-progress-text' ).textContent,
-		formatted( 'generating_progress', [ [ '%1$d', 10 ], [ '%2$d', 25 ] ] )
+		formatted( 'generating_progress', [ [ '%1$d', 10 ], [ '%2$d', 25 ] ] ),
 	);
 
 	release();

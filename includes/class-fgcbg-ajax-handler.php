@@ -64,12 +64,17 @@ final class FGCBG_Ajax_Handler {
 	/**
 	 * Handle AJAX batch coupon generation.
 	 *
+	 * This is the one place that reads request values from $_POST, directly
+	 * after the nonce and capability checks.
+	 *
 	 * @since 1.6.0
 	 * @return never
+	 * @SuppressWarnings("PHPMD.Superglobals")
 	 */
 	public function generate_batch(): never {
 		check_ajax_referer( 'fgcbg_ajax_nonce', 'nonce' );
 
+		// phpcs:ignore WordPress.WP.Capabilities.Undetermined -- The constant holds the WooCommerce capability 'publish_shop_coupons'.
 		if ( ! current_user_can( self::GENERATE_COUPONS_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-bulk-coupon-generator' ) ), 403 );
 		}
