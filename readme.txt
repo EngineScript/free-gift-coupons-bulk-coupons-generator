@@ -26,7 +26,7 @@ Key features:
 * **Multi-Product Support**: Select up to 20 products as free gifts in a single coupon
 * **Proper Data Structure**: Creates `$gift_info` arrays with correct product and variation ID mapping
 * **Custom Prefixes**: Add alphanumeric prefixes to coupon codes for easy organization
-* **Generated Code Export**: View generated codes one per line and download them as a `.txt` file
+* **Generated Code Export**: View generated codes one per line, ready to select and copy, and download them as a `.txt` file or a `.csv` file (one code per row, no heading row)
 * **Security First**: CSRF protection, input sanitization, output escaping, and capability checks
 * **User-Friendly Interface**: Clean, responsive admin interface with real-time validation
 * **Batch Processing**: Coupons are generated in requests of 10
@@ -110,6 +110,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 == Changelog ==
+
+= Unreleased =
+
+**Added:**
+
+* The generated codes can now be downloaded as a `.csv` file, one code per row with no heading row, as well as a `.txt` file.
 
 = 1.8.0 =
 

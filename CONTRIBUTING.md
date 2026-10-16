@@ -227,6 +227,18 @@ This project follows [Semantic Versioning](https://semver.org/):
 - **MINOR**: New features
 - **PATCH**: Bug fixes
 
+## Translation Template
+
+Use the literal `free-gift-bulk-coupon-generator` text domain for user-facing strings. Add translator comments for placeholders, use numbered placeholders when there is more than one, and escape translated text for its output context.
+
+The translation template, `languages/free-gift-bulk-coupon-generator.pot`, is generated locally and committed; no workflow regenerates it. Before committing a change to a shipped PHP or JavaScript file, run this from the repository root with WP-CLI's `i18n` command available:
+
+```bash
+composer make-pot
+```
+
+The script scans the shipped PHP and JavaScript files and names the GitHub issue tracker as the template's bug report address. When only the creation date would change, it puts the committed template back, so it is safe to run every time. Review message text, source references, translator notes, and plural forms in the generated diff, and commit the template with the change. A POT is a translation template; it does not provide a translated interface.
+
 ## Support Channels
 
 - **Issues**: [GitHub Issues](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues)

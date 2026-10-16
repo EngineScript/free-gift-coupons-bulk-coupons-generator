@@ -38,6 +38,10 @@
     "psalm:taint": "psalm --config=psalm.xml --taint-analysis",
     "phpstan": "phpstan analyze --memory-limit=1G",
     "test": "phpunit --configuration phpunit.xml --testsuite unit --fail-on-empty-test-suite",
+    "make-pot": [
+      "wp i18n make-pot . languages/free-gift-bulk-coupon-generator.pot --slug=free-gift-bulk-coupon-generator --domain=free-gift-bulk-coupon-generator --include=free-gift-bulk-coupon-generator.php,uninstall.php,includes,assets/js --headers={\\\"Report-Msgid-Bugs-To\\\":\\\"https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues\\\"}",
+      "git diff --quiet --ignore-matching-lines=POT-Creation-Date: -- languages/free-gift-bulk-coupon-generator.pot && git checkout -- languages/free-gift-bulk-coupon-generator.pot || exit 0"
+    ],
     "check-all": [
       "@phpcs",
       "@phpmd",

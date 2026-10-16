@@ -14,7 +14,8 @@
 		codeLength: '#coupon_code_length',
 		configError: '#fgcbg-config-error',
 		couponCount: '#number_of_coupons',
-		downloadButton: '#fgcbg-download-codes',
+		downloadCsv: '#fgcbg-download-csv',
+		downloadTxt: '#fgcbg-download-txt',
 		form: '.fgcbg-form',
 		generatedCodes: '#fgcbg-generated-codes',
 		prefix: '#coupon_prefix',
@@ -32,6 +33,18 @@
 
 	/** Coupon totals above this show a caution beside the field. */
 	const CAUTION_ABOVE = 50;
+
+	/**
+	 * Files the generated codes can be downloaded as, one code per line.
+	 *
+	 * Codes hold only lower-case letters and digits, so a CSV row needs no
+	 * quoting and cannot start a spreadsheet formula. The CSV has no heading
+	 * row and ends each row with CRLF, as RFC 4180 describes.
+	 */
+	const DOWNLOAD_FORMATS = Object.freeze( {
+		csv: Object.freeze( { filename: 'free-gift-coupon-codes.csv', lineEnding: '\r\n', type: 'text/csv;charset=utf-8' } ),
+		txt: Object.freeze( { filename: 'free-gift-coupon-codes.txt', lineEnding: '\n', type: 'text/plain;charset=utf-8' } ),
+	} );
 
 	function message( key ) {
 		return String( config[ key ] ?? '' );
@@ -141,7 +154,8 @@
 				codeLength: document.querySelector( selectors.codeLength ),
 				configError: document.querySelector( selectors.configError ),
 				couponCount: document.querySelector( selectors.couponCount ),
-				downloadButton: document.querySelector( selectors.downloadButton ),
+				downloadCsv: document.querySelector( selectors.downloadCsv ),
+				downloadTxt: document.querySelector( selectors.downloadTxt ),
 				form,
 				generatedCodes: document.querySelector( selectors.generatedCodes ),
 				prefix: document.querySelector( selectors.prefix ),
@@ -194,7 +208,8 @@
 			this.elements.couponCount?.addEventListener( 'input', () => this.updateCountWarning() );
 			this.elements.couponCount?.addEventListener( 'change', () => this.normalizeCouponCount() );
 			this.elements.codeLength?.addEventListener( 'change', () => this.normalizeCodeLength() );
-			this.elements.downloadButton?.addEventListener( 'click', () => this.downloadGeneratedCodes() );
+			this.elements.downloadTxt?.addEventListener( 'click', () => this.downloadGeneratedCodes( 'txt' ) );
+			this.elements.downloadCsv?.addEventListener( 'click', () => this.downloadGeneratedCodes( 'csv' ) );
 		}
 
 		/**
@@ -717,18 +732,24 @@
 			return true;
 		}
 
-		/** Download the generated coupon code list as a plain text file. */
-		downloadGeneratedCodes() {
+		/**
+		 * Download the generated coupon code list, one code per line.
+		 *
+		 * @param {string} format - A key of DOWNLOAD_FORMATS: 'txt' or 'csv'.
+		 * @return {void}
+		 */
+		downloadGeneratedCodes( format ) {
 			const codes = this.elements.generatedCodes?.value.trim() ?? '';
 
 			if ( codes === '' ) {
 				return;
 			}
 
-			const blob = new Blob( [ `${ codes }\n` ], { type: 'text/plain;charset=utf-8' } );
+			const { filename, lineEnding, type } = DOWNLOAD_FORMATS[ format ];
+			const blob = new Blob( [ codes.split( '\n' ).join( lineEnding ) + lineEnding ], { type } );
 			const url = URL.createObjectURL( blob );
 			const link = createElement( 'a', {
-				download: 'free-gift-coupon-codes.txt',
+				download: filename,
 				href: url,
 			} );
 

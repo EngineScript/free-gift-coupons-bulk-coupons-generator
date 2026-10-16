@@ -315,6 +315,12 @@
 	resize: vertical;
 }
 
+.fgcbg-download-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
 .fgcbg-error-message p {
 	white-space: pre-line;
 }

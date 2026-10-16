@@ -28,6 +28,23 @@ const MAX_LENGTH = Number( config.max_code_length );
 
 let view = null;
 
+/**
+ * Click a download button and return the text of the one file it produced.
+ *
+ * @param {Object} loaded - Value returned by loadPage().
+ * @param {string} format - 'txt' or 'csv'.
+ * @return {string} File contents.
+ */
+function downloadedText( loaded, format ) {
+	loaded.downloads.length = 0;
+	loaded.document.querySelector( `#fgcbg-download-${ format }` ).click();
+
+	assert.equal( loaded.downloads.length, 2, `One ${ format } file is made and one link is clicked.` );
+	assert.equal( loaded.downloads[ 1 ].download, `free-gift-coupon-codes.${ format }` );
+
+	return loaded.downloads[ 0 ].blobText;
+}
+
 afterEach( () => {
 	view?.close();
 	view = null;
@@ -380,12 +397,101 @@ test( 'the generated codes can be downloaded as a text file', async () => {
 	submitForm( view );
 	await waitForRun( view );
 
-	view.document.querySelector( '#fgcbg-download-codes' ).click();
+	view.document.querySelector( '#fgcbg-download-txt' ).click();
 
 	assert.deepEqual( view.downloads, [
-		{ blobType: 'text/plain;charset=utf-8', blobSize: 'code0\ncode1\n'.length },
+		{ blobType: 'text/plain;charset=utf-8', blobText: 'code0\ncode1\n' },
 		{ download: 'free-gift-coupon-codes.txt', href: 'blob:https://example.test/codes' },
 	] );
+} );
+
+test( 'the generated codes can be downloaded as a CSV file with one code per row and no heading', async () => {
+	view = await loadPage( { responses: [ okResponse( 2 ) ] } );
+	selectProducts( view, [ '123' ] );
+	setField( view, view.count, '2' );
+	submitForm( view );
+	await waitForRun( view );
+
+	view.document.querySelector( '#fgcbg-download-csv' ).click();
+
+	assert.deepEqual( view.downloads, [
+		{ blobType: 'text/csv;charset=utf-8', blobText: 'code0\r\ncode1\r\n' },
+		{ download: 'free-gift-coupon-codes.csv', href: 'blob:https://example.test/codes' },
+	] );
+} );
+
+test( 'both downloads hold exactly the codes on screen, from every batch, in the order they were created', async () => {
+	const codes = Array.from( { length: 12 }, ( _, index ) => `code${ index }` );
+
+	view = await loadPage( { responses: [ okResponse( 10, 0 ), okResponse( 2, 10 ) ] } );
+	selectProducts( view, [ '123' ] );
+	setField( view, view.count, '12' );
+	submitForm( view );
+	await waitForRun( view );
+
+	assert.equal( view.document.querySelector( '#fgcbg-generated-codes' ).value, codes.join( '\n' ) );
+	assert.equal( downloadedText( view, 'txt' ), `${ codes.join( '\n' ) }\n` );
+
+	const csv = downloadedText( view, 'csv' );
+	const rows = csv.split( '\r\n' );
+
+	assert.equal( csv, `${ codes.join( '\r\n' ) }\r\n` );
+	assert.equal( rows.pop(), '', 'The last row ends with a line break and nothing follows it.' );
+	assert.deepEqual( rows, codes, 'One code per row, with no heading row and no quoting.' );
+} );
+
+test( 'a download leaves no link behind and frees the file once the browser has it', async () => {
+	view = await loadPage( { responses: [ okResponse( 1 ) ] } );
+	selectProducts( view, [ '123' ] );
+	setField( view, view.count, '1' );
+	submitForm( view );
+	await waitForRun( view );
+
+	const timers = [];
+	view.window.setTimeout = ( callback ) => timers.push( callback );
+
+	for ( const format of [ 'txt', 'csv' ] ) {
+		timers.length = 0;
+		view.revoked.length = 0;
+		view.document.querySelector( `#fgcbg-download-${ format }` ).click();
+
+		assert.equal( view.document.querySelectorAll( 'a[download]' ).length, 0, `The ${ format } link is removed after the click.` );
+		assert.deepEqual( view.revoked, [], `The ${ format } file is not freed before the browser has read it.` );
+		assert.equal( timers.length, 1 );
+
+		timers[ 0 ]();
+		assert.deepEqual( view.revoked, [ 'blob:https://example.test/codes' ], `The ${ format } file is freed afterwards.` );
+	}
+} );
+
+test( 'after a second run, the downloads hold only the codes of that run', async () => {
+	view = await loadPage( { responses: [ okResponse( 2, 0 ), okResponse( 3, 50 ) ] } );
+	selectProducts( view, [ '123' ] );
+	setField( view, view.count, '2' );
+	submitForm( view );
+	await waitForRun( view );
+
+	setField( view, view.count, '3' );
+	submitForm( view );
+	await waitForRun( view );
+
+	assert.equal( view.requests.length, 2 );
+	assert.equal( downloadedText( view, 'txt' ), 'code50\ncode51\ncode52\n' );
+	assert.equal( downloadedText( view, 'csv' ), 'code50\r\ncode51\r\ncode52\r\n' );
+} );
+
+test( 'when a run stops early, the downloads hold the codes created before it stopped', async () => {
+	view = await loadPage( { responses: [ okResponse( 10 ), '<br />Notice: something{"success":true}' ] } );
+	selectProducts( view, [ '123' ] );
+	setField( view, view.count, '20' );
+	submitForm( view );
+	await waitForRun( view );
+
+	const codes = Array.from( { length: 10 }, ( _, index ) => `code${ index }` );
+
+	assert.deepEqual( notices( view, 'error' ), [ config.response_unreadable ] );
+	assert.equal( downloadedText( view, 'txt' ), `${ codes.join( '\n' ) }\n` );
+	assert.equal( downloadedText( view, 'csv' ), `${ codes.join( '\r\n' ) }\r\n` );
 } );
 
 // ---------------------------------------------------------------- what PHP prints for the script and for the browser
@@ -403,7 +509,8 @@ test( 'the page ships hidden states, roles, and control types as the script expe
 	assert.equal( bar.getAttribute( 'aria-valuemax' ), '100' );
 	assert.notEqual( bar.getAttribute( 'aria-label' ) ?? '', '' );
 	assert.equal( document.querySelector( '#fgcbg-generated-codes' ).readOnly, true );
-	assert.equal( document.querySelector( '#fgcbg-download-codes' ).type, 'button', 'A click on it must not submit the form.' );
+	assert.equal( document.querySelector( '#fgcbg-download-txt' ).type, 'button', 'A click on it must not submit the form.' );
+	assert.equal( document.querySelector( '#fgcbg-download-csv' ).type, 'button', 'A click on it must not submit the form.' );
 	assert.equal( view.submit.type, 'submit' );
 	assert.equal( document.querySelector( '.fgcbg-warning-icon' ).getAttribute( 'aria-hidden' ), 'true' );
 } );
@@ -768,7 +875,8 @@ test( 'a run that began in a field does not move focus to the button afterwards'
 test( 'nothing is downloaded while there are no codes', async () => {
 	view = await loadPage();
 
-	view.document.querySelector( '#fgcbg-download-codes' ).click();
+	view.document.querySelector( '#fgcbg-download-txt' ).click();
+	view.document.querySelector( '#fgcbg-download-csv' ).click();
 
 	assert.deepEqual( view.downloads, [] );
 } );

@@ -40,7 +40,8 @@ final class AdminPageTest extends TestCase {
 				'fgcbg-progress-text',
 				'fgcbg-results',
 				'fgcbg-generated-codes',
-				'fgcbg-download-codes',
+				'fgcbg-download-txt',
+				'fgcbg-download-csv',
 			) as $element_id
 		) {
 			$this->assertSame( 1, substr_count( $html, 'id="' . $element_id . '"' ), sprintf( 'Expected exactly one element with ID "%s".', $element_id ) );
@@ -68,5 +69,19 @@ final class AdminPageTest extends TestCase {
 	 */
 	public function test_settings_error_notice_is_hidden_by_default(): void {
 		$this->assertMatchesRegularExpression( '/<div id="fgcbg-config-error"[^>]*\shidden>/', $this->render_page() );
+	}
+
+	/**
+	 * The results offer a .txt and a .csv download, as buttons that do not submit the form.
+	 */
+	public function test_results_offer_txt_and_csv_downloads(): void {
+		$html = $this->render_page();
+
+		foreach ( array( 'txt', 'csv' ) as $format ) {
+			$this->assertMatchesRegularExpression(
+				'/<button type="button" id="fgcbg-download-' . $format . '" class="button">\s*Download \.' . $format . '\s*<\/button>/',
+				$html
+			);
+		}
 	}
 }

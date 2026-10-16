@@ -75,6 +75,7 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 	const spoken = [];
 	const confirmations = [];
 	const downloads = [];
+	const revoked = [];
 	const scrolls = [];
 	const jqueryHandlers = [];
 
@@ -91,11 +92,19 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 	window.HTMLAnchorElement.prototype.click = function() {
 		downloads.push( { download: this.getAttribute( 'download' ), href: this.getAttribute( 'href' ) } );
 	};
+	// Keep the text each Blob is built from, since reading a Blob back is asynchronous.
+	const blobTexts = new WeakMap();
+	window.Blob = class extends window.Blob {
+		constructor( parts = [], options = {} ) {
+			super( parts, options );
+			blobTexts.set( this, parts.join( '' ) );
+		}
+	};
 	window.URL.createObjectURL = ( blob ) => {
-		downloads.push( { blobType: blob.type, blobSize: blob.size } );
+		downloads.push( { blobType: blob.type, blobText: blobTexts.get( blob ) } );
 		return 'blob:https://example.test/codes';
 	};
-	window.URL.revokeObjectURL = () => {};
+	window.URL.revokeObjectURL = ( url ) => revoked.push( url );
 	window.confirm = ( text ) => {
 		confirmations.push( text );
 		return confirmResult;
@@ -150,6 +159,7 @@ export async function loadPage( { config = page.config, responses = [], confirmR
 		spoken,
 		confirmations,
 		downloads,
+		revoked,
 		scrolls,
 		jqueryHandlers,
 		form: document.querySelector( '.fgcbg-form' ),

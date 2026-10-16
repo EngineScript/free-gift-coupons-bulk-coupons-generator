@@ -21,7 +21,7 @@ A WordPress plugin for generating bulk free gift coupons that work specifically 
 - **AJAX Batch Generation**: Generates coupons in requests of 10 with a real-time progress bar to reduce timeout risk
 - **Multi-Product Support**: Select one product or up to 20 products as free gifts
 - **Custom Prefixes**: Add a prefix of up to 8 letters and digits to your coupon codes (for example, `gift` gives codes such as `giftk7m2p9x4wq3n`)
-- **Generated Code Export**: Displays generated codes one per line and downloads them as a `.txt` file
+- **Generated Code Export**: Displays generated codes one per line, ready to select and copy, and downloads them as a `.txt` file or a `.csv` file (one code per row, no heading row)
 - **Bulk Generation**: Generate up to 100 coupons per run. The server limits each request to 100 coupons; it does not limit how many runs a user starts
 - **Proper Data Structure**: Creates `$gift_info` arrays with the correct product and variation ID mapping
 - **Security**: Nonce and capability checks on every request, sanitized input, and escaped output
@@ -53,7 +53,7 @@ Install from the release zip file, not from a copy of the repository. The reposi
 3. Enter the number of coupons to generate (1-100)
 4. Optionally add a custom prefix and change the random code length (8-24 characters, 12 by default)
 5. Click "Generate Free Gift Coupons" and watch the progress bar
-6. Copy the generated codes from the page or download them as a `.txt` file
+6. Copy the generated codes from the page or download them as a `.txt` or `.csv` file
 
 ## Generated Coupon Features
 

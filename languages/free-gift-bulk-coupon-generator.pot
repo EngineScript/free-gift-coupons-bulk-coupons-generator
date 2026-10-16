@@ -9,29 +9,29 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-09T07:58:35+00:00\n"
+"POT-Creation-Date: 2026-10-16T00:09:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: free-gift-bulk-coupon-generator\n"
 
 #. Plugin Name of the plugin
-#: free-gift-bulk-coupon-generator.php:3
+#: free-gift-bulk-coupon-generator.php
 #: includes/class-fgcbg-admin-page.php:29
 msgid "Free Gift Coupons Bulk Coupon Generator"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: free-gift-bulk-coupon-generator.php:4
+#: free-gift-bulk-coupon-generator.php
 msgid "https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator"
 msgstr ""
 
 #. Description of the plugin
-#: free-gift-bulk-coupon-generator.php:5
+#: free-gift-bulk-coupon-generator.php
 msgid "Generate bulk free gift coupon codes that work with the Free Gift Coupons for WooCommerce plugin. Creates coupons with the proper data structure for free gift functionality."
 msgstr ""
 
 #. Author of the plugin
-#: free-gift-bulk-coupon-generator.php:7
+#: free-gift-bulk-coupon-generator.php
 msgid "EngineScript"
 msgstr ""
 
@@ -56,7 +56,7 @@ msgid "Generating many coupons may take some time."
 msgstr ""
 
 #: includes/class-fgcbg-admin-assets.php:183
-#: includes/class-fgcbg-ajax-handler.php:145
+#: includes/class-fgcbg-ajax-handler.php:150
 msgid "Please select at least one product."
 msgstr ""
 
@@ -108,145 +108,149 @@ msgstr ""
 msgid "Generate bulk free gift coupons that work with the Free Gift Coupons for WooCommerce plugin. These coupons are created with the proper data structure required for free gift functionality."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:58
+#: includes/class-fgcbg-admin-page.php:59
 msgid "The coupon generator needs JavaScript. Enable JavaScript in your browser and reload this page."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:63
+#: includes/class-fgcbg-admin-page.php:64
 msgid "The coupon generator could not load its settings, so coupons cannot be generated. Reload this page. If the problem continues, contact your site administrator."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:77
+#: includes/class-fgcbg-admin-page.php:78
 msgid "Generate Free Gift Coupons"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:83
+#: includes/class-fgcbg-admin-page.php:84
 msgid "Coupon generation progress"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:89
+#: includes/class-fgcbg-admin-page.php:90
 msgid "Generated Coupon Codes"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:92
+#: includes/class-fgcbg-admin-page.php:93
 msgid "One coupon code per line."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:96
+#: includes/class-fgcbg-admin-page.php:97
 msgid "Download .txt"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:116
-msgid "Select Products"
+#: includes/class-fgcbg-admin-page.php:100
+msgid "Download .csv"
 msgstr ""
 
 #: includes/class-fgcbg-admin-page.php:120
+msgid "Select Products"
+msgstr ""
+
+#: includes/class-fgcbg-admin-page.php:124
 msgid "Search for a product&hellip;"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:126
+#: includes/class-fgcbg-admin-page.php:130
 msgid "Search and select one or more products that will be given as free gifts with the coupon."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:143
+#: includes/class-fgcbg-admin-page.php:147
 msgid "Number of Coupons"
 msgstr ""
 
 #. translators: %d: Maximum number of coupons per run.
-#: includes/class-fgcbg-admin-page.php:152
+#: includes/class-fgcbg-admin-page.php:156
 #, php-format
 msgid "Enter the number of coupons to generate (maximum %d)."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:160
+#: includes/class-fgcbg-admin-page.php:164
 msgid "Note: Coupons are generated in small batches, so a large run can take a while. Keep this page open until it finishes."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:178
+#: includes/class-fgcbg-admin-page.php:182
 msgid "Coupon Prefix"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:182
+#: includes/class-fgcbg-admin-page.php:186
 msgid "e.g. gift"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:184
+#: includes/class-fgcbg-admin-page.php:188
 msgid "Optional prefix for coupon codes (e.g. gift). Coupon codes are stored in lower case."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:201
+#: includes/class-fgcbg-admin-page.php:205
 msgid "Random Code Length"
 msgstr ""
 
 #. translators: 1: Minimum random code length, 2: Maximum random code length, 3: Maximum prefix length, 4: Maximum total coupon code length.
-#: includes/class-fgcbg-admin-page.php:213
+#: includes/class-fgcbg-admin-page.php:217
 #, php-format
 msgid "Number of random characters after the optional prefix (%1$d-%2$d characters). With a %3$d-character prefix, the total coupon code is at most %4$d characters."
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:235
+#: includes/class-fgcbg-admin-page.php:239
 msgid "Information"
 msgstr ""
 
 #. translators: %d: Maximum number of coupons per run.
-#: includes/class-fgcbg-admin-page.php:241
+#: includes/class-fgcbg-admin-page.php:245
 #, php-format
 msgid "Maximum %d coupons can be generated at once"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:246
+#: includes/class-fgcbg-admin-page.php:250
 msgid "Coupons are set to expire after 1 year by default"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:247
+#: includes/class-fgcbg-admin-page.php:251
 msgid "Each coupon can only be used once"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:248
+#: includes/class-fgcbg-admin-page.php:252
 msgid "Coupons are set for individual use only"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:249
+#: includes/class-fgcbg-admin-page.php:253
 msgid "Generated coupons appear in WooCommerce > Coupons"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:266
+#: includes/class-fgcbg-admin-page.php:270
 msgid "View on GitHub"
 msgstr ""
 
-#: includes/class-fgcbg-admin-page.php:270
+#: includes/class-fgcbg-admin-page.php:274
 msgid "Report Issues"
 msgstr ""
 
-#: includes/class-fgcbg-ajax-handler.php:74
+#: includes/class-fgcbg-ajax-handler.php:79
 msgid "You do not have permission to generate coupons."
 msgstr ""
 
-#: includes/class-fgcbg-ajax-handler.php:80
+#: includes/class-fgcbg-ajax-handler.php:85
 msgid "Free Gift Coupons for WooCommerce must be active before generating free gift coupons."
 msgstr ""
 
-#: includes/class-fgcbg-ajax-handler.php:99
+#: includes/class-fgcbg-ajax-handler.php:104
 msgid "No coupons could be created. If the selected products are valid, check WooCommerce > Status > Logs for details."
 msgstr ""
 
 #. translators: %s: List of gift product names.
-#: includes/class-fgcbg-ajax-handler.php:125
+#: includes/class-fgcbg-ajax-handler.php:130
 #, php-format
 msgid "These gift products are not purchasable and cannot be gifted until they are published, in stock, and have a price: %s."
 msgstr ""
 
 #. translators: %d: Maximum number of gift products per coupon.
-#: includes/class-fgcbg-ajax-handler.php:153
+#: includes/class-fgcbg-ajax-handler.php:158
 #, php-format
 msgid "Please select no more than %d products."
 msgstr ""
 
-#: includes/class-fgcbg-ajax-handler.php:162
+#: includes/class-fgcbg-ajax-handler.php:167
 msgid "You do not have permission to generate coupons for one or more selected products."
 msgstr ""
 
-#: includes/class-fgcbg-ajax-handler.php:166
+#: includes/class-fgcbg-ajax-handler.php:171
 msgid "One or more selected products are not available. Remove any product that is in the trash or has been deleted, then try again."
 msgstr ""
 
@@ -263,19 +267,19 @@ msgid "FGCBG Error generating coupon [%1$s]: %2$s"
 msgstr ""
 
 #. translators: %s: WooCommerce download link
-#: includes/class-fgcbg-plugin.php:166
+#: includes/class-fgcbg-plugin.php:167
 #, php-format
 msgid "Free Gift Coupons Bulk Coupon Generator requires WooCommerce to be installed and active. You can download %s here."
 msgstr ""
 
-#: includes/class-fgcbg-plugin.php:189
+#: includes/class-fgcbg-plugin.php:190
 msgid "Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available."
 msgstr ""
 
-#: includes/class-fgcbg-plugin.php:210
+#: includes/class-fgcbg-plugin.php:212
 msgid "Free Gift Bulk Coupons"
 msgstr ""
 
-#: includes/class-fgcbg-plugin.php:211
+#: includes/class-fgcbg-plugin.php:213
 msgid "Coupon Generator"
 msgstr ""

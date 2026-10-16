@@ -49,6 +49,7 @@ final class FGCBG_Admin_Page {
 	 *
 	 * @since 1.0.0
 	 * @since 1.7.0 Adds notices for a missing script and for missing script settings.
+	 * @since 1.9.0 Adds a .csv download beside the .txt download.
 	 * @return void
 	 */
 	private function render_admin_form(): void {
@@ -91,9 +92,12 @@ final class FGCBG_Admin_Page {
 				<p id="fgcbg-generated-codes-description" class="description">
 					<?php esc_html_e( 'One coupon code per line.', 'free-gift-bulk-coupon-generator' ); ?>
 				</p>
-				<p>
-					<button type="button" id="fgcbg-download-codes" class="button">
+				<p class="fgcbg-download-buttons">
+					<button type="button" id="fgcbg-download-txt" class="button">
 						<?php esc_html_e( 'Download .txt', 'free-gift-bulk-coupon-generator' ); ?>
+					</button>
+					<button type="button" id="fgcbg-download-csv" class="button">
+						<?php esc_html_e( 'Download .csv', 'free-gift-bulk-coupon-generator' ); ?>
 					</button>
 				</p>
 			</div>

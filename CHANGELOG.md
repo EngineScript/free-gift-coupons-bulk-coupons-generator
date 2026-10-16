@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **CSV Download**: The generated codes can now be downloaded as a `.csv` file as well as a `.txt` file. The CSV lists one code per row with no heading row. The `.txt` button's element ID changed from `fgcbg-download-codes` to `fgcbg-download-txt`.
+
+### Changed
+
+- **Translation Template**: The template is now generated locally with `composer make-pot` and committed with each change, and the Update Translation File workflow was removed. The script scans every shipped PHP and JavaScript file, now including `uninstall.php` and `assets/js/`, and leaves the template untouched when only its creation date would change. The template was regenerated and adds the "Download .csv" label.
+
 ## [1.8.0] - 2026-10-09
 
 ### Changed
