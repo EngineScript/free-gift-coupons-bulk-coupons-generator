@@ -242,7 +242,6 @@ The script scans the shipped PHP and JavaScript files and names the GitHub issue
 ## Support Channels
 
 - **Issues**: [GitHub Issues](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/discussions)
 - **Security**: Report security issues privately through the [vulnerability report form](https://github.com/EngineScript/free-gift-coupons-bulk-coupons-generator/security/advisories/new); see [SECURITY.md](SECURITY.md)
 
 ## Resources
