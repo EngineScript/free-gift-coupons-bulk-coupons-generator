@@ -117,6 +117,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 * The generated codes can now be downloaded as a `.csv` file, one code per row with no heading row, as well as a `.txt` file.
 
+**Changed:**
+
+* The code uses PHP 8 forms (short arrays, a `readonly` AJAX handler class, an arrow function, a first-class callable) and the admin script uses `replaceAll()`; behavior is unchanged.
+
 = 1.8.0 =
 
 **Changed:**

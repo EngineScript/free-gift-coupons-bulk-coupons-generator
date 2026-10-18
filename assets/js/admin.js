@@ -549,7 +549,7 @@
 			}
 
 			prefix.value = String( prefix.value )
-				.replace( /[^a-zA-Z0-9]/g, '' )
+				.replaceAll( /[^a-zA-Z0-9]/g, '' )
 				.toLowerCase()
 				.slice( 0, MAX_PREFIX_LENGTH );
 		}
@@ -607,7 +607,7 @@
 				return;
 			}
 
-			const count = Number.parseInt( String( couponCount.value ).replace( /\D/g, '' ), 10 );
+			const count = Number.parseInt( String( couponCount.value ).replaceAll( /\D/g, '' ), 10 );
 
 			if ( Number.isNaN( count ) || count < 1 ) {
 				couponCount.value = '1';
@@ -630,7 +630,7 @@
 				return;
 			}
 
-			const length = Number.parseInt( String( codeLength.value ).replace( /\D/g, '' ), 10 );
+			const length = Number.parseInt( String( codeLength.value ).replaceAll( /\D/g, '' ), 10 );
 
 			if ( Number.isNaN( length ) || length < MIN_CODE_LENGTH ) {
 				codeLength.value = String( MIN_CODE_LENGTH );

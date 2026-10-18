@@ -138,7 +138,7 @@ add_filter( 'fgcbg_coupon_expiry_days', 'my_custom_coupon_expiry' );
  * @return void
  */
 function my_log_coupon_generation( $product_ids, $count ) {
-    wc_get_logger()->info( "Generated {$count} coupons.", array( 'source' => 'my-plugin' ) );
+    wc_get_logger()->info( "Generated {$count} coupons.", [ 'source' => 'my-plugin' ] );
 }
 add_action( 'fgcbg_after_coupon_generation', 'my_log_coupon_generation', 10, 2 );
 ```

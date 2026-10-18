@@ -49,7 +49,6 @@ require_once __DIR__ . '/includes/class-fgcbg-plugin.php';
  * Helper function to check if plugin is loaded.
  *
  * @since 1.0.0
- * @return bool
  */
 function fgcbg_is_loaded(): bool {
 	return class_exists( 'FGCBG_Plugin' );
@@ -59,7 +58,6 @@ function fgcbg_is_loaded(): bool {
  * Initialize the plugin after all plugins are loaded.
  *
  * @since 1.0.0
- * @return void
  */
 function fgcbg_init(): void {
 	FGCBG_Plugin::get_instance();
@@ -76,7 +74,6 @@ add_action( 'plugins_loaded', 'fgcbg_init' );
  * declaration as incompatible.
  *
  * @since 1.7.0
- * @return void
  */
 function fgcbg_declare_woocommerce_compatibility(): void {
 	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {

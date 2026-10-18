@@ -21,7 +21,6 @@ final class FGCBG_Admin_Page {
 	 * Render the admin page.
 	 *
 	 * @since 1.6.0
-	 * @return void
 	 */
 	public function render(): void {
 		?>
@@ -50,7 +49,6 @@ final class FGCBG_Admin_Page {
 	 * @since 1.0.0
 	 * @since 1.7.0 Adds notices for a missing script and for missing script settings.
 	 * @since 1.9.0 Adds a .csv download beside the .txt download.
-	 * @return void
 	 */
 	private function render_admin_form(): void {
 		?>
@@ -111,7 +109,6 @@ final class FGCBG_Admin_Page {
 	 * Uses WooCommerce's built-in AJAX product search (Select2) for scalability.
 	 *
 	 * @since 1.0.0
-	 * @return void
 	 */
 	private function render_product_selection_field(): void {
 		?>
@@ -138,7 +135,6 @@ final class FGCBG_Admin_Page {
 	 * Render coupon count field.
 	 *
 	 * @since 1.0.0
-	 * @return void
 	 */
 	private function render_coupon_count_field(): void {
 		?>
@@ -173,7 +169,6 @@ final class FGCBG_Admin_Page {
 	 * Render coupon prefix field.
 	 *
 	 * @since 1.0.0
-	 * @return void
 	 */
 	private function render_coupon_prefix_field(): void {
 		?>
@@ -196,7 +191,6 @@ final class FGCBG_Admin_Page {
 	 * Render generated coupon code length field.
 	 *
 	 * @since 1.6.0
-	 * @return void
 	 */
 	private function render_coupon_code_length_field(): void {
 		?>
@@ -231,7 +225,6 @@ final class FGCBG_Admin_Page {
 	 * Render admin sidebar.
 	 *
 	 * @since 1.0.0
-	 * @return void
 	 */
 	private function render_admin_sidebar(): void {
 		?>
@@ -260,7 +253,6 @@ final class FGCBG_Admin_Page {
 	 * Render admin footer.
 	 *
 	 * @since 1.0.0
-	 * @return void
 	 */
 	private function render_admin_footer(): void {
 		?>

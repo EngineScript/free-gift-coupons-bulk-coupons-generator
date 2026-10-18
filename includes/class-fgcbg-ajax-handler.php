@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.6.0
  */
-final class FGCBG_Ajax_Handler {
+final readonly class FGCBG_Ajax_Handler {
 
 	/**
 	 * Capability required to mint generated coupons.
@@ -34,31 +34,21 @@ final class FGCBG_Ajax_Handler {
 	public const DEFAULT_BATCH_SIZE = 10;
 
 	/**
-	 * Coupon generator.
-	 *
-	 * @since 1.6.0
-	 * @var FGCBG_Coupon_Generator
-	 */
-	private FGCBG_Coupon_Generator $generator;
-
-	/**
 	 * Constructor.
 	 *
 	 * @since 1.6.0
 	 * @param FGCBG_Coupon_Generator $generator Coupon generator.
 	 */
-	public function __construct( FGCBG_Coupon_Generator $generator ) {
-		$this->generator = $generator;
+	public function __construct( private FGCBG_Coupon_Generator $generator ) {
 	}
 
 	/**
 	 * Register AJAX hooks.
 	 *
 	 * @since 1.6.0
-	 * @return void
 	 */
 	public function register_hooks(): void {
-		add_action( 'wp_ajax_fgcbg_generate_batch', array( $this, 'generate_batch' ) );
+		add_action( 'wp_ajax_fgcbg_generate_batch', [ $this, 'generate_batch' ] );
 	}
 
 	/**
@@ -68,7 +58,6 @@ final class FGCBG_Ajax_Handler {
 	 * after the nonce and capability checks.
 	 *
 	 * @since 1.6.0
-	 * @return never
 	 * @SuppressWarnings("PHPMD.Superglobals")
 	 */
 	public function generate_batch(): never {
@@ -76,20 +65,20 @@ final class FGCBG_Ajax_Handler {
 
 		// phpcs:ignore WordPress.WP.Capabilities.Undetermined -- The constant holds the WooCommerce capability 'publish_shop_coupons'.
 		if ( ! current_user_can( self::GENERATE_COUPONS_CAPABILITY ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-bulk-coupon-generator' ) ), 403 );
+			wp_send_json_error( [ 'message' => __( 'You do not have permission to generate coupons.', 'free-gift-bulk-coupon-generator' ) ], 403 );
 		}
 
 		if ( ! FGCBG_Dependencies::has_free_gift_coupon_type() ) {
 			wp_send_json_error(
-				array(
+				[
 					'message' => __( 'Free Gift Coupons for WooCommerce must be active before generating free gift coupons.', 'free-gift-bulk-coupon-generator' ),
-				),
+				],
 				400
 			);
 		}
 
 		// The nonce is verified above. Request values are read here and nowhere else.
-		$product_ids   = $this->to_absint_list( isset( $_POST['product_ids'] ) ? wp_unslash( $_POST['product_ids'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each scalar value is passed through absint() in to_absint_list().
+		$product_ids   = $this->to_absint_list( isset( $_POST['product_ids'] ) ? wp_unslash( $_POST['product_ids'] ) : [] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each scalar value is passed through absint() in to_absint_list().
 		$batch_size    = $this->to_batch_size( is_string( $_POST['batch_size'] ?? null ) ? absint( (string) wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE );
 		$coupon_prefix = $this->to_text( isset( $_POST['coupon_prefix'] ) ? wp_unslash( $_POST['coupon_prefix'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through sanitize_text_field() in to_text() after a string check.
 		$code_length   = $this->to_code_length( is_string( $_POST['coupon_code_length'] ?? null ) ? absint( (string) wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH );
@@ -100,9 +89,9 @@ final class FGCBG_Ajax_Handler {
 
 		if ( $result['generated'] < 1 ) {
 			wp_send_json_error(
-				array(
+				[
 					'message' => __( 'No coupons could be created. If the selected products are valid, check WooCommerce > Status > Logs for details.', 'free-gift-bulk-coupon-generator' ),
-				),
+				],
 				500
 			);
 		}
@@ -143,32 +132,31 @@ final class FGCBG_Ajax_Handler {
 	 *
 	 * @since 1.7.0
 	 * @param array<int> $product_ids Product IDs selected for free gift coupon generation.
-	 * @return void
 	 */
 	private function require_usable_products( array $product_ids ): void {
 		if ( empty( $product_ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ) ), 400 );
+			wp_send_json_error( [ 'message' => __( 'Please select at least one product.', 'free-gift-bulk-coupon-generator' ) ], 400 );
 		}
 
 		if ( count( $product_ids ) > FGCBG_Coupon_Generator::MAX_GIFT_PRODUCTS ) {
 			wp_send_json_error(
-				array(
+				[
 					'message' => sprintf(
 						/* translators: %d: Maximum number of gift products per coupon. */
 						__( 'Please select no more than %d products.', 'free-gift-bulk-coupon-generator' ),
 						FGCBG_Coupon_Generator::MAX_GIFT_PRODUCTS
 					),
-				),
+				],
 				400
 			);
 		}
 
 		if ( ! $this->current_user_can_edit_products( $product_ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to generate coupons for one or more selected products.', 'free-gift-bulk-coupon-generator' ) ), 403 );
+			wp_send_json_error( [ 'message' => __( 'You do not have permission to generate coupons for one or more selected products.', 'free-gift-bulk-coupon-generator' ) ], 403 );
 		}
 
 		if ( ! $this->generator->are_products_usable( $product_ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'One or more selected products are not available. Remove any product that is in the trash or has been deleted, then try again.', 'free-gift-bulk-coupon-generator' ) ), 400 );
+			wp_send_json_error( [ 'message' => __( 'One or more selected products are not available. Remove any product that is in the trash or has been deleted, then try again.', 'free-gift-bulk-coupon-generator' ) ], 400 );
 		}
 	}
 
@@ -230,7 +218,6 @@ final class FGCBG_Ajax_Handler {
 	 *
 	 * @since 1.7.0
 	 * @param int|float $batch_size Requested number of coupons for this request.
-	 * @return int
 	 */
 	private function to_batch_size( int|float $batch_size ): int {
 		if ( $batch_size < 1 ) {
@@ -245,7 +232,6 @@ final class FGCBG_Ajax_Handler {
 	 *
 	 * @since 1.7.0
 	 * @param int|float $code_length Requested random code length; a float only for the lowest integer, as in to_batch_size().
-	 * @return int
 	 */
 	private function to_code_length( int|float $code_length ): int {
 		return (int) max(

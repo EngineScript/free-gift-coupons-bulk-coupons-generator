@@ -518,7 +518,7 @@ test( 'the page ships hidden states, roles, and control types as the script expe
 test( 'every field has a label, and every label and description reference resolves', async () => {
 	view = await loadPage();
 	const { document } = view;
-	const fields = Array.from( document.querySelectorAll( '.wrap select, .wrap input, .wrap textarea' ) );
+	const fields = [ ...document.querySelectorAll( '.wrap select, .wrap input, .wrap textarea' ) ];
 
 	assert.equal( fields.length, 5 );
 
@@ -532,7 +532,7 @@ test( 'every field has a label, and every label and description reference resolv
 		assert.ok( fields.includes( document.getElementById( label.htmlFor ) ), `label for "${ label.htmlFor }"` );
 	}
 
-	const references = Array.from( document.querySelectorAll( '.wrap [aria-describedby], .wrap [aria-labelledby]' ) )
+	const references = [ ...document.querySelectorAll( '.wrap [aria-describedby], .wrap [aria-labelledby]' ) ]
 		.flatMap( ( element ) => `${ element.getAttribute( 'aria-describedby' ) ?? '' } ${ element.getAttribute( 'aria-labelledby' ) ?? '' }`.split( /\s+/ ) )
 		.filter( Boolean );
 

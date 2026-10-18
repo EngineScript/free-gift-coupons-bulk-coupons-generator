@@ -79,7 +79,6 @@ final class FGCBG_Plugin {
 	 * Get plugin instance.
 	 *
 	 * @since 1.0.0
-	 * @return FGCBG_Plugin
 	 * @psalm-api
 	 */
 	public static function get_instance(): self {
@@ -105,11 +104,10 @@ final class FGCBG_Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.7.0 Private; the dependency lookup moved into the notice callback.
-	 * @return void
 	 */
 	private function init(): void {
 		if ( ! FGCBG_Dependencies::has_woocommerce() ) {
-			add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
+			add_action( 'admin_notices', [ $this, 'woocommerce_missing_notice' ] );
 			return;
 		}
 
@@ -119,10 +117,10 @@ final class FGCBG_Plugin {
 		$this->admin_assets = new FGCBG_Admin_Assets();
 
 		if ( is_admin() ) {
-			add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+			add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
 			$this->admin_assets->register_hooks();
 			$this->ajax_handler->register_hooks();
-			add_action( 'admin_notices', array( $this, 'free_gift_coupons_missing_notice' ) );
+			add_action( 'admin_notices', [ $this, 'free_gift_coupons_missing_notice' ] );
 		}
 	}
 
@@ -155,7 +153,6 @@ final class FGCBG_Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.7.0 Shown only to users who can act on it.
-	 * @return void
 	 */
 	public function woocommerce_missing_notice(): void {
 		if ( ! $this->should_show_dependency_notice() ) {
@@ -168,7 +165,7 @@ final class FGCBG_Plugin {
 			'<a href="' . esc_url( 'https://woocommerce.com/' ) . '" target="_blank" rel="noopener noreferrer">WooCommerce</a>'
 		);
 
-		wp_admin_notice( $message, array( 'type' => 'error' ) );
+		wp_admin_notice( $message, [ 'type' => 'error' ] );
 	}
 
 	/**
@@ -179,7 +176,6 @@ final class FGCBG_Plugin {
 	 *
 	 * @since 1.6.0
 	 * @since 1.7.0 Checks the dependency itself and is shown only to users who can act on it.
-	 * @return void
 	 */
 	public function free_gift_coupons_missing_notice(): void {
 		if ( FGCBG_Dependencies::has_free_gift_coupon_type() || ! $this->should_show_dependency_notice() ) {
@@ -188,7 +184,7 @@ final class FGCBG_Plugin {
 
 		wp_admin_notice(
 			esc_html__( 'Free Gift Coupons Bulk Coupon Generator requires Free Gift Coupons for WooCommerce to be active so the free_gift coupon type is available.', 'free-gift-bulk-coupon-generator' ),
-			array( 'type' => 'error' )
+			[ 'type' => 'error' ]
 		);
 	}
 
@@ -203,7 +199,6 @@ final class FGCBG_Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.8.0 Registered under Coupons for users without the WooCommerce menu.
-	 * @return void
 	 */
 	public function add_admin_menu(): void {
 		$page_hook = add_submenu_page(
@@ -213,7 +208,7 @@ final class FGCBG_Plugin {
 			esc_html__( 'Coupon Generator', 'free-gift-bulk-coupon-generator' ),
 			FGCBG_Ajax_Handler::GENERATE_COUPONS_CAPABILITY, // phpcs:ignore WordPress.WP.Capabilities.Undetermined -- The constant holds the WooCommerce capability 'publish_shop_coupons'.
 			'free-gift-bulk-coupon-generator',
-			array( $this->admin_page, 'render' )
+			[ $this->admin_page, 'render' ]
 		);
 
 		$this->page_hook = is_string( $page_hook ) ? $page_hook : '';

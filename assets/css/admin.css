@@ -193,6 +193,7 @@
 }
 
 .fgcbg-form .button-primary:disabled {
+	/* stylelint-disable-next-line plugin/no-unsupported-browser-features -- Touch screens show no cursor; the faded button still marks the state. */
 	cursor: not-allowed;
 	opacity: 0.5;
 	pointer-events: none;
@@ -203,6 +204,7 @@
  * Loading State
  */
 .fgcbg-form.loading .button-primary {
+	/* stylelint-disable-next-line plugin/no-unsupported-browser-features -- Touch screens show no cursor; the faded button still marks the state. */
 	cursor: not-allowed;
 	opacity: 0.6;
 }
@@ -312,6 +314,7 @@
 #fgcbg-generated-codes {
 	font-family: Consolas, Monaco, monospace;
 	min-height: 180px;
+	/* stylelint-disable-next-line plugin/no-unsupported-browser-features -- Where resizing is unsupported, the field keeps its height and stays scrollable. */
 	resize: vertical;
 }
 

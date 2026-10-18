@@ -57,7 +57,6 @@ final class FGCBG_Admin_Assets {
 	 *
 	 * @since 1.7.0
 	 * @param string $page_hook Hook suffix returned by add_submenu_page(), or an empty string.
-	 * @return void
 	 */
 	public function set_page_hook( string $page_hook ): void {
 		$this->page_hook = $page_hook;
@@ -71,10 +70,9 @@ final class FGCBG_Admin_Assets {
 	 *
 	 * @since 1.6.0
 	 * @since 1.7.0 Priority 20.
-	 * @return void
 	 */
 	public function register_hooks(): void {
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ), 20 );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ], 20 );
 	}
 
 	/**
@@ -84,7 +82,6 @@ final class FGCBG_Admin_Assets {
 	 * @since 1.7.0 Recognizes the screen by its registered hook suffix and loads
 	 *              the WooCommerce admin styles that the product search needs.
 	 * @param string $hook The current admin page hook.
-	 * @return void
 	 */
 	public function enqueue( string $hook ): void {
 		if ( '' === $this->page_hook || $this->page_hook !== $hook ) {
@@ -94,12 +91,12 @@ final class FGCBG_Admin_Assets {
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
 			plugin_dir_url( FGCBG_PLUGIN_FILE ) . 'assets/js/admin.js',
-			array( 'wc-enhanced-select', 'wp-a11y' ),
+			[ 'wc-enhanced-select', 'wp-a11y' ],
 			FGCBG_PLUGIN_VERSION,
-			array(
+			[
 				'in_footer' => true,
 				'strategy'  => 'defer',
-			)
+			]
 		);
 
 		/*
@@ -111,7 +108,7 @@ final class FGCBG_Admin_Assets {
 		 * stylesheet from printing at all.
 		 */
 		wp_enqueue_style( 'woocommerce_admin_styles' );
-		$style_dependencies = wp_style_is( 'woocommerce_admin_styles', 'registered' ) ? array( 'woocommerce_admin_styles' ) : array();
+		$style_dependencies = wp_style_is( 'woocommerce_admin_styles', 'registered' ) ? [ 'woocommerce_admin_styles' ] : [];
 
 		wp_enqueue_style(
 			self::STYLE_HANDLE,
@@ -123,7 +120,7 @@ final class FGCBG_Admin_Assets {
 		$script_data = $this->get_script_data();
 		if ( false === wp_json_encode( $script_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) ) {
 			$this->queue_script_data_failure_notice();
-			$script_data = array();
+			$script_data = [];
 		}
 
 		if ( ! wp_localize_script( self::SCRIPT_HANDLE, 'fgcbgAdminConfig', $script_data ) ) {
@@ -135,7 +132,6 @@ final class FGCBG_Admin_Assets {
 	 * Queue an admin notice when script data cannot be prepared.
 	 *
 	 * @since 1.6.0
-	 * @return void
 	 */
 	private function queue_script_data_failure_notice(): void {
 		if ( $this->script_data_failed ) {
@@ -143,14 +139,13 @@ final class FGCBG_Admin_Assets {
 		}
 
 		$this->script_data_failed = true;
-		add_action( 'admin_notices', array( $this, 'script_data_failure_notice' ) );
+		add_action( 'admin_notices', [ $this, 'script_data_failure_notice' ] );
 	}
 
 	/**
 	 * Display the script data failure notice.
 	 *
 	 * @since 1.6.0
-	 * @return void
 	 */
 	public function script_data_failure_notice(): void {
 		if ( ! $this->script_data_failed ) {
@@ -167,7 +162,7 @@ final class FGCBG_Admin_Assets {
 	 * @return array<string, int|string>
 	 */
 	private function get_script_data(): array {
-		return array(
+		return [
 			'ajax_url'               => admin_url( 'admin-ajax.php' ),
 			'batch_size'             => FGCBG_Ajax_Handler::DEFAULT_BATCH_SIZE,
 			'max_coupon_count_value' => FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH,
@@ -194,6 +189,6 @@ final class FGCBG_Admin_Assets {
 			'generation_failed'      => __( 'Failed to generate coupons. Please try again.', 'free-gift-bulk-coupon-generator' ),
 			'session_expired'        => __( 'Your session has expired or this page is out of date. Reload the page, then try again.', 'free-gift-bulk-coupon-generator' ),
 			'response_unreadable'    => __( 'The server response could not be read, so some coupons may have been created without being listed here. Check WooCommerce > Coupons before generating again.', 'free-gift-bulk-coupon-generator' ),
-		);
+		];
 	}
 }

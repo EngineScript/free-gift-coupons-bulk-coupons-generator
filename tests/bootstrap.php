@@ -861,11 +861,20 @@ if ( ! function_exists( 'current_datetime' ) ) {
 	}
 }
 
+if ( ! class_exists( 'WC_Product' ) ) {
+	/**
+	 * Stand-in for WooCommerce's product base class, so that the product double
+	 * meets the plugin's `WC_Product` parameter types. It adds no behavior.
+	 */
+	class WC_Product {
+	}
+}
+
 if ( ! class_exists( 'FGCBG_Test_Product' ) ) {
 	/**
 	 * Minimal WooCommerce product double.
 	 */
-	class FGCBG_Test_Product {
+	class FGCBG_Test_Product extends WC_Product {
 		/**
 		 * Product name.
 		 *

@@ -149,10 +149,10 @@ final class FGCBG_Coupon_Generator {
 	public function generate_coupon_batch( array|int $product_ids, int $number_of_coupons, string $prefix = '', ?int $code_length = null ): array {
 		$valid_products = $this->validate_products( $product_ids );
 		if ( empty( $valid_products ) ) {
-			return array(
+			return [
 				'generated' => 0,
-				'codes'     => array(),
-			);
+				'codes'     => [],
+			];
 		}
 
 		$generation_params = $this->prepare_generation_params( $number_of_coupons, $prefix, $code_length );
@@ -198,7 +198,7 @@ final class FGCBG_Coupon_Generator {
 	 * @return bool True when all IDs can be used.
 	 */
 	public function are_products_usable( array $product_ids ): bool {
-		$unique_ids = array_unique( array_filter( array_map( 'absint', $product_ids ) ) );
+		$unique_ids = array_unique( array_filter( array_map( absint( ... ), $product_ids ) ) );
 
 		return count( $unique_ids ) > 0 && count( $this->validate_products( $unique_ids ) ) === count( $unique_ids );
 	}
@@ -225,9 +225,7 @@ final class FGCBG_Coupon_Generator {
 			 * @param WC_Product $product Product.
 			 * @return bool
 			 */
-			static function ( $product ): bool {
-				return ! $product->is_purchasable();
-			}
+			static fn( \WC_Product $product ): bool => ! $product->is_purchasable()
 		);
 
 		return $this->get_product_names( $unpurchasable );
@@ -244,15 +242,15 @@ final class FGCBG_Coupon_Generator {
 	 */
 	private function validate_products( array|int $product_ids ): array {
 		if ( ! is_array( $product_ids ) ) {
-			$product_ids = array( $product_ids );
+			$product_ids = [ $product_ids ];
 		}
 
-		$product_ids = array_unique( array_filter( array_map( 'absint', $product_ids ) ) );
+		$product_ids = array_unique( array_filter( array_map( absint( ... ), $product_ids ) ) );
 		if ( count( $product_ids ) > self::MAX_GIFT_PRODUCTS ) {
-			return array();
+			return [];
 		}
 
-		$valid_products = array();
+		$valid_products = [];
 		foreach ( $product_ids as $product_id ) {
 			$product = wc_get_product( $product_id );
 			if ( $product && 'trash' !== $product->get_status() ) {
@@ -303,13 +301,13 @@ final class FGCBG_Coupon_Generator {
 		);
 		$code_length = $this->normalize_code_length( $code_length );
 
-		return array(
+		return [
 			'count'        => $count,
 			'prefix'       => $this->normalize_prefix( $prefix ),
 			'code_length'  => $code_length,
 			'expiry_days'  => $expiry_days,
 			'max_attempts' => max( $count * 2, $count + 10 ),
-		);
+		];
 	}
 
 	/**
@@ -320,11 +318,11 @@ final class FGCBG_Coupon_Generator {
 	 * key is the selected gift ID. For simple products, that key and the nested
 	 * `product_id` are the same and `variation_id` is 0:
 	 *
-	 * 123 => array(
+	 * 123 => [
 	 *     'product_id'   => 123,
 	 *     'variation_id' => 0,
 	 *     'quantity'     => 1,
-	 * )
+	 * ]
 	 *
 	 * For variations, the outer key is the variation ID, `product_id` is the
 	 * parent product ID, and `variation_id` is the selected variation ID. Do not
@@ -336,14 +334,14 @@ final class FGCBG_Coupon_Generator {
 	 * @return array<int, array{product_id:int, variation_id:int, quantity:int}> Gift information array.
 	 */
 	private function prepare_gift_info( array $valid_products ): array {
-		$gift_info = array();
+		$gift_info = [];
 		foreach ( $valid_products as $gift_id => $product ) {
 			$parent_id             = absint( $product->get_parent_id() );
-			$gift_info[ $gift_id ] = array(
+			$gift_info[ $gift_id ] = [
 				'product_id'   => $parent_id > 0 ? $parent_id : $gift_id,
 				'variation_id' => $parent_id > 0 ? $gift_id : 0,
 				'quantity'     => 1,
-			);
+			];
 		}
 		return $gift_info;
 	}
@@ -360,7 +358,7 @@ final class FGCBG_Coupon_Generator {
 	private function execute_coupon_generation( array $valid_products, array $gift_info, array $params ): array {
 		$generated_count = 0;
 		$attempt_count   = 0;
-		$generated_codes = array();
+		$generated_codes = [];
 
 		while ( $generated_count < $params['count'] && $attempt_count < $params['max_attempts'] ) {
 			++$attempt_count;
@@ -373,10 +371,10 @@ final class FGCBG_Coupon_Generator {
 			}
 		}
 
-		return array(
+		return [
 			'generated' => $generated_count,
 			'codes'     => $generated_codes,
-		);
+		];
 	}
 
 	/**
@@ -444,7 +442,6 @@ final class FGCBG_Coupon_Generator {
 	 * @param string                                                                              $code           The coupon code.
 	 * @param array<int, WC_Product>                                                              $valid_products Array of valid product objects.
 	 * @param array{count:int, prefix:string, code_length:int, expiry_days:int, max_attempts:int} $params         Generation parameters.
-	 * @return void
 	 */
 	private function set_coupon_properties( WC_Coupon $coupon, string $code, array $valid_products, array $params ): void {
 		$products_text = wp_sprintf( '%l', $this->get_product_names( $valid_products ) );
@@ -471,7 +468,7 @@ final class FGCBG_Coupon_Generator {
 	 * @return array<int, string> Names with tags stripped.
 	 */
 	private function get_product_names( array $products ): array {
-		$product_names = array();
+		$product_names = [];
 		foreach ( $products as $product ) {
 			$product_name = sanitize_text_field( wp_strip_all_tags( $product->get_name() ) );
 			if ( '' !== $product_name ) {
@@ -495,13 +492,12 @@ final class FGCBG_Coupon_Generator {
 	 *              `_wc_fgc_product_sync_ids`, as Free Gift Coupons does.
 	 * @param WC_Coupon                                                         $coupon    The coupon object.
 	 * @param array<int, array{product_id:int, variation_id:int, quantity:int}> $gift_info Gift information array.
-	 * @return void
 	 */
 	private function set_coupon_metadata( WC_Coupon $coupon, array $gift_info ): void {
 		$coupon->update_meta_data( '_wc_free_gift_coupon_data', $gift_info );
 		// Free Gift Coupons saves these two with every coupon; the values are its defaults (no free shipping, no quantity sync).
 		$coupon->update_meta_data( '_wc_free_gift_coupon_free_shipping', 'no' );
-		$coupon->update_meta_data( '_wc_fgc_product_sync_ids', array() );
+		$coupon->update_meta_data( '_wc_fgc_product_sync_ids', [] );
 		$coupon->update_meta_data( '_fgcbg_generated', true );
 		$coupon->update_meta_data( '_fgcbg_product_ids', array_keys( $gift_info ) );
 		$coupon->update_meta_data( '_fgcbg_generation_date', current_time( 'mysql' ) );
@@ -516,7 +512,6 @@ final class FGCBG_Coupon_Generator {
 	 * @since 1.0.0
 	 * @since 1.7.0 No longer limited to WP_DEBUG.
 	 * @param \Throwable $exception The exception that occurred.
-	 * @return void
 	 */
 	private function log_coupon_error( \Throwable $exception ): void {
 		wc_get_logger()->error(
@@ -526,7 +521,7 @@ final class FGCBG_Coupon_Generator {
 				$exception::class,
 				$exception->getMessage()
 			),
-			array( 'source' => 'free-gift-bulk-coupon-generator' )
+			[ 'source' => 'free-gift-bulk-coupon-generator' ]
 		);
 	}
 
@@ -603,7 +598,6 @@ final class FGCBG_Coupon_Generator {
 	 *
 	 * @since 1.7.0
 	 * @param mixed $value Filtered value.
-	 * @return int
 	 */
 	private function to_int( mixed $value ): int {
 		if ( is_string( $value ) && is_numeric( $value ) ) {

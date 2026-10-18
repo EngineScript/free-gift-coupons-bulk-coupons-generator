@@ -65,6 +65,7 @@
 /phpstan.neon
 /phpunit.xml
 /psalm.xml
+/rector.php
 /renovate.json
 /tslint.json
 /stubs
