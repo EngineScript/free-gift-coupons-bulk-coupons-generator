@@ -10,7 +10,7 @@ This project follows the [WordPress Community Code of Conduct](https://make.word
 
 ### Requirements
 
-- **PHP**: 8.2 or higher
+- **PHP**: 8.3 or higher
 - **WordPress**: 7.0 or higher
 - **WooCommerce**: Required for plugin functionality
 - **Free Gift Coupons for WooCommerce**: Required for end-to-end free gift coupon behavior
@@ -137,7 +137,7 @@ function fgcbg_example_function( string $input ): string {
 1. **Manual testing**:
 
    - Test with WordPress 7.0 or higher.
-   - Test with PHP 8.2 or higher.
+   - Test with PHP 8.3 or higher.
    - Verify the generator screen at **WooCommerce > Coupon Generator**.
    - Verify product search, batch generation progress, and the generated code export.
    - Verify WooCommerce coupon creation and Free Gift Coupons metadata.
@@ -151,7 +151,7 @@ function fgcbg_example_function( string $input ): string {
    - Run the admin script tests (`npm install`, then `npm test`; Node.js 22.22.2 or later and PHP on the path).
    - Run the JavaScript, Markdown and CSS linters (`npm run lint:js`, `npm run lint:md`, `npm run lint:css`).
    - The lint job also runs yamllint, actionlint, zizmor, Ruff and mypy on the workflows and the scripts in `.github`; `.github/lint-requirements.txt` pins their versions.
-   - The WordPress integration tests are generated and run by the compatibility workflow on GitHub Actions, across WordPress 7.0, the latest release, and nightly, and PHP 8.2 to 8.5.
+   - The WordPress integration tests are generated and run by the compatibility workflow on GitHub Actions, across WordPress 7.0, the latest release, and nightly, and PHP 8.3 to 8.5.
 
 ## Submitting Changes
 

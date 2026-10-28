@@ -2,8 +2,8 @@
 # It runs multiple validation processes including:
 # - WordPress Plugin Check for WordPress.org compatibility
 # - PHPUnit unit tests (tracked, no WordPress) and generated WordPress integration tests
-#   across supported PHP versions (8.2, 8.3, 8.4, 8.5)
-# - PHP compatibility testing across multiple PHP versions (8.2, 8.3, 8.4, 8.5)
+#   across supported PHP versions (8.3, 8.4, 8.5)
+# - PHP compatibility testing across multiple PHP versions (8.3, 8.4, 8.5)
 # - WordPress compatibility testing across multiple WP versions (7.0, latest, nightly)
 # - PHPStan static analysis for WordPress-specific code quality
 # - Rector dry run, which fails on PHP that a current idiom would replace
@@ -69,7 +69,7 @@ jobs:
         id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
-          rm -rf vendor/ composer.lock || true
+          rm -rf vendor/ || true
 
       - name: Install Composer dependencies (no cache)
         id: install_composer_dependencies_no_cache
@@ -265,9 +265,9 @@ jobs:
           mkdir -p "$CONTROL_DIR" "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics"
           printf '<?php strlen("control");\n' > "$CONTROL_DIR/compatible.php"
           printf '<?php each(array());\n' > "$CONTROL_DIR/legacy-incompatible.php"
-          printf '<?php json_validate("{}");\n' > "$CONTROL_DIR/modern-incompatible.php"
-          vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.2 "$CONTROL_DIR/compatible.php"
-          if vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.2 --report=json "$CONTROL_DIR/legacy-incompatible.php" > "$CONTROL_DIR/legacy.json"; then
+          printf '<?php array_find(array(), "is_int");\n' > "$CONTROL_DIR/modern-incompatible.php"
+          vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.3 "$CONTROL_DIR/compatible.php"
+          if vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.3 --report=json "$CONTROL_DIR/legacy-incompatible.php" > "$CONTROL_DIR/legacy.json"; then
             echo '::error::The known legacy-incompatible fixture was missed.'
             exit 1
           else
@@ -275,13 +275,13 @@ jobs:
             [[ $status == 1 || $status == 2 ]]
           fi
           php -r '$report = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR); foreach ($report["files"] ?? [] as $file) { foreach ($file["messages"] as $message) { if (str_starts_with($message["source"], "PHPCompatibility.") && str_contains($message["message"], "each")) { exit(0); } } } exit(1);' "$CONTROL_DIR/legacy.json"
-          if vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.2 --report=json "$CONTROL_DIR/modern-incompatible.php" > "$CONTROL_DIR/modern.json"; then
-            echo '::warning::CR-TOOL-001: current stable rules miss PHP 8.3 json_validate at the PHP 8.2 floor. Modern-rule acceptance remains pending.'
+          if vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 8.3 --report=json "$CONTROL_DIR/modern-incompatible.php" > "$CONTROL_DIR/modern.json"; then
+            echo '::warning::CR-TOOL-001: current stable rules miss PHP 8.4 array_find at the PHP 8.3 floor. Modern-rule acceptance remains pending.'
             echo 'modern_rule_coverage=known_gap' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/compatibility-controls.txt"
           else
             status=$?
             [[ $status == 1 || $status == 2 ]]
-            php -r '$report = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR); foreach ($report["files"] ?? [] as $file) { foreach ($file["messages"] as $message) { if (str_starts_with($message["source"], "PHPCompatibility.") && str_contains($message["message"], "json_validate")) { exit(0); } } } exit(1);' "$CONTROL_DIR/modern.json"
+            php -r '$report = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR); foreach ($report["files"] ?? [] as $file) { foreach ($file["messages"] as $message) { if (str_starts_with($message["source"], "PHPCompatibility.") && str_contains($message["message"], "array_find")) { exit(0); } } } exit(1);' "$CONTROL_DIR/modern.json"
             echo 'modern_rule_coverage=fixture_detected' > "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/compatibility-controls.txt"
           fi
           echo 'compatible=passed;legacy_incompatible=rejected' >> "$RUNNER_TEMP/free-gift-bulk-coupon-generator-diagnostics/compatibility-controls.txt"
@@ -595,7 +595,7 @@ jobs:
         id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
-          rm -rf vendor/ composer.lock || true
+          rm -rf vendor/ || true
 
       - name: Install Composer dependencies (no cache)
         id: install_composer_dependencies_no_cache
@@ -977,7 +977,7 @@ jobs:
         id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
-          rm -rf vendor/ composer.lock || true
+          rm -rf vendor/ || true
 
       - name: Install Composer dependencies (no cache)
         id: install_composer_dependencies_no_cache
@@ -1087,7 +1087,7 @@ jobs:
         id: clear_any_existing_composer_cache
         run: |
           composer clear-cache || true
-          rm -rf vendor/ composer.lock || true
+          rm -rf vendor/ || true
 
       - name: Install Composer dependencies (no cache)
         id: install_composer_dependencies_no_cache
@@ -1190,8 +1190,7 @@ jobs:
       - name: Install npm dependencies
         id: install_npm_dependencies
         run: |
-          # package-lock.json is not tracked, so npm resolves the pinned packages here.
-          npm install --no-audit --no-fund --no-package-lock
+          npm ci --no-audit --no-fund
           npm ls jsdom
 
       - name: Run JavaScript tests
@@ -1299,8 +1298,7 @@ jobs:
       - name: Install npm dependencies
         id: install_npm_dependencies
         run: |
-          # package-lock.json is not tracked, so npm resolves the pinned packages here.
-          npm install --no-audit --no-fund --no-package-lock
+          npm ci --no-audit --no-fund
           npm ls @wordpress/eslint-plugin eslint markdownlint-cli2 stylelint stylelint-config-standard
 
       - name: Install Python linters
@@ -1566,11 +1564,11 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        php-version: ['8.2', '8.3', '8.4', '8.5']
+        php-version: ['8.3', '8.4', '8.5']
         wp-version: ['7.0', 'latest', 'nightly']
         dependency-versions: ['highest']
         include:
-          - php-version: '8.2'
+          - php-version: '8.3'
             wp-version: 'latest'
             dependency-versions: 'lowest'
       fail-fast: false
@@ -1630,6 +1628,13 @@ jobs:
         id: install_subversion
         timeout-minutes: 15
         run: sudo apt-get update && sudo apt-get install -y subversion
+
+      - name: Resolve dependencies for this PHP version
+        id: resolve_dependencies_for_this_php_version
+        run: |
+          # composer.json resolves composer.lock for the PHP 8.3 floor (config.platform);
+          # this job updates the dependencies, so it resolves them for the PHP it runs.
+          composer config platform.php "$(php -r 'echo PHP_VERSION;')"
 
       - name: Install Composer dependencies
         id: install_composer_dependencies
@@ -2075,7 +2080,7 @@ jobs:
                   $this->assertSame(FGCBG_PLUGIN_VERSION, $headers['version']);
                   $this->assertSame('woocommerce', $headers['requires_plugins']);
                   $this->assertSame('7.0', $headers['requires_wp']);
-                  $this->assertSame('8.2', $headers['requires_php']);
+                  $this->assertSame('8.3', $headers['requires_php']);
                   $this->assertSame('7.1', $headers['tested_wp']);
                   // WordPress.org does not allow an Update URI header, and Plugin Check rejects it.
                   $this->assertSame('', $headers['update_uri']);

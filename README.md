@@ -3,7 +3,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/0d4ba2d43e6e4ee1b2171879388e8cbe)](https://app.codacy.com/gh/EngineScript/free-gift-coupons-bulk-coupons-generator/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![License](https://img.shields.io/badge/License-GPL%20v3-green.svg?logo=gnu)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![WordPress Compatible](https://img.shields.io/badge/WordPress-7.0%2B-blue.svg?logo=wordpress)](https://wordpress.org/)
-[![PHP Compatible](https://img.shields.io/badge/PHP-8.2%2B-purple.svg?logo=php)](https://www.php.net/)
+[![PHP Compatible](https://img.shields.io/badge/PHP-8.3%2B-purple.svg?logo=php)](https://www.php.net/)
 
 ## Current Version
 
@@ -32,7 +32,7 @@ A WordPress plugin for generating bulk free gift coupons that work specifically 
 ## Requirements
 
 - WordPress 7.0 or higher
-- PHP 8.2 or higher
+- PHP 8.3 or higher
 - WooCommerce 10.8 or higher
 - **[Free Gift Coupons for WooCommerce](https://woocommerce.com/products/free-gift-coupons/)** plugin (required - available for purchase)
 

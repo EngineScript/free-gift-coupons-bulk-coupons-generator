@@ -22,9 +22,8 @@ final class FGCBG_Plugin {
 	 * Capability WooCommerce requires for its own admin menu.
 	 *
 	 * @since 1.8.0
-	 * @var string
 	 */
-	private const WOOCOMMERCE_MENU_CAPABILITY = 'edit_others_shop_orders';
+	private const string WOOCOMMERCE_MENU_CAPABILITY = 'edit_others_shop_orders';
 
 	/**
 	 * Plugin instance.

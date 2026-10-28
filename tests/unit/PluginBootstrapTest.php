@@ -13,7 +13,7 @@ use z4kn4fein\SemVer\Version;
 /**
  * Tests for the main plugin entry point.
  *
- * This suite targets PHP 8.2+, matching the plugin minimum.
+ * This suite targets PHP 8.3+, matching the plugin minimum.
  */
 final class PluginBootstrapTest extends FGCBG_Test_Case {
 
@@ -144,7 +144,7 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 		foreach (
 			array(
 				'Requires at least: 7.0',
-				'Requires PHP: 8.2',
+				'Requires PHP: 8.3',
 				'Requires Plugins: woocommerce',
 				'WC requires at least: 10.8',
 				'Tested up to: 7.1',

@@ -21,9 +21,8 @@ final class FGCBG_Coupon_Generator {
 	 * Coupon discount type registered by Free Gift Coupons for WooCommerce.
 	 *
 	 * @since 1.6.0
-	 * @var string
 	 */
-	public const DISCOUNT_TYPE = 'free_gift';
+	public const string DISCOUNT_TYPE = 'free_gift';
 
 	/**
 	 * Maximum coupons that one request can create.
@@ -32,50 +31,44 @@ final class FGCBG_Coupon_Generator {
 	 * sends as several smaller requests.
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	public const MAX_COUPONS_PER_BATCH = 100;
+	public const int MAX_COUPONS_PER_BATCH = 100;
 
 	/**
 	 * Maximum coupon prefix length.
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	public const MAX_PREFIX_LENGTH = 8;
+	public const int MAX_PREFIX_LENGTH = 8;
 
 	/**
 	 * Minimum generated coupon code length.
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	public const MIN_CODE_LENGTH = 8;
+	public const int MIN_CODE_LENGTH = 8;
 
 	/**
 	 * Maximum generated coupon code length.
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	public const MAX_CODE_LENGTH = 24;
+	public const int MAX_CODE_LENGTH = 24;
 
 	/**
 	 * Default generated coupon code length.
 	 *
 	 * @since 1.6.0
 	 * @since 1.7.0 Raised from 8 to 12.
-	 * @var int
 	 */
-	public const DEFAULT_CODE_LENGTH = 12;
+	public const int DEFAULT_CODE_LENGTH = 12;
 
 	/**
 	 * Maximum gift products that one coupon can carry.
 	 *
 	 * @since 1.7.0
-	 * @var int
 	 */
-	public const MAX_GIFT_PRODUCTS = 20;
+	public const int MAX_GIFT_PRODUCTS = 20;
 
 	/**
 	 * Characters used for the random part of a coupon code.
@@ -84,17 +77,15 @@ final class FGCBG_Coupon_Generator {
 	 * i, l, o, 0, and 1, because shoppers type these codes.
 	 *
 	 * @since 1.7.0
-	 * @var string
 	 */
-	private const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+	private const string CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 
 	/**
 	 * Default coupon expiry in days (filterable via fgcbg_coupon_expiry_days).
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	private const DEFAULT_EXPIRY_DAYS = 365;
+	private const int DEFAULT_EXPIRY_DAYS = 365;
 
 	/**
 	 * Latest expiry time, as a UTC timestamp: 9999-12-31 00:00:00.
@@ -106,9 +97,8 @@ final class FGCBG_Coupon_Generator {
 	 * every site time zone.
 	 *
 	 * @since 1.8.0
-	 * @var int
 	 */
-	private const LATEST_EXPIRY_TIMESTAMP = 253402214400;
+	private const int LATEST_EXPIRY_TIMESTAMP = 253402214400;
 
 	/**
 	 * Generate coupons.

@@ -21,17 +21,15 @@ final class FGCBG_Admin_Assets {
 	 * Admin script handle.
 	 *
 	 * @since 1.6.0
-	 * @var string
 	 */
-	private const SCRIPT_HANDLE = 'fgcbg-admin';
+	private const string SCRIPT_HANDLE = 'fgcbg-admin';
 
 	/**
 	 * Admin style handle.
 	 *
 	 * @since 1.6.0
-	 * @var string
 	 */
-	private const STYLE_HANDLE = 'fgcbg-admin';
+	private const string STYLE_HANDLE = 'fgcbg-admin';
 
 	/**
 	 * Whether admin script data failed to load.

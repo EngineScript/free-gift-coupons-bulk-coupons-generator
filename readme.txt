@@ -4,7 +4,7 @@ Tags: woocommerce, coupons, bulk, free-gifts, gift-coupons
 Requires at least: 7.0
 Tested up to: 7.1
 Stable tag: 1.8.0
-Requires PHP: 8.2
+Requires PHP: 8.3
 License: GPL v3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -57,7 +57,7 @@ This plugin is built with security as the top priority, implementing multiple la
 * WordPress 7.0 or higher
 * WooCommerce 10.8 or higher, installed and activated
 * Free Gift Coupons for WooCommerce plugin (required - purchase at https://woocommerce.com/products/free-gift-coupons/)
-* PHP 8.2 or higher
+* PHP 8.3 or higher
 * A user who can publish coupons and edit the selected products (Administrators and Shop Managers by default)
 
 = How many coupons can I generate at once? =
@@ -119,6 +119,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 **Changed:**
 
+* Raise the minimum PHP version to 8.3, which WooCommerce requires.
 * The code uses PHP 8 forms (short arrays, a `readonly` AJAX handler class, an arrow function, a first-class callable) and the admin script uses `replaceAll()`; behavior is unchanged.
 
 = 1.8.0 =

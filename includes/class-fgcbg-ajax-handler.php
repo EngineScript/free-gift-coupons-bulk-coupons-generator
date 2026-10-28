@@ -21,17 +21,15 @@ final readonly class FGCBG_Ajax_Handler {
 	 * Capability required to mint generated coupons.
 	 *
 	 * @since 1.6.0
-	 * @var string
 	 */
-	public const GENERATE_COUPONS_CAPABILITY = 'publish_shop_coupons';
+	public const string GENERATE_COUPONS_CAPABILITY = 'publish_shop_coupons';
 
 	/**
 	 * Default number of coupons generated per AJAX request.
 	 *
 	 * @since 1.6.0
-	 * @var int
 	 */
-	public const DEFAULT_BATCH_SIZE = 10;
+	public const int DEFAULT_BATCH_SIZE = 10;
 
 	/**
 	 * Constructor.
