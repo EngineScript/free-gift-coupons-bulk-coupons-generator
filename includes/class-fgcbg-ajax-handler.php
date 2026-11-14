@@ -77,9 +77,9 @@ final readonly class FGCBG_Ajax_Handler {
 
 		// The nonce is verified above. Request values are read here and nowhere else.
 		$product_ids   = $this->to_absint_list( isset( $_POST['product_ids'] ) ? wp_unslash( $_POST['product_ids'] ) : [] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each scalar value is passed through absint() in to_absint_list().
-		$batch_size    = $this->to_batch_size( is_string( $_POST['batch_size'] ?? null ) ? absint( (string) wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE );
+		$batch_size    = $this->to_batch_size( isset( $_POST['batch_size'] ) && is_string( $_POST['batch_size'] ) ? absint( wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE );
 		$coupon_prefix = $this->to_text( isset( $_POST['coupon_prefix'] ) ? wp_unslash( $_POST['coupon_prefix'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through sanitize_text_field() in to_text() after a string check.
-		$code_length   = $this->to_code_length( is_string( $_POST['coupon_code_length'] ?? null ) ? absint( (string) wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH );
+		$code_length   = $this->to_code_length( isset( $_POST['coupon_code_length'] ) && is_string( $_POST['coupon_code_length'] ) ? absint( wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH );
 
 		$this->require_usable_products( $product_ids );
 

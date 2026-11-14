@@ -120,6 +120,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **Changed:**
 
 * Raise the minimum PHP version to 8.3, which WooCommerce requires.
+* "Tested up to" is declared only in `readme.txt`, not in the plugin header, as Plugin Check requires.
 * The code uses PHP 8 forms (short arrays, a `readonly` AJAX handler class, an arrow function, a first-class callable) and the admin script uses `replaceAll()`; behavior is unchanged.
 
 = 1.8.0 =

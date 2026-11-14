@@ -14,10 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Minimum PHP 8.3**: Raise the minimum PHP version from 8.2 to 8.3, which WooCommerce requires. PHP 8.2 reaches end of life on December 31, 2026. The tests cover PHP 8.3 to 8.5, and the class constants declare their types, which PHP 8.3 allows.
+- **Tested Up To in the Readme Only**: The plugin header no longer declares "Tested up to"; `readme.txt` does. Plugin Check refuses the field in the plugin header, because two copies can drift apart. The scheduled WordPress version check now updates `readme.txt` only.
 - **Translation Template**: The template is now generated locally with `composer make-pot` and committed with each change, and the Update Translation File workflow was removed. The script scans every shipped PHP and JavaScript file, now including `uninstall.php` and `assets/js/`, and leaves the template untouched when only its creation date would change. The template was regenerated and adds the "Download .csv" label.
 - **Modern PHP**: The code uses PHP 8 forms: short arrays, a `readonly` AJAX handler class with a promoted constructor parameter, an arrow function, a first-class callable, and a `WC_Product` parameter type where only products arrive. Behavior is unchanged.
 - **Modern JavaScript**: The admin script uses `replaceAll()` for its global replacements; the result is the same.
 - **Tooling**: A new Rector job fails when PHP 8.3 or Rector's dead-code, code-quality, type-declaration, or early-return rules would change the code (`rector.php` skips the rules that conflict with WordPress, each with its reason). ESLint also applies modern-JavaScript rules, and ESLint and Stylelint fail on a browser feature that WordPress's supported browsers lack; the two CSS features that simply have no effect on touch screens are listed as exceptions with that reason. PHPCS requires the short array syntax. `package.json` overrides `smol-toml`, `katex`, and `re2js` (used by the Markdown linter) for their advisories.
+- **Psalm 7**: Static analysis runs on Psalm 7. The AJAX handler reads the batch size and code length with `isset()` and `is_string()` on the request value itself, which Psalm 7 follows, and three `(string)` casts it called redundant are removed. Behavior is unchanged.
 - **Workflow Names**: The JavaScript test job is now "JavaScript Tests (Node 24)", the name it has in the other EngineScript plugins.
 
 ## [1.8.0] - 2026-10-09
