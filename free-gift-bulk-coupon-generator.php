@@ -6,7 +6,6 @@
  * Version: 1.8.0
  * Author: EngineScript
  * Requires at least: 7.0
- * Tested up to: 7.1
  * Requires PHP: 8.3
  * Requires Plugins: woocommerce
  * WC requires at least: 10.8

@@ -167,7 +167,7 @@ final class FGCBG_Admin_Assets {
 			'max_prefix_length'      => FGCBG_Coupon_Generator::MAX_PREFIX_LENGTH,
 			'min_code_length'        => FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
 			'max_code_length'        => FGCBG_Coupon_Generator::MAX_CODE_LENGTH,
-			'nonce'                  => (string) wp_create_nonce( 'fgcbg_ajax_nonce' ),
+			'nonce'                  => wp_create_nonce( 'fgcbg_ajax_nonce' ),
 			/* translators: %d: Number of coupons to generate. */
 			'confirm_large_batch'    => __( 'You are about to generate %d coupons. Do you want to continue?', 'free-gift-bulk-coupon-generator' ),
 			/* translators: %d: Maximum number of coupons per run. */

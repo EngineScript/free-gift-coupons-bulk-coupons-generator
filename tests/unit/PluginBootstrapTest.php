@@ -147,7 +147,6 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 				'Requires PHP: 8.3',
 				'Requires Plugins: woocommerce',
 				'WC requires at least: 10.8',
-				'Tested up to: 7.1',
 				'Text Domain: free-gift-bulk-coupon-generator',
 			) as $header
 		) {
@@ -156,6 +155,8 @@ final class PluginBootstrapTest extends FGCBG_Test_Case {
 
 		// WordPress.org does not allow an Update URI header, and Plugin Check rejects it.
 		$this->assertStringNotContainsString( 'Update URI:', $contents );
+		// Plugin Check refuses "Tested up to" in the plugin header; readme.txt declares it.
+		$this->assertStringNotContainsString( 'Tested up to:', $contents );
 	}
 
 	/**

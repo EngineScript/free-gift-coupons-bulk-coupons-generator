@@ -2081,7 +2081,8 @@ jobs:
                   $this->assertSame('woocommerce', $headers['requires_plugins']);
                   $this->assertSame('7.0', $headers['requires_wp']);
                   $this->assertSame('8.3', $headers['requires_php']);
-                  $this->assertSame('7.1', $headers['tested_wp']);
+                  // Plugin Check refuses "Tested up to" in the plugin header; readme.txt declares it.
+                  $this->assertSame('', $headers['tested_wp']);
                   // WordPress.org does not allow an Update URI header, and Plugin Check rejects it.
                   $this->assertSame('', $headers['update_uri']);
                   $this->assertSame('free-gift-bulk-coupon-generator', $headers['text_domain']);
