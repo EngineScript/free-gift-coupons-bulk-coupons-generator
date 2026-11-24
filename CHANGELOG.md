@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tooling**: A new Rector job fails when PHP 8.3 or Rector's dead-code, code-quality, type-declaration, or early-return rules would change the code (`rector.php` skips the rules that conflict with WordPress, each with its reason). ESLint also applies modern-JavaScript rules, and ESLint and Stylelint fail on a browser feature that WordPress's supported browsers lack; the two CSS features that simply have no effect on touch screens are listed as exceptions with that reason. PHPCS requires the short array syntax. `package.json` overrides `smol-toml`, `katex`, and `re2js` (used by the Markdown linter) for their advisories.
 - **Psalm 7**: Static analysis runs on Psalm 7. The AJAX handler reads the batch size and code length with `isset()` and `is_string()` on the request value itself, which Psalm 7 follows, and three `(string)` casts it called redundant are removed. Behavior is unchanged.
 - **Workflow Names**: The JavaScript test job is now "JavaScript Tests (Node 24)", the name it has in the other EngineScript plugins.
+- **WordPress CSS Standards**: Stylelint checks the stylesheet against WordPress's CSS coding standards (`@wordpress/stylelint-config`) in place of `stylelint-config-standard`. The WordPress config needs Stylelint 17, so Stylelint stays on 17 until the config supports 18. The stylesheet was adjusted to match (a blank line at the start of each media query and keyframes block) and looks the same.
 
 ## [1.8.0] - 2026-10-09
 

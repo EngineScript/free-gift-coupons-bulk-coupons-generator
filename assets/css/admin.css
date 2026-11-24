@@ -222,6 +222,7 @@
 }
 
 @keyframes fgcbg-spin {
+
 	to {
 		transform: rotate(360deg);
 	}
@@ -335,6 +336,7 @@
 }
 
 @keyframes fgcbg-fade-in {
+
 	from {
 		opacity: 0;
 		transform: translateY(-10px);
@@ -351,6 +353,7 @@
  * Accessibility
  */
 @media (prefers-reduced-motion: reduce) {
+
 	.fgcbg-form.loading .button-primary::after,
 	.fgcbg-error-message,
 	.fgcbg-success-message {
@@ -363,6 +366,7 @@
  * Responsive: Tablet
  */
 @media (width <= 1024px) {
+
 	.fgcbg-admin-container {
 		flex-direction: column;
 	}
@@ -377,6 +381,7 @@
  * Responsive: Mobile
  */
 @media (width <= 600px) {
+
 	.fgcbg-form .regular-text,
 	.fgcbg-product-search {
 		max-width: 300px;
