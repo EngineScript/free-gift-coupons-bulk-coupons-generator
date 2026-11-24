@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Psalm 7**: Static analysis runs on Psalm 7. The AJAX handler reads the batch size and code length with `isset()` and `is_string()` on the request value itself, which Psalm 7 follows, and three `(string)` casts it called redundant are removed. Behavior is unchanged.
 - **Workflow Names**: The JavaScript test job is now "JavaScript Tests (Node 24)", the name it has in the other EngineScript plugins.
 - **WordPress CSS Standards**: Stylelint checks the stylesheet against WordPress's CSS coding standards (`@wordpress/stylelint-config`) in place of `stylelint-config-standard`. The WordPress config needs Stylelint 17, so Stylelint stays on 17 until the config supports 18. The stylesheet was adjusted to match (a blank line at the start of each media query and keyframes block) and looks the same.
+
 ## [1.8.0] - 2026-10-09
 
 ### Changed
