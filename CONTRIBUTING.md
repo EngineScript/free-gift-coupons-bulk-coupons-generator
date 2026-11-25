@@ -92,6 +92,9 @@ free-gift-bulk-coupon-generator/
 |-- phpcs.xml                           # The part Codacy can run, generated from phpcs-wordpress.xml
 |-- phpstan.neon                        # PHPStan configuration
 |-- phpmd.xml                           # PHPMD configuration
+|-- biome.json                          # Biome lint rules (npm run lint:biome, CI, Codacy)
+|-- .pylintrc                           # Pylint checks for .github/scripts (CI, Codacy)
+|-- bandit.yml                          # Bandit settings for .github/scripts (CI, Codacy)
 |-- eslint.wordpress.config.mjs         # ESLint configuration (npm run lint:js, CI)
 |-- eslint.config.mjs                   # Its settings without the WordPress standards, for Codacy
 |-- stylelint-wordpress.json            # Stylelint configuration (npm run lint:css, CI)
@@ -99,7 +102,7 @@ free-gift-bulk-coupon-generator/
 `-- .github/                            # GitHub workflows and templates
 ```
 
-Codacy reads `phpcs.xml`, `phpmd.xml`, `eslint.config.mjs`, and `.stylelintrc.json`, but it installs no WordPress coding standards, no PHPCSExtra, no WordPress ESLint or Stylelint packages, and only PHPMD 2. Keep those files to what Codacy installs; the full configurations add the rest. After changing `phpcs-wordpress.xml` or `stylelint-wordpress.json`, or updating their packages, regenerate the Codacy copies with `python .github/scripts/codacy-configs.py phpcs` and `python .github/scripts/codacy-configs.py stylelint`. CI fails when they are out of date.
+Codacy reads `phpcs.xml`, `phpmd.xml`, `eslint.config.mjs`, and `.stylelintrc.json`, but it installs no WordPress coding standards, no PHPCSExtra, no WordPress ESLint or Stylelint packages, and only PHPMD 2. Keep those files to what Codacy installs; the full configurations add the rest. After changing `phpcs-wordpress.xml` or `stylelint-wordpress.json`, or updating their packages, regenerate the Codacy copies with `python .github/scripts/codacy-configs.py phpcs` and `python .github/scripts/codacy-configs.py stylelint`. CI fails when they are out of date. Codacy also reads `biome.json`, `.pylintrc`, and `bandit.yml`, and CI runs Biome (`npm run lint:biome`), Pylint, and Bandit with the same files, so a pull request gets every check Codacy runs before Codacy does.
 
 ## Making Changes
 
