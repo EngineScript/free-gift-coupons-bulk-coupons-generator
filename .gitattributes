@@ -15,13 +15,16 @@
 /.mypy.ini export-ignore
 /.ruff.toml export-ignore
 /.stylelintrc.json export-ignore
+/stylelint-wordpress.json export-ignore
 /.yamllint.yml export-ignore
 /composer.json export-ignore
 /composer.lock export-ignore
 /eslint.config.mjs export-ignore
+/eslint.wordpress.config.mjs export-ignore
 /package.json export-ignore
 /package-lock.json export-ignore
 /phpcs.xml export-ignore
+/phpcs-wordpress.xml export-ignore
 /phpmd.xml export-ignore
 /phpstan.neon export-ignore
 /phpunit.xml export-ignore
