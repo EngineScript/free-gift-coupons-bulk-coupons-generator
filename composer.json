@@ -32,8 +32,8 @@
     "rector/rector": "^2.6"
   },
   "scripts": {
-    "phpcs": "phpcs --standard=phpcs.xml",
-    "phpcs:fix": "phpcbf --standard=phpcs.xml",
+    "phpcs": "phpcs --standard=phpcs-wordpress.xml",
+    "phpcs:fix": "phpcbf --standard=phpcs-wordpress.xml",
     "phpmd": "phpmd analyze . --format text --ruleset phpmd.xml --no-progress",
     "psalm": "psalm --config=psalm.xml --show-info=true",
     "psalm:taint": "psalm --config=psalm.xml --taint-analysis",
