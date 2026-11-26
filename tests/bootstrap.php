@@ -1190,4 +1190,8 @@ if ( ! function_exists( 'wc_get_logger' ) ) {
 	}
 }
 
-require dirname( __DIR__ ) . '/free-gift-bulk-coupon-generator.php';
+// PluginFileLoadTest loads the plugin file itself, in a separate process, so that coverage records
+// the file's top-level code. Its class setup sets this variable, which that process inherits.
+if ( false === getenv( 'FGCBG_TEST_DEFER_PLUGIN_LOAD' ) ) {
+	require dirname( __DIR__ ) . '/free-gift-bulk-coupon-generator.php';
+}
