@@ -77,9 +77,9 @@ final readonly class FGCBG_Ajax_Handler {
 
 		// The nonce is verified above. Request values are read here and nowhere else.
 		$product_ids   = $this->to_absint_list( isset( $_POST['product_ids'] ) ? wp_unslash( $_POST['product_ids'] ) : [] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each scalar value is passed through absint() in to_absint_list().
-		$batch_size    = $this->to_batch_size( isset( $_POST['batch_size'] ) && is_string( $_POST['batch_size'] ) ? absint( wp_unslash( $_POST['batch_size'] ) ) : self::DEFAULT_BATCH_SIZE );
+		$batch_size    = $this->to_batch_size( isset( $_POST['batch_size'] ) ? wp_unslash( $_POST['batch_size'] ) : null ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through absint() in to_batch_size() after a string check.
 		$coupon_prefix = $this->to_text( isset( $_POST['coupon_prefix'] ) ? wp_unslash( $_POST['coupon_prefix'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through sanitize_text_field() in to_text() after a string check.
-		$code_length   = $this->to_code_length( isset( $_POST['coupon_code_length'] ) && is_string( $_POST['coupon_code_length'] ) ? absint( wp_unslash( $_POST['coupon_code_length'] ) ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH );
+		$code_length   = $this->to_code_length( isset( $_POST['coupon_code_length'] ) ? wp_unslash( $_POST['coupon_code_length'] ) : null ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passed through absint() in to_code_length() after a string check.
 
 		$this->require_usable_products( $product_ids );
 
@@ -208,31 +208,40 @@ final readonly class FGCBG_Ajax_Handler {
 	}
 
 	/**
-	 * Bound the requested batch size.
+	 * Convert an unslashed request value to a bounded batch size.
 	 *
-	 * The value is a float in one case only: absint() of the lowest integer,
-	 * whose absolute value does not fit an integer. It is bounded like any
-	 * other value that is too large.
+	 * A value that is not a string yields the default batch size. absint()
+	 * returns a float in one case only: the lowest integer, whose absolute
+	 * value does not fit an integer. It is bounded like any other value that
+	 * is too large, so min() returns the integer maximum.
 	 *
 	 * @since 1.7.0
-	 * @param int|float $batch_size Requested number of coupons for this request.
+	 * @param mixed $value Unslashed request value: the requested number of coupons for this request.
 	 */
-	private function to_batch_size( int|float $batch_size ): int {
+	private function to_batch_size( mixed $value ): int {
+		$batch_size = is_string( $value ) ? absint( $value ) : self::DEFAULT_BATCH_SIZE;
+
 		if ( $batch_size < 1 ) {
 			return self::DEFAULT_BATCH_SIZE;
 		}
 
-		return (int) min( $batch_size, FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH );
+		return min( $batch_size, FGCBG_Coupon_Generator::MAX_COUPONS_PER_BATCH );
 	}
 
 	/**
-	 * Bound the requested random coupon code length.
+	 * Convert an unslashed request value to a bounded random coupon code length.
+	 *
+	 * A value that is not a string yields the default length. absint() returns
+	 * a float only for the lowest integer, as in to_batch_size(), and min()
+	 * then returns the integer maximum.
 	 *
 	 * @since 1.7.0
-	 * @param int|float $code_length Requested random code length; a float only for the lowest integer, as in to_batch_size().
+	 * @param mixed $value Unslashed request value: the requested random code length.
 	 */
-	private function to_code_length( int|float $code_length ): int {
-		return (int) max(
+	private function to_code_length( mixed $value ): int {
+		$code_length = is_string( $value ) ? absint( $value ) : FGCBG_Coupon_Generator::DEFAULT_CODE_LENGTH;
+
+		return max(
 			FGCBG_Coupon_Generator::MIN_CODE_LENGTH,
 			min( FGCBG_Coupon_Generator::MAX_CODE_LENGTH, $code_length )
 		);
